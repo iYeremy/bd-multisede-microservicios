@@ -9,7 +9,7 @@
 --   Subconsulta correlac.  10, 16
 --   GROUP BY / HAVING .... 6, 8, 11 / 6, 8
 --   CTE (WITH) ........... 4, 5, 11, 15, 17, 19, 20
---   Funciones de ventana . 1 (SUM OVER), 4 (DENSE_RANK), 5 (LAG), 19 (RANK)
+--   Funciones de ventana . 1 (SUM OVER), 4 (ROW_NUMBER, DENSE_RANK), 5 (LAG), 17 (SUM OVER), 19 (RANK)
 --   Operaciones conjuntos  18 (EXCEPT, INTERSECT) + UNION ALL en las vistas
 -- =====================================================================
 
@@ -29,8 +29,7 @@ JOIN catalogo.productos  p ON p.id_producto  = i.id_producto
 JOIN catalogo.categorias c ON c.id_categoria = p.id_categoria
 JOIN catalogo.sedes      s ON s.id_sede      = i.id_sede
 JOIN catalogo.almacenes  a ON a.id_almacen   = i.id_almacen
-ORDER BY s.nombre, c.nombre, p.nombre
-LIMIT 25;   -- quite el LIMIT para ver el listado completo
+ORDER BY s.id_sede, a.nombre, c.nombre, p.nombre;
 
 \echo
 \echo '=== Consulta 2. Alertas de reabastecimiento ==='
@@ -59,7 +58,9 @@ WHERE p.estado = 'ACTIVO'
 ORDER BY s.id_sede, p.id_producto;
 
 \echo
-\echo '=== Consulta 4. Top 5 de productos más vendidos por sede y trimestre (DENSE_RANK) ==='
+\echo '=== Consulta 4. Top 5 de productos más vendidos por sede y trimestre (ROW_NUMBER / DENSE_RANK) ==='
+-- ROW_NUMBER limita a exactamente 5 filas por sede y trimestre (los empates
+-- se desempatan por nombre); DENSE_RANK muestra qué productos empatan.
 WITH ventas_producto AS (
     SELECT pv.id_sede,
            to_char(pv.fecha_pedido, 'YYYY-"T"Q') AS periodo,
@@ -71,19 +72,21 @@ WITH ventas_producto AS (
     WHERE pv.estado IN ('CONFIRMADO', 'ENTREGADO')
     GROUP BY pv.id_sede, periodo, d.id_producto
 ), ranking AS (
-    SELECT vp.*,
-           DENSE_RANK() OVER (PARTITION BY vp.id_sede, vp.periodo ORDER BY vp.unidades DESC) AS puesto
+    SELECT vp.*, p.nombre AS producto,
+           ROW_NUMBER() OVER (PARTITION BY vp.id_sede, vp.periodo ORDER BY vp.unidades DESC, p.nombre) AS puesto,
+           DENSE_RANK() OVER (PARTITION BY vp.id_sede, vp.periodo ORDER BY vp.unidades DESC)           AS nivel_ventas
     FROM ventas_producto vp
+    JOIN catalogo.productos p ON p.id_producto = vp.id_producto
 )
-SELECT s.nombre AS sede, r.periodo, r.puesto, p.nombre AS producto, r.unidades
+SELECT s.nombre AS sede, r.periodo, r.puesto, r.nivel_ventas, r.producto, r.unidades
 FROM ranking r
-JOIN catalogo.sedes     s ON s.id_sede     = r.id_sede
-JOIN catalogo.productos p ON p.id_producto = r.id_producto
+JOIN catalogo.sedes s ON s.id_sede = r.id_sede
 WHERE r.puesto <= 5
-ORDER BY s.id_sede, r.periodo, r.puesto, p.nombre;
+ORDER BY s.id_sede, r.periodo, r.puesto;
 
 \echo
 \echo '=== Consulta 5. Ventas mensuales por sede y variación frente al mes anterior (LAG) ==='
+-- Octubre llega solo hasta la fecha de corte (día 15), por eso su caída es parcial.
 WITH mensual AS (
     SELECT id_sede, sede, mes, total_vendido
     FROM reportes.vista_ventas_mensuales_por_sede
@@ -317,22 +320,15 @@ WITH vendidas AS (
 SELECT c.nombre AS categoria, p.nombre AS producto,
        v.vendidas,
        COALESCE(d.devueltas, 0) AS devueltas,
-       round(100.0 * COALESCE(d.devueltas, 0) / v.vendidas, 2) AS pct_devolucion
+       round(100.0 * COALESCE(d.devueltas, 0) / v.vendidas, 2) AS pct_devolucion,
+       -- mismo cálculo agregado a nivel de categoría (función de ventana)
+       round(100.0 * SUM(COALESCE(d.devueltas, 0)) OVER (PARTITION BY c.id_categoria)
+             / SUM(v.vendidas) OVER (PARTITION BY c.id_categoria), 2) AS pct_devolucion_categoria
 FROM vendidas v
 JOIN catalogo.productos  p ON p.id_producto  = v.id_producto
 JOIN catalogo.categorias c ON c.id_categoria = p.id_categoria
 LEFT JOIN devueltas d ON d.id_producto = v.id_producto   -- productos sin devoluciones salen con 0 %
-ORDER BY pct_devolucion DESC, v.vendidas DESC;
-
-\echo
-\echo '--- 17b. Resumen por categoría ---'
-SELECT categoria,
-       SUM(unidades_vendidas)  AS vendidas,
-       SUM(unidades_devueltas) AS devueltas,
-       round(100.0 * SUM(unidades_devueltas) / SUM(unidades_vendidas), 2) AS pct_devolucion
-FROM reportes.vista_devoluciones_por_producto
-GROUP BY categoria
-ORDER BY pct_devolucion DESC;
+ORDER BY c.nombre, pct_devolucion DESC, v.vendidas DESC;
 
 \echo
 \echo '=== Consulta 18a. Productos que hay en Bogotá y NO en Cali (EXCEPT) ==='
