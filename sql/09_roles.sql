@@ -48,19 +48,16 @@ CREATE ROLE auditor_interno   LOGIN PASSWORD 'Andina2026*' IN ROLE rol_auditor;
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 REVOKE ALL ON ALL TABLES IN SCHEMA catalogo, identidad, compras, inventarios, ventas, reportes FROM PUBLIC;
 
-DO $$
-BEGIN
-    EXECUTE format('GRANT CONNECT ON DATABASE %I TO rol_administrador, rol_gerencia, rol_inventario, '
-                   'rol_compras, rol_vendedor, rol_auditor', current_database());
-    EXECUTE format('GRANT CREATE ON DATABASE %I TO rol_administrador', current_database());
-END $$;
+-- CONNECT sobre la base ya lo tiene PUBLIC por defecto. El administrador
+-- además puede crear esquemas. :"DBNAME" es la variable de psql con el
+-- nombre de la base actual (comercializadora).
+GRANT CREATE ON DATABASE :"DBNAME" TO rol_administrador;
 
 -- ---------------------------------------------------------------------
 -- 4. Administrador: todo sobre todos los esquemas
 -- ---------------------------------------------------------------------
 GRANT USAGE, CREATE ON SCHEMA catalogo, identidad, compras, inventarios, ventas, reportes TO rol_administrador;
 GRANT ALL ON ALL TABLES    IN SCHEMA catalogo, identidad, compras, inventarios, ventas, reportes TO rol_administrador WITH GRANT OPTION;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA catalogo, identidad, compras, inventarios, ventas TO rol_administrador WITH GRANT OPTION;
 
 -- ---------------------------------------------------------------------
 -- 5. Gerencia: solo reportes (las vistas acceden a las tablas con los
@@ -85,7 +82,6 @@ GRANT SELECT (id_usuario, id_empleado, nombre_usuario, rol, estado, fecha_creaci
 GRANT USAGE ON SCHEMA catalogo, inventarios, reportes TO rol_inventario;
 GRANT SELECT ON catalogo.sedes, catalogo.almacenes, catalogo.productos, catalogo.categorias TO rol_inventario;
 GRANT SELECT, INSERT, UPDATE ON inventarios.transferencias, inventarios.detalle_transferencia TO rol_inventario;
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA inventarios TO rol_inventario;
 GRANT SELECT ON reportes.vista_alertas_reabastecimiento,
                 reportes.vista_transferencias_en_transito,
                 reportes.vista_productos_sin_inventario TO rol_inventario;
@@ -100,7 +96,6 @@ GRANT USAGE ON SCHEMA catalogo, compras, reportes TO rol_compras;
 GRANT SELECT ON catalogo.productos, catalogo.proveedores, catalogo.producto_proveedor,
                 catalogo.almacenes, catalogo.sedes TO rol_compras;
 GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA compras TO rol_compras;
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA compras TO rol_compras;
 GRANT SELECT ON reportes.vista_compras_pendientes TO rol_compras;
 
 -- ---------------------------------------------------------------------
@@ -111,7 +106,6 @@ GRANT SELECT ON reportes.vista_compras_pendientes TO rol_compras;
 GRANT USAGE ON SCHEMA catalogo, ventas TO rol_vendedor;
 GRANT SELECT ON catalogo.productos, catalogo.clientes TO rol_vendedor;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ventas.pagos, ventas.devoluciones, ventas.detalle_devolucion TO rol_vendedor;
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA ventas TO rol_vendedor;
 
 -- Se revoca el DELETE concedido arriba: los pagos y devoluciones no se
 -- borran, se cambia su estado (RN-43). Demostración de REVOKE.
@@ -119,7 +113,3 @@ REVOKE DELETE ON ventas.pagos, ventas.devoluciones, ventas.detalle_devolucion FR
 
 GRANT SELECT, INSERT, UPDATE ON ventas.ped_bogota, ventas.det_ped_bogota TO vendedor_bogota;  -- sede 1
 GRANT SELECT, INSERT, UPDATE ON ventas.ped_cali,   ventas.det_ped_cali   TO vendedor_cali;    -- sede 3
-REVOKE USAGE ON SEQUENCE ventas.seq_ped_medellin, ventas.seq_ped_cali, ventas.seq_ped_cedi FROM rol_vendedor;
-REVOKE USAGE ON SEQUENCE ventas.seq_ped_bogota FROM rol_vendedor;
-GRANT  USAGE ON SEQUENCE ventas.seq_ped_bogota TO vendedor_bogota;
-GRANT  USAGE ON SEQUENCE ventas.seq_ped_cali   TO vendedor_cali;

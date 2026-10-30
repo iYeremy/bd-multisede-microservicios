@@ -35,9 +35,6 @@ CREATE TABLE identidad.auditoria_accesos (
     objeto_consultado VARCHAR(100) NOT NULL
 );
 
-CREATE INDEX idx_empleados_sede     ON identidad.empleados (id_sede);
-CREATE INDEX idx_auditoria_usuario  ON identidad.auditoria_accesos (id_usuario);
-
 COMMENT ON TABLE identidad.empleados         IS 'Responsable: Identidad y Accesos';
 COMMENT ON TABLE identidad.usuarios          IS 'Responsable: Identidad y Accesos';
 COMMENT ON TABLE identidad.auditoria_accesos IS 'Responsable: Identidad y Accesos';

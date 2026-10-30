@@ -2,27 +2,54 @@
 -- 05_inventarios.sql
 -- Microservicio de Inventarios y Transferencias.
 --
--- FRAGMENTACIÓN HORIZONTAL: inventarios se particiona por LIST (id_sede).
--- Cada partición es una tabla física (un fragmento por sede):
+-- FRAGMENTACIÓN HORIZONTAL: el inventario se guarda en una tabla física
+-- por sede, todas con las mismas columnas:
 --     inv_bogota (1) · inv_medellin (2) · inv_cali (3) · inv_cedi (4)
--- No hay partición DEFAULT: una fila con una sede desconocida se rechaza,
--- y una fila nunca puede quedar en dos fragmentos.
+-- La condición de cada fragmento es id_sede = n y se asegura con un
+-- CHECK: una fila con otra sede se rechaza, así un registro nunca puede
+-- quedar en dos fragmentos. La vista reportes.vista_inventario_consolidado
+-- reúne los cuatro con UNION ALL.
 -- =====================================================================
 
-CREATE TABLE inventarios.inventarios (
-    id_sede             INTEGER   NOT NULL,             -- † catalogo.sedes (clave de fragmentación)
+CREATE TABLE inventarios.inv_bogota (
+    id_sede             INTEGER   NOT NULL DEFAULT 1 CHECK (id_sede = 1),  -- † catalogo.sedes
     id_almacen          INTEGER   NOT NULL,             -- † catalogo.almacenes
     id_producto         INTEGER   NOT NULL,             -- † catalogo.productos
     existencia_actual   INTEGER   NOT NULL CHECK (existencia_actual >= 0),
     stock_minimo        INTEGER   NOT NULL CHECK (stock_minimo >= 0),
     fecha_actualizacion TIMESTAMP NOT NULL DEFAULT now(),
     PRIMARY KEY (id_sede, id_almacen, id_producto)
-) PARTITION BY LIST (id_sede);
+);
 
-CREATE TABLE inventarios.inv_bogota   PARTITION OF inventarios.inventarios FOR VALUES IN (1);
-CREATE TABLE inventarios.inv_medellin PARTITION OF inventarios.inventarios FOR VALUES IN (2);
-CREATE TABLE inventarios.inv_cali     PARTITION OF inventarios.inventarios FOR VALUES IN (3);
-CREATE TABLE inventarios.inv_cedi     PARTITION OF inventarios.inventarios FOR VALUES IN (4);
+CREATE TABLE inventarios.inv_medellin (
+    id_sede             INTEGER   NOT NULL DEFAULT 2 CHECK (id_sede = 2),
+    id_almacen          INTEGER   NOT NULL,
+    id_producto         INTEGER   NOT NULL,
+    existencia_actual   INTEGER   NOT NULL CHECK (existencia_actual >= 0),
+    stock_minimo        INTEGER   NOT NULL CHECK (stock_minimo >= 0),
+    fecha_actualizacion TIMESTAMP NOT NULL DEFAULT now(),
+    PRIMARY KEY (id_sede, id_almacen, id_producto)
+);
+
+CREATE TABLE inventarios.inv_cali (
+    id_sede             INTEGER   NOT NULL DEFAULT 3 CHECK (id_sede = 3),
+    id_almacen          INTEGER   NOT NULL,
+    id_producto         INTEGER   NOT NULL,
+    existencia_actual   INTEGER   NOT NULL CHECK (existencia_actual >= 0),
+    stock_minimo        INTEGER   NOT NULL CHECK (stock_minimo >= 0),
+    fecha_actualizacion TIMESTAMP NOT NULL DEFAULT now(),
+    PRIMARY KEY (id_sede, id_almacen, id_producto)
+);
+
+CREATE TABLE inventarios.inv_cedi (
+    id_sede             INTEGER   NOT NULL DEFAULT 4 CHECK (id_sede = 4),
+    id_almacen          INTEGER   NOT NULL,
+    id_producto         INTEGER   NOT NULL,
+    existencia_actual   INTEGER   NOT NULL CHECK (existencia_actual >= 0),
+    stock_minimo        INTEGER   NOT NULL CHECK (stock_minimo >= 0),
+    fecha_actualizacion TIMESTAMP NOT NULL DEFAULT now(),
+    PRIMARY KEY (id_sede, id_almacen, id_producto)
+);
 
 CREATE TABLE inventarios.transferencias (
     id_transferencia   INTEGER     GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -46,12 +73,9 @@ CREATE TABLE inventarios.detalle_transferencia (
     PRIMARY KEY (id_transferencia, id_producto)
 );
 
-CREATE INDEX idx_inventarios_producto ON inventarios.inventarios (id_producto);
-
-COMMENT ON TABLE inventarios.inventarios           IS 'Responsable: Inventarios y Transferencias. Fragmentada por id_sede';
-COMMENT ON TABLE inventarios.inv_bogota            IS 'Fragmento de inventarios: id_sede = 1 (Sede Bogotá)';
-COMMENT ON TABLE inventarios.inv_medellin          IS 'Fragmento de inventarios: id_sede = 2 (Sede Medellín)';
-COMMENT ON TABLE inventarios.inv_cali              IS 'Fragmento de inventarios: id_sede = 3 (Sede Cali)';
-COMMENT ON TABLE inventarios.inv_cedi              IS 'Fragmento de inventarios: id_sede = 4 (CEDI Funza)';
+COMMENT ON TABLE inventarios.inv_bogota            IS 'Responsable: Inventarios y Transferencias. Fragmento de inventario: id_sede = 1 (Sede Bogotá)';
+COMMENT ON TABLE inventarios.inv_medellin          IS 'Responsable: Inventarios y Transferencias. Fragmento de inventario: id_sede = 2 (Sede Medellín)';
+COMMENT ON TABLE inventarios.inv_cali              IS 'Responsable: Inventarios y Transferencias. Fragmento de inventario: id_sede = 3 (Sede Cali)';
+COMMENT ON TABLE inventarios.inv_cedi              IS 'Responsable: Inventarios y Transferencias. Fragmento de inventario: id_sede = 4 (CEDI Funza)';
 COMMENT ON TABLE inventarios.transferencias        IS 'Responsable: Inventarios y Transferencias';
 COMMENT ON TABLE inventarios.detalle_transferencia IS 'Responsable: Inventarios y Transferencias';
