@@ -7,7 +7,7 @@ Proyecto final de Bases de Datos. TL;DR: una empresa con **4 sedes** (Bogotá, M
 - Los **reportes** son puras vistas que juntan los pedazos con `UNION ALL`.
 - Hay **roles de verdad**: el vendedor de Bogotá no puede ni ver los pedidos de Cali, la gerencia solo lee reportes, el auditor lee todo pero no toca nada.
 
-![Arquitectura](docs/diagramas/arquitectura-microservicios.svg)
+[Arquitectura (en HTML)](docs/diagramas/arquitectura-microservicios.drawio.html)
 
 ## Ejecucion
 
