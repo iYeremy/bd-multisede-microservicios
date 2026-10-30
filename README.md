@@ -2,8 +2,6 @@
 
 Proyecto final de Bases de Datos. TL;DR: una empresa con **4 sedes** (Bogotá, Medellín, Cali y un centro de distribución en Funza) necesita una base de datos donde cada sede vea lo suyo y la gerencia vea todo junto. Todo hecho en **PostgreSQL** (el goat :3).
 
-## La idea en 30 segundos
-
 - El enunciado pide pensarlo como **microservicios**: catálogo, compras, inventarios, ventas, identidad y reportes. Aquí cada "microservicio" es un **esquema** de PostgreSQL. es una simulación, todo vive en una sola base.
 - **Inventarios y pedidos están partidos por sede**: hay una tabla física por sede (`inv_bogota`, `ped_cali`…), cada una con un `CHECK (id_sede = n)` para que nadie meta filas donde no van.
 - Los **reportes** son puras vistas que juntan los pedazos con `UNION ALL`.
@@ -11,7 +9,7 @@ Proyecto final de Bases de Datos. TL;DR: una empresa con **4 sedes** (Bogotá, M
 
 ![Arquitectura](docs/diagramas/arquitectura-microservicios.svg)
 
-## Correrlo
+## Ejecucion
 
 Necesitas PostgreSQL 12+ y `psql`. (todavia estoy mirando las ventajas en x version)
 
@@ -24,7 +22,7 @@ Eso borra todo, crea todo, mete los datos de prueba, corre las 20 consultas y la
 
 Más detalle en el [manual](docs/manual-ejecucion.md).
 
-## Qué hay dónde
+## Estructura scripts
 
 | Ruta | Qué es |
 | --- | --- |
@@ -37,7 +35,7 @@ Más detalle en el [manual](docs/manual-ejecucion.md).
 | `docs/enunciado.pdf` | Todo el contexto y requisitos que se nos dio para el proyecto |
 | `docs/` | análisis, reglas de negocio, manual, evidencias |
 
-## En qué vamos
+## Proceso
 - [ ] Modelo E-R conceptual y modelo relacional (estan hechos pero toca rehacerlos de manera mas organizada para la presentacion)
 - [x] Base de datos completa: tablas, fragmentos, datos, vistas, roles, consultas y pruebas 
 - [x] Diagrama de arquitectura
