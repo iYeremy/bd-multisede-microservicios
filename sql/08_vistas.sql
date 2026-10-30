@@ -206,7 +206,7 @@ LEFT JOIN devueltas dv ON dv.id_producto = v.id_producto;
 CREATE VIEW reportes.vista_reporte_corporativo AS
 WITH inv AS (
     SELECT id_sede,
-           COUNT(DISTINCT id_producto) FILTER (WHERE existencia_actual > 0) AS productos_con_existencia,
+           COUNT(DISTINCT CASE WHEN existencia_actual > 0 THEN id_producto END) AS productos_con_existencia,
            SUM(existencia_actual)                                           AS unidades_inventario
     FROM reportes.vista_inventario_consolidado
     GROUP BY id_sede
@@ -218,9 +218,9 @@ WITH inv AS (
     GROUP BY i.id_sede
 ), ven AS (
     SELECT id_sede,
-           COUNT(*)              FILTER (WHERE estado IN ('CONFIRMADO', 'ENTREGADO')) AS pedidos_vendidos,
-           SUM(total_registrado) FILTER (WHERE estado IN ('CONFIRMADO', 'ENTREGADO')) AS valor_ventas,
-           COUNT(*)              FILTER (WHERE estado = 'PENDIENTE')                  AS pedidos_pendientes
+           COUNT(CASE WHEN estado IN ('CONFIRMADO', 'ENTREGADO') THEN 1 END)                AS pedidos_vendidos,
+           SUM(CASE WHEN estado IN ('CONFIRMADO', 'ENTREGADO') THEN total_registrado END) AS valor_ventas,
+           COUNT(CASE WHEN estado = 'PENDIENTE' THEN 1 END)                             AS pedidos_pendientes
     FROM reportes.vista_pedidos_consolidado
     GROUP BY id_sede
 ), com AS (

@@ -124,7 +124,7 @@ Los siguientes supuestos resuelven lo que el enunciado deja abierto; si alguno c
 ### 4.2 Técnicos
 
 - **S-07.** Se usa una sola instancia de PostgreSQL 16 con un esquema por microservicio, como simulación académica de la arquitectura.
-- **S-08.** La fragmentación se implementa con particionamiento declarativo por lista (`PARTITION BY LIST (id_sede)`). Cada partición es una tabla física que se puede consultar por separado.
+- **S-08.** La fragmentación se implementa con tablas físicas separadas, una por sede (por ejemplo `inventarios.inv_cali`), cada una con `CHECK (id_sede = n)`. Cada fragmento se puede consultar por separado, y una vista `UNION ALL` los reúne para los reportes.
 - **S-09.** Las claves foráneas solo se declaran dentro de un mismo esquema. Las relaciones entre microservicios se manejan con identificadores compartidos y se documentan.
 - **S-10.** No hay triggers. Las consecuencias entre servicios (por ejemplo, que una recepción aumente el inventario) se tratan como eventos conceptuales; en los datos de prueba ya se cargan coherentes.
 - **S-11.** Los valores monetarios usan `NUMERIC(14,2)` y las cantidades `INTEGER`. Los productos se manejan en unidades enteras.
@@ -172,7 +172,7 @@ Las reglas se agrupan por microservicio; la última columna de cada tabla indica
 | --- | --- | --- |
 | RN-15 | Existe a lo sumo un registro de inventario por sede, almacén y producto. | PK compuesta |
 | RN-16 | La existencia actual y el stock mínimo son ≥ 0. | CHECK |
-| RN-17 | Cada registro de inventario va en el fragmento de su sede, y solo en ese. | Clave de partición `id_sede` |
+| RN-17 | Cada registro de inventario va en el fragmento de su sede, y solo en ese. | CHECK (`id_sede = n`) en cada fragmento |
 | RN-18 | Hay **alerta de reabastecimiento** cuando la existencia es cero o menor que el stock mínimo. | Regla de consulta |
 | RN-19 | Una transferencia tiene un almacén de origen y uno de destino distintos. | CHECK |
 | RN-20 | Las fechas de una transferencia siguen el orden solicitud ≤ despacho ≤ recepción. | CHECK |
@@ -185,7 +185,7 @@ Las reglas se agrupan por microservicio; la última columna de cada tabla indica
 | Código | Regla | Cómo se garantiza |
 | --- | --- | --- |
 | RN-24 | Cada pedido pertenece a una sede, un almacén de esa sede, un cliente y un empleado. | Identificadores compartidos |
-| RN-25 | Cada pedido va en el fragmento de su sede, y solo en ese. | Clave de partición `id_sede` |
+| RN-25 | Cada pedido va en el fragmento de su sede, y solo en ese. | CHECK (`id_sede = n`) en cada fragmento |
 | RN-26 | Un pedido tiene uno o más productos, cada uno con cantidad > 0 y precio unitario > 0. Un producto no se repite dentro del mismo pedido. | PK compuesta, CHECK |
 | RN-27 | El precio unitario se guarda en el detalle al momento de la venta y no cambia aunque cambie el precio de lista. Lo mismo aplica al costo unitario en compras. | Columna en el detalle |
 | RN-28 | El total registrado de un pedido es la suma de cantidad × precio unitario de sus detalles, y es ≥ 0. | CHECK, datos de prueba |
@@ -241,7 +241,7 @@ Las reglas se agrupan por microservicio; la última columna de cada tabla indica
 | Microservicio | Componente con una responsabilidad de negocio definida y dueño de sus propios datos. |
 | Esquema | Espacio de nombres de PostgreSQL que agrupa las tablas de un microservicio. |
 | Fragmentación horizontal | División de las filas de una tabla en varias tablas físicas según una condición, aquí la sede. |
-| Partición | Tabla física que contiene un fragmento; en este proyecto, una por sede. |
+| Fragmento | Tabla física que contiene las filas de una sede; en este proyecto hay una por sede para inventarios, pedidos y detalles de pedido. |
 | Identificador compartido | Clave de una entidad de otro microservicio que se guarda sin FK declarada. |
 | SKU | Código único que identifica un producto. |
 | Stock mínimo | Existencia por debajo de la cual se debe reabastecer un producto en un almacén. |

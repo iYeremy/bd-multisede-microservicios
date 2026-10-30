@@ -69,10 +69,6 @@ CREATE TABLE catalogo.clientes (
     UNIQUE (tipo_documento, num_documento)
 );
 
-CREATE INDEX idx_almacenes_sede      ON catalogo.almacenes (id_sede);
-CREATE INDEX idx_productos_categoria ON catalogo.productos (id_categoria);
-CREATE INDEX idx_prod_prov_proveedor ON catalogo.producto_proveedor (id_proveedor);
-
 COMMENT ON TABLE catalogo.sedes              IS 'Responsable: Catálogo y Terceros';
 COMMENT ON TABLE catalogo.almacenes          IS 'Responsable: Catálogo y Terceros';
 COMMENT ON TABLE catalogo.categorias         IS 'Responsable: Catálogo y Terceros';

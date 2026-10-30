@@ -10,6 +10,7 @@ CREATE SCHEMA inventarios;
 CREATE SCHEMA ventas;
 CREATE SCHEMA reportes;
 
+-- COMMENT sirve para agregar/modificar/eliminar una descripcion para un esquema especifico
 COMMENT ON SCHEMA catalogo    IS 'Microservicio de Catálogo y Terceros (datos maestros)';
 COMMENT ON SCHEMA identidad   IS 'Microservicio de Identidad y Accesos';
 COMMENT ON SCHEMA compras     IS 'Microservicio de Compras y Abastecimiento';

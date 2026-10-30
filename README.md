@@ -1,61 +1,49 @@
-```mermaid
-flowchart LR
-    subgraph CAT["catalogo · Catálogo y Terceros"]
-        sedes[sedes] --- almacenes[almacenes]
-        categorias[categorias] --- productos[productos]
-        productos --- prodprov[producto_proveedor] --- proveedores[proveedores]
-        clientes[clientes]
-    end
+# bd-multisede-microservicios
 
-    subgraph IDE["identidad · Identidad y Accesos"]
-        empleados[empleados] --- usuarios[usuarios] --- auditoria[auditoria_accesos]
-    end
+Proyecto final de Bases de Datos. TL;DR: una empresa con **4 sedes** (Bogotá, Medellín, Cali y un centro de distribución en Funza) necesita una base de datos donde cada sede vea lo suyo y la gerencia vea todo junto. Todo hecho en **PostgreSQL** (el goat :3).
 
-    subgraph COM["compras · Compras y Abastecimiento"]
-        oc[ordenes_compra] --- doc[detalle_orden_compra]
-        oc --- rec[recepciones_compra] --- drec[detalle_recepcion]
-    end
+- El enunciado pide pensarlo como **microservicios**: catálogo, compras, inventarios, ventas, identidad y reportes. Aquí cada "microservicio" es un **esquema** de PostgreSQL. es una simulación, todo vive en una sola base.
+- **Inventarios y pedidos están partidos por sede**: hay una tabla física por sede (`inv_bogota`, `ped_cali`…), cada una con un `CHECK (id_sede = n)` para que nadie meta filas donde no van.
+- Los **reportes** son puras vistas que juntan los pedazos con `UNION ALL`.
+- Hay **roles de verdad**: el vendedor de Bogotá no puede ni ver los pedidos de Cali, la gerencia solo lee reportes, el auditor lee todo pero no toca nada.
 
-    subgraph INV["inventarios · Inventarios y Transferencias"]
-        inv[("inventarios<br/>LIST (id_sede)")]
-        inv --> inv1[inv_bogota · 1]
-        inv --> inv2[inv_medellin · 2]
-        inv --> inv3[inv_cali · 3]
-        inv --> inv4[inv_cedi · 4]
-        tra[transferencias] --- dtra[detalle_transferencia]
-    end
+![Arquitectura (en HTML)](docs/diagramas/arquitectura-microservicios.drawio.png)
 
-    subgraph VEN["ventas · Ventas y Pagos"]
-        ped[("pedidos_venta<br/>LIST (id_sede)")]
-        ped --> ped1[ped_bogota · 1]
-        ped --> ped2[ped_medellin · 2]
-        ped --> ped3[ped_cali · 3]
-        ped --> ped4[ped_cedi · 4]
-        det[("detalle_pedido<br/>LIST (id_sede)")]
-        det --> det1[det_ped_bogota · 1]
-        det --> det2[det_ped_medellin · 2]
-        det --> det3[det_ped_cali · 3]
-        det --> det4[det_ped_cedi · 4]
-        ped --- det
-        ped --- pagos[pagos]
-        ped --- dev[devoluciones] --- ddev[detalle_devolucion]
-    end
+## Ejecucion
 
-    subgraph REP["reportes · Reportes Corporativos (solo vistas)"]
-        vinv{{vista_inventario_consolidado<br/>UNION ALL}}
-        vped{{vista_pedidos_consolidado<br/>UNION ALL}}
-        vdet{{vista_detalle_pedido_consolidado<br/>UNION ALL}}
-        v10["10 vistas obligatorias<br/>inventario_por_sede · alertas_reabastecimiento<br/>productos_sin_inventario · ventas_mensuales_por_sede<br/>pedidos_pendientes · saldos_pendientes<br/>compras_pendientes · transferencias_en_transito<br/>devoluciones_por_producto · reporte_corporativo"]
-    end
+Necesitas PostgreSQL 12+ y `psql`. (todavia estoy mirando las ventajas en x version)
 
-    inv1 & inv2 & inv3 & inv4 -.-> vinv
-    ped1 & ped2 & ped3 & ped4 -.-> vped
-    det1 & det2 & det3 & det4 -.-> vdet
-    vinv & vped & vdet -.-> v10
-    CAT -.-> v10
-    IDE -.-> v10
-    COM -.-> v10
-    tra -.-> v10
-    pagos -.-> v10
-    dev -.-> v10
+```bash
+createdb -U postgres comercializadora
+psql -U postgres -d comercializadora -f run_all.sql
 ```
+
+Eso borra todo, crea todo, mete los datos de prueba, corre las 20 consultas y las pruebas. Se puede correr las veces que quiera uno, siempre da lo mismo (semilla fija). Sí, salen varios `ERROR`: son las pruebas de rechazo (SKU duplicado, permisos denegados…) y es justo lo que se espera. La salida completa está en [`docs/evidencias.txt`](docs/evidencias.txt).
+
+Más detalle en el [manual](docs/manual-ejecucion.md).
+
+## Estructura scripts
+
+| Ruta | Qué es |
+| --- | --- |
+| `sql/01`–`06` | esquemas y tablas, un archivo por microservicio |
+| `sql/07_datos.sql` | datos de prueba: 300 pedidos, 80 productos, 100 clientes… Totalmente generadas con IA :)|
+| `sql/08_vistas.sql` | vistas que unen los fragmentos + las 10 vistas obligatorias |
+| `sql/09_roles.sql` | roles, usuarios y permisos |
+| `sql/10_consultas.sql` | las 20 consultas que pide el enunciado |
+| `sql/11_pruebas.sql` | pruebas de restricciones, fragmentos y permisos (todo con ROLLBACK, no ensucia nada) |
+| `docs/enunciado.pdf` | Todo el contexto y requisitos que se nos dio para el proyecto |
+| `docs/` | análisis, reglas de negocio, manual, evidencias |
+
+## Proceso
+- [ ] Modelo E-R conceptual y modelo relacional (estan hechos pero toca rehacerlos de manera mas organizada para la presentacion)
+- [x] Base de datos completa: tablas, fragmentos, datos, vistas, roles, consultas y pruebas 
+- [x] Diagrama de arquitectura
+- [ ] Análisis de resultados, conclusiones y matriz de pruebas para el informe
+- [ ] Backend sencillo (Python + FastAPI) y un front básico
+- [ ] Desplegar en AWS EC2
+
+## Notas
+
+- **Solo SQL visto en clase.** Nada de secuencias, `NULLIF`, `GREATEST`/`LEAST` ni particionamiento declarativo. `COALESCE` es la única excepción (tengo que explicarlo en el informe xd).
+- Las relaciones **entre** microservicios no tienen FK a propósito (son "identificadores compartidos"). Se validan con `NOT EXISTS` en `11_pruebas.sql`.

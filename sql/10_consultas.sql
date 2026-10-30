@@ -87,17 +87,19 @@ ORDER BY s.id_sede, r.periodo, r.puesto;
 \echo
 \echo '=== Consulta 5. Ventas mensuales por sede y variación frente al mes anterior (LAG) ==='
 -- Octubre llega solo hasta la fecha de corte (día 15), por eso su caída es parcial.
+-- El primer mes de cada sede no tiene mes anterior: LAG devuelve NULL y la
+-- variación también sale NULL.
 WITH mensual AS (
-    SELECT id_sede, sede, mes, total_vendido
+    SELECT id_sede, sede, mes, total_vendido,
+           LAG(total_vendido) OVER (PARTITION BY id_sede ORDER BY mes) AS mes_anterior
     FROM reportes.vista_ventas_mensuales_por_sede
 )
 SELECT sede,
-       to_char(mes, 'YYYY-MM')                                       AS mes,
+       to_char(mes, 'YYYY-MM')                                   AS mes,
        total_vendido,
-       LAG(total_vendido) OVER (PARTITION BY id_sede ORDER BY mes)   AS mes_anterior,
-       total_vendido - LAG(total_vendido) OVER (PARTITION BY id_sede ORDER BY mes) AS variacion,
-       round(100.0 * (total_vendido - LAG(total_vendido) OVER (PARTITION BY id_sede ORDER BY mes))
-             / NULLIF(LAG(total_vendido) OVER (PARTITION BY id_sede ORDER BY mes), 0), 2) AS variacion_pct
+       mes_anterior,
+       total_vendido - mes_anterior                              AS variacion,
+       round(100.0 * (total_vendido - mes_anterior) / mes_anterior, 2) AS variacion_pct
 FROM mensual
 ORDER BY id_sede, mes;
 
@@ -192,8 +194,11 @@ WITH ultima_recepcion AS (
 SELECT pv.razon_social                                                          AS proveedor,
        t.total_ordenes,
        COUNT(u.id_orden_compra)                                                 AS ordenes_recibidas,
-       COUNT(*) FILTER (WHERE u.fecha_ultima_recepcion <= u.fecha_estimada)     AS recibidas_en_plazo,
-       round(AVG(GREATEST(u.fecha_ultima_recepcion - u.fecha_estimada, 0)), 2)  AS promedio_dias_retraso
+       COUNT(CASE WHEN u.fecha_ultima_recepcion <= u.fecha_estimada THEN 1 END) AS recibidas_en_plazo,
+       -- una orden que llegó antes de la fecha estimada cuenta 0 días de retraso
+       round(AVG(CASE WHEN u.fecha_ultima_recepcion > u.fecha_estimada
+                      THEN u.fecha_ultima_recepcion - u.fecha_estimada
+                      ELSE 0 END), 2)                                           AS promedio_dias_retraso
 FROM totales t
 JOIN catalogo.proveedores pv ON pv.id_proveedor = t.id_proveedor
 LEFT JOIN ultima_recepcion u ON u.id_proveedor = t.id_proveedor
@@ -266,7 +271,10 @@ SELECT p.nombre                         AS producto,
        ex.existencia - ex.minimo        AS excedente,
        sd.nombre                        AS sede_con_faltante,
        fa.minimo - fa.existencia        AS faltante,
-       LEAST(ex.existencia - ex.minimo, fa.minimo - fa.existencia) AS unidades_sugeridas
+       -- se sugiere mover lo menor entre lo que sobra y lo que falta
+       CASE WHEN ex.existencia - ex.minimo < fa.minimo - fa.existencia
+            THEN ex.existencia - ex.minimo
+            ELSE fa.minimo - fa.existencia END AS unidades_sugeridas
 FROM stock_sede ex
 JOIN stock_sede fa ON fa.id_producto = ex.id_producto AND fa.id_sede <> ex.id_sede
 JOIN catalogo.productos p  ON p.id_producto = ex.id_producto
@@ -343,10 +351,14 @@ ORDER BY p.sku;
 
 \echo
 \echo '=== Consulta 18b. Productos comunes a Medellín y Cali (INTERSECT) ==='
-SELECT COUNT(*) AS productos_comunes
-FROM (SELECT id_producto FROM inventarios.inv_medellin
-      INTERSECT
-      SELECT id_producto FROM inventarios.inv_cali) comunes;
+SELECT p.sku, p.nombre
+FROM catalogo.productos p
+WHERE p.id_producto IN (
+    SELECT id_producto FROM inventarios.inv_medellin
+    INTERSECT
+    SELECT id_producto FROM inventarios.inv_cali
+)
+ORDER BY p.sku;
 
 \echo
 \echo '=== Consulta 19. Clasificación de vendedores por sede (RANK) ==='
@@ -380,8 +392,8 @@ WITH inv AS (
     GROUP BY i.id_sede
 ), ven AS (
     SELECT id_sede,
-           SUM(total_registrado) FILTER (WHERE estado IN ('CONFIRMADO', 'ENTREGADO')) AS valor_ventas,
-           COUNT(*)              FILTER (WHERE estado = 'PENDIENTE')                  AS pedidos_pendientes
+           SUM(CASE WHEN estado IN ('CONFIRMADO', 'ENTREGADO') THEN total_registrado END) AS valor_ventas,
+           COUNT(CASE WHEN estado = 'PENDIENTE' THEN 1 END)                             AS pedidos_pendientes
     FROM reportes.vista_pedidos_consolidado
     GROUP BY id_sede
 ), com AS (
@@ -393,7 +405,9 @@ WITH inv AS (
     WHERE oc.estado <> 'CANCELADA'
     GROUP BY a.id_sede
 ), tra AS (
-    SELECT a.id_sede, COUNT(*) AS transferencias
+    -- DISTINCT: una transferencia entre dos almacenes de la misma sede
+    -- coincide con ambos y no debe contarse dos veces
+    SELECT a.id_sede, COUNT(DISTINCT t.id_transferencia) AS transferencias
     FROM inventarios.transferencias t
     JOIN catalogo.almacenes a ON a.id_almacen IN (t.id_almacen_origen, t.id_almacen_destino)
     WHERE t.estado <> 'CANCELADA'

@@ -39,9 +39,6 @@ CREATE TABLE compras.detalle_recepcion (
     PRIMARY KEY (id_recepcion, id_producto)
 );
 
-CREATE INDEX idx_oc_proveedor       ON compras.ordenes_compra (id_proveedor);
-CREATE INDEX idx_recepciones_orden  ON compras.recepciones_compra (id_orden_compra);
-
 COMMENT ON TABLE compras.ordenes_compra       IS 'Responsable: Compras y Abastecimiento';
 COMMENT ON TABLE compras.detalle_orden_compra IS 'Responsable: Compras y Abastecimiento';
 COMMENT ON TABLE compras.recepciones_compra   IS 'Responsable: Compras y Abastecimiento';
