@@ -9,6 +9,8 @@ Proyecto final de Bases de Datos. TL;DR: una empresa con **4 sedes** (Bogotá, M
 
 ![Arquitectura (en HTML)](docs/diagramas/arquitectura-microservicios.drawio.png)
 
+![Diagrama relacional](docs/diagramas/diagrama_relacional.drawio.png)
+
 ## Ejecucion
 
 Necesitas PostgreSQL 12+ y `psql`. (todavia estoy mirando las ventajas en x version)
