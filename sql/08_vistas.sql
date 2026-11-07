@@ -1,26 +1,34 @@
 -- =====================================================================
 -- 08_vistas.sql
--- Microservicio de Reportes Corporativos: solo vistas de solo lectura.
+-- microservicio de reportes: aqui no hay tablas, solo vistas.
 --
--- Bloque A: parámetros y vistas de unificación de fragmentos (UNION ALL).
--- Bloque B: las 10 vistas obligatorias del enunciado.
+-- una vista es una consulta guardada con nombre. no copia datos: cada
+-- vez que se usa, lee las tablas en ese momento, asi siempre esta al dia.
 --
--- Las vistas que tienen columna id_sede sirven tanto para uso local
--- (WHERE id_sede = n) como para consulta consolidada (todas las sedes).
+-- parte a: vistas que juntan las 4 sedes en una sola (UNION ALL).
+-- parte b: las 10 vistas que pide el enunciado, hechas encima de las
+--          de la parte a.
+--
+-- si una vista tiene id_sede, sirve para una sede (WHERE id_sede = n)
+-- o para toda la empresa (sin WHERE).
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
--- A. Parámetros y unificación de fragmentos
+-- a. parametros y unificacion de fragmentos
 -- ---------------------------------------------------------------------
 
--- Fecha de corte y umbrales usados por todas las consultas (S-14, S-15, S-16)
+-- fecha de corte y umbrales que usan las vistas y las consultas
+-- (S-14, S-15, S-16). se usa una fecha fija en vez de current_date para
+-- que los resultados no cambien segun el dia en que se ejecute.
 CREATE VIEW reportes.parametros AS
 SELECT DATE '2026-10-15' AS fecha_corte,
        15                AS dias_pedido_antiguo,
        90                AS dias_baja_rotacion;
 
--- Une los 4 fragmentos de inventario. La columna fragmento indica de qué
--- tabla física proviene cada fila.
+-- junta los 4 inventarios en uno solo. la columna fragmento dice de que
+-- tabla viene cada fila.
+-- UNION ALL y no UNION: UNION gasta tiempo buscando repetidos, y aqui no
+-- puede haber, porque el CHECK de cada sede ya lo impide.
 CREATE VIEW reportes.vista_inventario_consolidado AS
 SELECT 'inventarios.inv_bogota'   AS fragmento, i.* FROM inventarios.inv_bogota   i
 UNION ALL
@@ -30,6 +38,7 @@ SELECT 'inventarios.inv_cali'     AS fragmento, i.* FROM inventarios.inv_cali   
 UNION ALL
 SELECT 'inventarios.inv_cedi'     AS fragmento, i.* FROM inventarios.inv_cedi     i;
 
+-- lo mismo para pedidos y para sus detalles
 CREATE VIEW reportes.vista_pedidos_consolidado AS
 SELECT 'ventas.ped_bogota'   AS fragmento, p.* FROM ventas.ped_bogota   p
 UNION ALL
@@ -49,10 +58,13 @@ UNION ALL
 SELECT 'ventas.det_ped_cedi'     AS fragmento, d.* FROM ventas.det_ped_cedi     d;
 
 -- ---------------------------------------------------------------------
--- B. Vistas obligatorias
+-- b. vistas obligatorias
 -- ---------------------------------------------------------------------
 
--- 1. Inventario por sede (fuentes: fragmentos de inventarios + catálogo)
+-- 1. inventario por sede: une el inventario consolidado con el catalogo
+--    para mostrar nombres en vez de ids, y calcula la valorizacion
+--    (existencia x precio de lista).
+--    fuentes: fragmentos de inventarios + catalogo
 CREATE VIEW reportes.vista_inventario_por_sede AS
 SELECT i.id_sede, s.nombre AS sede,
        i.id_almacen, a.nombre AS almacen,
@@ -66,7 +78,8 @@ JOIN catalogo.almacenes  a ON a.id_almacen   = i.id_almacen
 JOIN catalogo.productos  p ON p.id_producto  = i.id_producto
 JOIN catalogo.categorias c ON c.id_categoria = p.id_categoria;
 
--- 2. Alertas de reabastecimiento: existencia cero o bajo el mínimo (RN-18)
+-- 2. alertas de reabastecimiento: existencia cero o bajo el minimo
+--    (RN-18). se apoya en la vista 1, que ya trae los nombres.
 CREATE VIEW reportes.vista_alertas_reabastecimiento AS
 SELECT v.id_sede, v.sede, v.id_almacen, v.almacen, v.id_producto, v.sku, v.producto, v.categoria,
        v.existencia_actual, v.stock_minimo,
@@ -76,7 +89,9 @@ FROM reportes.vista_inventario_por_sede v
 WHERE v.existencia_actual = 0
    OR v.existencia_actual < v.stock_minimo;
 
--- 3. Productos activos sin registro de inventario en una sede
+-- 3. productos activos sin registro de inventario en una sede.
+--    CROSS JOIN arma todas las parejas producto-sede y NOT EXISTS deja
+--    solo las que no aparecen en ningun fragmento.
 CREATE VIEW reportes.vista_productos_sin_inventario AS
 SELECT s.id_sede, s.nombre AS sede, p.id_producto, p.sku, p.nombre AS producto, c.nombre AS categoria
 FROM catalogo.productos p
@@ -88,7 +103,9 @@ WHERE p.estado = 'ACTIVO'
                   WHERE i.id_sede = s.id_sede
                     AND i.id_producto = p.id_producto);
 
--- 4. Ventas confirmadas (CONFIRMADO o ENTREGADO, RN-29) por sede y mes
+-- 4. ventas confirmadas (CONFIRMADO o ENTREGADO, RN-29) por sede y mes.
+--    date_trunc('month', fecha) lleva cada fecha al dia 1 de su mes para
+--    agrupar por mes.
 CREATE VIEW reportes.vista_ventas_mensuales_por_sede AS
 SELECT p.id_sede, s.nombre AS sede,
        date_trunc('month', p.fecha_pedido)::date AS mes,
@@ -99,7 +116,11 @@ JOIN catalogo.sedes s ON s.id_sede = p.id_sede
 WHERE p.estado IN ('CONFIRMADO', 'ENTREGADO')
 GROUP BY p.id_sede, s.nombre, date_trunc('month', p.fecha_pedido);
 
--- 5. Pedidos pendientes con su antigüedad respecto de la fecha de corte
+-- 5. pedidos pendientes con su antiguedad respecto de la fecha de corte.
+--    restar dos DATE da los dias entre ellas. es_antiguo marca los que
+--    superan el umbral de 15 dias (S-15).
+--    CROSS JOIN con parametros (una sola fila) pega la fecha de corte a
+--    cada pedido.
 CREATE VIEW reportes.vista_pedidos_pendientes AS
 SELECT p.id_sede, s.nombre AS sede, p.id_pedido, p.fecha_pedido,
        pr.fecha_corte - p.fecha_pedido AS dias_antiguedad,
@@ -114,7 +135,11 @@ JOIN catalogo.clientes   cl ON cl.id_cliente  = p.id_cliente
 JOIN identidad.empleados e  ON e.id_empleado  = p.id_empleado
 WHERE p.estado = 'PENDIENTE';
 
--- 6. Saldos pendientes: total registrado menos pagos confirmados (RN-31)
+-- 6. saldos pendientes: total registrado menos pagos confirmados (RN-31).
+--    los pagos se suman primero por pedido (subconsulta pg) y despues se
+--    unen, asi un pedido con varios pagos no se repite.
+--    LEFT JOIN conserva los pedidos sin ningun pago; para ellos la suma
+--    sale NULL y COALESCE(pg.pagado, 0) la convierte en 0.
 CREATE VIEW reportes.vista_saldos_pendientes AS
 SELECT p.id_sede, s.nombre AS sede, p.id_pedido, p.fecha_pedido, p.estado,
        p.id_cliente, cl.nombre_completo AS cliente,
@@ -132,7 +157,9 @@ LEFT JOIN (SELECT id_sede, id_pedido, SUM(valor) AS pagado
 WHERE p.estado <> 'ANULADO'
   AND p.total_registrado - COALESCE(pg.pagado, 0) > 0;
 
--- 7. Compras pendientes de recibir por orden y producto
+-- 7. compras pendientes de recibir por orden y producto: solicitado
+--    menos lo recibido en todas sus recepciones registradas (RN-11).
+--    mismo patron que la vista 6: sumar primero, LEFT JOIN y COALESCE.
 CREATE VIEW reportes.vista_compras_pendientes AS
 SELECT oc.id_orden_compra, oc.fecha_orden, oc.fecha_estimada, oc.estado,
        pv.razon_social AS proveedor, a.nombre AS almacen_destino,
@@ -154,7 +181,10 @@ LEFT JOIN (SELECT rc.id_orden_compra, dr.id_producto, SUM(dr.cantidad_recibida) 
 WHERE oc.estado <> 'CANCELADA'
   AND d.cantidad_solicitada > COALESCE(r.recibida, 0);
 
--- 8. Transferencias despachadas y aún no recibidas (RN-22)
+-- 8. transferencias despachadas y aun no recibidas (RN-22).
+--    almacenes y sedes se unen dos veces, con alias distintos (ao/so
+--    para el origen, ad/sd para el destino), porque la transferencia
+--    tiene dos almacenes.
 CREATE VIEW reportes.vista_transferencias_en_transito AS
 SELECT t.id_transferencia,
        ao.nombre AS almacen_origen,  so.nombre AS sede_origen,
@@ -173,7 +203,9 @@ JOIN catalogo.productos p  ON p.id_producto = dt.id_producto
 WHERE t.estado = 'DESPACHADA'
   AND t.fecha_recepcion IS NULL;
 
--- 9. Devoluciones aprobadas frente a unidades vendidas, por producto
+-- 9. devoluciones aprobadas frente a unidades vendidas, por producto
+--    (RN-34). WITH define dos subconsultas con nombre (CTE): vendidas y
+--    devueltas se calculan por separado y luego se unen por producto.
 CREATE VIEW reportes.vista_devoluciones_por_producto AS
 WITH vendidas AS (
     SELECT d.id_producto, SUM(d.cantidad) AS unidades_vendidas
@@ -198,11 +230,14 @@ JOIN catalogo.productos  p ON p.id_producto  = v.id_producto
 JOIN catalogo.categorias c ON c.id_categoria = p.id_categoria
 LEFT JOIN devueltas dv ON dv.id_producto = v.id_producto;
 
--- 10. Reporte corporativo por sede. Cada fuente se agrega por separado en
---     su propia CTE y luego se une por id_sede, para no duplicar cifras
---     por relaciones uno a muchos (RN-42).
---     Fuentes: catalogo, fragmentos de inventarios y ventas, compras e
---     inventarios.transferencias.
+-- 10. reporte corporativo: un resumen por sede.
+--     el truco: si se unen pedidos, inventario y compras en un solo JOIN,
+--     cada pedido se repite muchas veces y las sumas salen infladas.
+--     por eso cada cosa se resume aparte (una CTE por fuente, una fila
+--     por sede) y al final se juntan por sede (RN-42).
+--     la prueba 10 de 11_pruebas.sql revisa que los totales cuadren.
+--     COUNT(CASE WHEN ... THEN 1 END) cuenta solo las filas que cumplen
+--     la condicion (las demas dan NULL y COUNT no las cuenta).
 CREATE VIEW reportes.vista_reporte_corporativo AS
 WITH inv AS (
     SELECT id_sede,
@@ -264,6 +299,7 @@ LEFT JOIN com        ON com.id_sede = s.id_sede
 LEFT JOIN tr_sal ts  ON ts.id_sede  = s.id_sede
 LEFT JOIN tr_ent te  ON te.id_sede  = s.id_sede;
 
+-- procedencia de cada vista, guardada en la base (seccion 6 del enunciado)
 COMMENT ON VIEW reportes.vista_inventario_consolidado      IS 'UNION ALL de inv_bogota, inv_medellin, inv_cali, inv_cedi';
 COMMENT ON VIEW reportes.vista_pedidos_consolidado         IS 'UNION ALL de ped_bogota, ped_medellin, ped_cali, ped_cedi';
 COMMENT ON VIEW reportes.vista_detalle_pedido_consolidado  IS 'UNION ALL de det_ped_bogota, det_ped_medellin, det_ped_cali, det_ped_cedi';

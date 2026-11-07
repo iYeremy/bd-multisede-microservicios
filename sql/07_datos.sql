@@ -1,26 +1,40 @@
 -- =====================================================================
 -- 07_datos.sql
--- Datos de prueba sintéticos y reproducibles (semilla fija).
--- Periodo: 1 de mayo al 15 de octubre de 2026. Fecha de corte: 2026-10-15.
+-- datos de prueba sinteticos y reproducibles (S-13).
+-- periodo: 1 de mayo al 15 de octubre de 2026 (mas de 4 meses, seccion
+-- 10 del enunciado). fecha de corte: 2026-10-15 (S-14).
 --
--- Escenarios que se garantizan a propósito:
---   * Productos que nunca se venden ........ 19, 35, 53, 70, 78
---   * Productos sin ventas desde julio ..... 12, 27, 44, 58, 75 (baja rotación)
---   * Productos descontinuados / inactivos . 39, 80 / 64
---   * Proveedores con retrasos ............. 3 y 7
---   * Huecos de surtido: Bogotá no tiene los múltiplos de 9, Medellín los
---     de 7 y Cali los de 5.
---   * Pedidos con pagos parciales, pedidos pendientes antiguos, compras
---     parciales, transferencias en tránsito y con diferencias.
+-- volumen: 4 sedes, 5 almacenes, 5 categorias, 80 productos,
+-- 10 proveedores, 100 clientes, 20 empleados, 300 pedidos, 60 ordenes
+-- de compra, 25 transferencias y 22 devoluciones.
+--
+-- escenarios que se fuerzan a proposito para que las consultas den
+-- resultados variados (seccion 10 del enunciado):
+--   * productos que nunca se venden ........ 19, 35, 53, 70, 78
+--   * productos sin ventas desde julio ..... 12, 27, 44, 58, 75 (baja rotacion, consulta 16)
+--   * productos descontinuados / inactivos . 39, 80 / 64
+--   * proveedores con retrasos ............. 3 y 7 (consulta 11)
+--   * huecos de surtido: bogota no tiene los multiplos de 9, medellin
+--     los de 7 y cali los de 5 (consultas 3 y 18)
+--   * pedidos con pagos parciales, pedidos pendientes antiguos, compras
+--     parciales, transferencias en transito y con diferencias.
+--
+-- tecnica general: los datos se generan primero en tablas temporales
+-- (CREATE TEMP TABLE, desaparecen al cerrar la sesion) y despues cada
+-- fila se inserta en el fragmento de su sede. asi se calcula todo una
+-- sola vez y se reparte segun id_sede.
 -- =====================================================================
 
+-- setseed fija la semilla de random(): cada ejecucion genera exactamente
+-- los mismos "numeros al azar", y por eso los mismos datos.
 SELECT setseed(0.2026);
 
 -- ---------------------------------------------------------------------
--- CATÁLOGO
--- Las claves IDENTITY numeran las filas en el orden en que se insertan
--- (1, 2, 3...). El resto del script usa esos números: sede 1 = Bogotá,
--- 2 = Medellín, 3 = Cali, 4 = CEDI; almacenes 1 a 5 en el orden de la lista.
+-- catalogo
+-- las claves IDENTITY numeran las filas en el orden en que se insertan
+-- (1, 2, 3...). el resto del script usa esos numeros: sede 1 = bogota,
+-- 2 = medellin, 3 = cali, 4 = CEDI; almacenes 1 a 5 en el orden de la
+-- lista (4 y 5 son las dos bodegas del CEDI).
 -- ---------------------------------------------------------------------
 INSERT INTO catalogo.sedes (nombre, ciudad, direccion, tipo_sede) VALUES
     ('Sede Bogotá',   'Bogotá',   'Calle 72 # 10-34',          'VENTA'),
@@ -42,7 +56,8 @@ INSERT INTO catalogo.categorias (nombre, descripcion) VALUES
     ('Limpieza del hogar',  'Detergentes, desinfectantes y accesorios'),
     ('Papelería y oficina', 'Útiles escolares y de oficina');
 
--- id_producto: ALI = 1-16, BEB = 17-32, ASE = 33-48, LIM = 49-64, PAP = 65-80
+-- 16 productos por categoria. id_producto: ALI = 1-16, BEB = 17-32,
+-- ASE = 33-48, LIM = 49-64, PAP = 65-80
 INSERT INTO catalogo.productos (sku, nombre, id_categoria, unidad_medida, precio_lista, estado) VALUES
     ('ALI-001', 'Arroz blanco 1 kg',              1, 'KG',       4800, 'ACTIVO'),
     ('ALI-002', 'Azúcar refinada 1 kg',           1, 'KG',       4200, 'ACTIVO'),
@@ -137,7 +152,11 @@ INSERT INTO catalogo.proveedores (identificacion, razon_social, ciudad, correo, 
     ('900111009-9', 'Lácteos de la Montaña S.A.S.',     'Manizales',    'ventas@lacmontana.co',     '6064443322'),
     ('900111010-0', 'Comercial Santander Ltda.',        'Bucaramanga',  'info@comsantander.co',     '6071112233');
 
--- Cada producto tiene un proveedor principal y los pares un segundo proveedor.
+-- cada producto tiene un proveedor principal y los de id par un segundo
+-- proveedor (RN-05: uno o varios). el proveedor sale de una formula con
+-- % (modulo) para repartir los productos entre los 10 proveedores; el
+-- costo es el 65 % o el 68 % del precio de lista.
+-- UNION ALL junta las dos listas en un solo INSERT.
 INSERT INTO catalogo.producto_proveedor (id_producto, id_proveedor, costo_referencia, plazo_entrega_dias)
 SELECT p.id_producto, ((p.id_producto - 1) % 10) + 1,
        round(p.precio_lista * 0.65, 0), 5 + ((((p.id_producto - 1) % 10) + 1) % 4) * 3
@@ -148,6 +167,10 @@ SELECT p.id_producto, ((p.id_producto + 4) % 10) + 1,
 FROM catalogo.productos p
 WHERE p.id_producto % 2 = 0;
 
+-- 100 clientes con generate_series(1, 100), que produce una fila por
+-- cada numero i. con i se arma todo: cada 10 es una empresa (NIT), el
+-- resto personas; los nombres salen de listas (ARRAY[...][posicion]).
+-- los clientes 48 y 97 quedan inactivos.
 INSERT INTO catalogo.clientes (tipo_documento, num_documento, nombre_completo, correo, telefono, estado)
 SELECT CASE WHEN i % 10 = 0 THEN 'NIT' WHEN i % 23 = 0 THEN 'CE' ELSE 'CC' END,
        CASE WHEN i % 10 = 0 THEN (900200000 + i * 37)::text ELSE (1010200000 + i * 7919)::text END,
@@ -169,9 +192,11 @@ FROM generate_series(1, 100) AS i
 ORDER BY i;
 
 -- ---------------------------------------------------------------------
--- IDENTIDAD
+-- identidad
 -- ---------------------------------------------------------------------
--- id_empleado 1 a 20 en el orden de la lista
+-- id_empleado 1 a 20 en el orden de la lista. los vendedores de cada
+-- sede (3-5 bogota, 8-10 medellin, 12-14 cali, 18-19 CEDI) se usan
+-- abajo para asignar los pedidos.
 INSERT INTO identidad.empleados (id_sede, num_documento, nombre_completo, cargo, correo) VALUES
     (1, '79100001', 'Ricardo Acosta Peña',      'ADMINISTRADOR',   'racosta@andina.co'),
     (1, '52100002', 'Mónica Salazar Ríos',      'GERENTE',         'msalazar@andina.co'),
@@ -194,6 +219,9 @@ INSERT INTO identidad.empleados (id_sede, num_documento, nombre_completo, cargo,
     (4, '52100019', 'Gloria Barrera Pinzón',    'VENDEDOR',        'gbarrera@andina.co'),
     (1, '79100020', 'Tomás Villamil Ortega',    'AUDITOR',         'tvillamil@andina.co');
 
+-- 12 de los 20 empleados tienen usuario (relacion 1:1 opcional).
+-- VALUES (...) AS u(...) funciona como una tabla escrita a mano.
+-- md5() genera un hash de ejemplo (S-12).
 INSERT INTO identidad.usuarios (id_empleado, nombre_usuario, password_hash, rol, fecha_creacion)
 SELECT u.emp, u.usr, md5(u.usr || '2026'), u.rol, TIMESTAMP '2026-04-20 08:00' + u.id * INTERVAL '1 hour'
 FROM (VALUES
@@ -212,6 +240,7 @@ FROM (VALUES
 ) AS u(id, emp, usr, rol)
 ORDER BY u.id;
 
+-- 60 accesos al azar repartidos en el periodo
 INSERT INTO identidad.auditoria_accesos (id_usuario, fecha_hora, accion, objeto_consultado)
 SELECT 1 + floor(random() * 12)::int,
        TIMESTAMP '2026-05-01 07:00' + (random() * 167) * INTERVAL '1 day',
@@ -222,8 +251,16 @@ FROM generate_series(1, 60);
 
 
 -- ---------------------------------------------------------------------
--- INVENTARIOS: se generan en una tabla temporal y luego cada fila se
+-- inventarios
+-- se generan en una tabla temporal (tmp_inv) cruzando almacenes con
+-- productos (CROSS JOIN = todas las combinaciones) y luego cada fila se
 -- inserta en el fragmento de su sede.
+--
+-- r y r2 son dos numeros al azar por fila que deciden la existencia:
+--   almacenes de venta (1-3): 6 % en cero, 14 % bajo el minimo y el
+--     resto por encima (alertas de reabastecimiento, consulta 2).
+--   bodega general CEDI (4): casi todo con mucho stock.
+--   bodega de despacho CEDI (5): pocas unidades.
 -- ---------------------------------------------------------------------
 CREATE TEMP TABLE tmp_inv AS
 SELECT x.id_sede, x.id_almacen, x.id_producto,
@@ -244,19 +281,23 @@ FROM (SELECT a.id_sede, a.id_almacen, p.id_producto,
                                ELSE 10 + floor(random() * 21)::int END AS minimo
       FROM catalogo.almacenes a
       CROSS JOIN catalogo.productos p
-      -- Huecos de surtido: cada almacén deja por fuera algunos productos
+      -- huecos de surtido: cada almacen deja por fuera algunos productos
       WHERE (a.id_almacen = 1 AND p.id_producto % 9 <> 0)
          OR (a.id_almacen = 2 AND p.id_producto % 7 <> 0)
          OR (a.id_almacen = 3 AND p.id_producto % 5 <> 0)
          OR (a.id_almacen = 4 AND p.id_producto <> 80)
          OR (a.id_almacen = 5 AND p.id_producto <= 20)) x;
 
--- Los productos sin rotación deben tener existencia positiva
+-- los productos sin rotacion deben tener existencia positiva: la
+-- consulta 16 busca productos con stock que no se venden
 UPDATE tmp_inv
 SET existencia_actual = stock_minimo + 25
 WHERE id_producto IN (19, 35, 53, 70, 78, 12, 27, 44, 58, 75)
   AND existencia_actual = 0;
 
+-- reparto en fragmentos: cada INSERT toma solo las filas de su sede
+-- (WHERE id_sede = n). si una fila tuviera otra sede, el CHECK del
+-- fragmento la rechazaria.
 INSERT INTO inventarios.inv_bogota (id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion)
 SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM tmp_inv WHERE id_sede = 1;
 INSERT INTO inventarios.inv_medellin (id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion)
@@ -267,7 +308,11 @@ INSERT INTO inventarios.inv_cedi (id_sede, id_almacen, id_producto, existencia_a
 SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM tmp_inv WHERE id_sede = 4;
 
 -- ---------------------------------------------------------------------
--- VENTAS: 300 pedidos (Bogotá 100, Medellín 80, Cali 70, CEDI 50)
+-- ventas: 300 pedidos (bogota 100, medellin 80, cali 70, CEDI 50)
+-- primero la base de cada pedido: sede, almacen de esa sede, cliente al
+-- azar, uno de los vendedores de la sede, fecha en el periodo y cuantas
+-- lineas (1 a 5) tendra. generate_series(1, 100) con "n <= cant" deja
+-- la cantidad exacta de pedidos de cada sede.
 -- ---------------------------------------------------------------------
 CREATE TEMP TABLE tmp_ped_base AS
 SELECT s.id_sede, s.id_almacen,
@@ -283,7 +328,12 @@ FROM (VALUES (1, 1, 100, ARRAY[3, 4, 5]),
 CROSS JOIN generate_series(1, 100) AS g(n)
 WHERE g.n <= s.cant;
 
--- Consecutivo por sede en orden cronológico y estado según antigüedad
+-- id_pedido: ROW_NUMBER() OVER (PARTITION BY id_sede ...) numera desde 1
+-- dentro de cada sede en orden de fecha, igual que lo hara el IDENTITY
+-- de cada fragmento.
+-- estado segun antiguedad: los pedidos viejos casi siempre ya estan
+-- entregados y los recientes suelen seguir pendientes; algunos viejos
+-- quedan pendientes a proposito (consulta 9).
 CREATE TEMP TABLE tmp_ped AS
 SELECT b.*,
        ROW_NUMBER() OVER (PARTITION BY b.id_sede ORDER BY b.fecha_pedido, b.id_cliente, b.r_estado)::int AS id_pedido,
@@ -298,10 +348,12 @@ SELECT b.*,
        END AS estado
 FROM tmp_ped_base b;
 
--- Detalles: a cada pedido se le asignan nlineas productos distintos al
--- azar (ROW_NUMBER sobre un orden aleatorio) entre los que existen en el
--- almacén del pedido. El precio se guarda en el detalle (antes de agosto
--- la lista era 5 % menor).
+-- detalles: a cada pedido se le asignan nlineas productos distintos al
+-- azar (ROW_NUMBER sobre ORDER BY random() y luego n <= nlineas) entre
+-- los que existen en el almacen del pedido.
+-- el precio se guarda en el detalle: antes de agosto la lista era 5 %
+-- menor, asi se ve que el precio historico no depende del catalogo
+-- actual (RN-27). el CEDI vende al por mayor (cantidades hasta 30, S-02).
 CREATE TEMP TABLE tmp_det AS
 SELECT c.id_sede, c.id_pedido, c.id_producto,
        1 + floor(random() * CASE WHEN c.id_sede = 4 THEN 30 ELSE 8 END)::int AS cantidad,
@@ -316,7 +368,9 @@ FROM (SELECT p.id_sede, p.id_pedido, p.fecha_pedido, p.nlineas, pr.id_producto, 
              OR pr.id_producto NOT IN (12, 27, 44, 58, 75, 39, 64, 80))) c -- sin ventas desde julio
 WHERE c.n <= c.nlineas;
 
--- Total registrado = suma de cantidad × precio de los detalles (RN-28)
+-- total registrado = suma de cantidad x precio de los detalles (RN-28).
+-- UPDATE ... FROM actualiza cada pedido con el total calculado en la
+-- subconsulta d.
 ALTER TABLE tmp_ped ADD COLUMN total_registrado NUMERIC(14,2);
 UPDATE tmp_ped p
 SET total_registrado = d.total
@@ -324,10 +378,11 @@ FROM (SELECT id_sede, id_pedido, SUM(cantidad * precio_unitario) AS total
       FROM tmp_det GROUP BY id_sede, id_pedido) d
 WHERE p.id_sede = d.id_sede AND p.id_pedido = d.id_pedido;
 
--- Cada pedido va a su fragmento, y sus detalles al fragmento de la misma sede.
--- Los pedidos se insertan ordenados por id_pedido sin indicar el número:
--- el IDENTITY del fragmento les asigna 1, 2, 3..., los mismos números que
--- ya tienen sus detalles en tmp_det.
+-- cada pedido va a su fragmento, y sus detalles al fragmento de la misma
+-- sede. los pedidos se insertan ordenados por id_pedido SIN indicar el
+-- numero: el IDENTITY del fragmento les asigna 1, 2, 3..., los mismos
+-- numeros que ya tienen sus detalles en tmp_det. por eso la FK de los
+-- detalles encuentra su pedido.
 INSERT INTO ventas.ped_bogota (id_sede, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado)
 SELECT id_sede, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado FROM tmp_ped WHERE id_sede = 1 ORDER BY id_pedido;
 INSERT INTO ventas.ped_medellin (id_sede, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado)
@@ -346,8 +401,13 @@ SELECT id_sede, id_pedido, id_producto, cantidad, precio_unitario FROM tmp_det W
 INSERT INTO ventas.det_ped_cedi (id_sede, id_pedido, id_producto, cantidad, precio_unitario)
 SELECT id_sede, id_pedido, id_producto, cantidad, precio_unitario FROM tmp_det WHERE id_sede = 4;
 
--- Pagos: entregados pagados (1 o 2 cuotas), confirmados con saldo en
--- algunos casos, pendientes con anticipo y anulados con pago rechazado.
+-- pagos (RN-30, RN-31):
+--   entregados   pagados completos, en 1 o 2 cuotas
+--   confirmados  algunos pagados, otros con saldo (consulta 7)
+--   pendientes   algunos con anticipo del 30 %
+--   anulados     algunos con un pago rechazado
+-- el primer INSERT crea el primer pago y el segundo la segunda cuota.
+-- las fechas nunca pasan de la fecha de corte.
 CREATE TEMP TABLE tmp_pag AS
 SELECT id_sede, id_pedido, fecha_pedido, estado, total_registrado AS total, random() AS r,
        (ARRAY['EFECTIVO', 'TARJETA_DEBITO', 'TARJETA_CREDITO', 'TRANSFERENCIA'])[1 + floor(random() * 4)::int] AS medio
@@ -380,7 +440,9 @@ FROM tmp_pag
 WHERE (estado = 'ENTREGADO' AND r < 0.3)
    OR (estado = 'CONFIRMADO' AND r >= 0.7);
 
--- Devoluciones: 22 pedidos confirmados o entregados, 1 o 2 productos cada una
+-- devoluciones: 22 pedidos confirmados o entregados elegidos al azar
+-- (RN-32), con 1 o 2 productos cada una. estado: la mayoria aprobadas,
+-- algunas solicitadas y rechazadas.
 CREATE TEMP TABLE tmp_dev AS
 SELECT (ROW_NUMBER() OVER ())::int AS id_devolucion, x.*
 FROM (SELECT id_sede, id_pedido, fecha_pedido
@@ -401,8 +463,9 @@ SELECT id_sede, id_pedido,
 FROM tmp_dev
 ORDER BY id_devolucion;
 
--- Se devuelven los 1 o 2 productos con más unidades del pedido, la mitad
--- de lo vendido (nunca más de lo vendido, RN-33)
+-- se devuelven los 1 o 2 productos con mas unidades del pedido, la mitad
+-- de lo vendido (nunca mas de lo vendido, RN-33). como salen del JOIN
+-- con los detalles del pedido, siempre son productos del pedido (RN-32).
 INSERT INTO ventas.detalle_devolucion (id_devolucion, id_producto, cantidad, condicion_producto)
 SELECT x.id_devolucion, x.id_producto,
        CASE WHEN x.cantidad / 2 < 1 THEN 1 ELSE x.cantidad / 2 END,
@@ -414,13 +477,17 @@ FROM (SELECT d.id_devolucion, dp.id_producto, dp.cantidad,
 WHERE x.n <= 1 + x.id_devolucion % 2;
 
 -- ---------------------------------------------------------------------
--- COMPRAS: 60 órdenes repartidas en el periodo
+-- compras: 60 ordenes repartidas en el periodo
+-- la mayoria llega al CEDI (almacen 4, S-06); cada 5 ordenes una llega
+-- a una sede. retraso = dias que se pasa de la fecha estimada: los
+-- proveedores 3 y 7 siempre se retrasan, los demas llegan entre 2 dias
+-- antes y 1 despues.
 -- ---------------------------------------------------------------------
 CREATE TEMP TABLE tmp_oc AS
 SELECT o.*,
        o.fecha_orden + 5 + (o.id_proveedor % 4) * 3 AS fecha_estimada,
        CASE WHEN o.id_proveedor IN (3, 7) THEN 3 + o.id_orden_compra % 8   -- proveedores con retraso
-            ELSE -2 + o.id_orden_compra % 4 END                            -- entre 2 días antes y 1 después
+            ELSE -2 + o.id_orden_compra % 4 END                            -- entre 2 dias antes y 1 despues
             AS retraso
 FROM (SELECT i AS id_orden_compra,
              1 + (i * 7) % 10                                   AS id_proveedor,
@@ -429,6 +496,8 @@ FROM (SELECT i AS id_orden_compra,
              DATE '2026-05-01' + ((i - 1) * 163) / 59            AS fecha_orden
       FROM generate_series(1, 60) AS i) o;
 
+-- estado de cada orden (RN-13): 2 canceladas, emitidas si aun no llega
+-- la fecha estimada, algunas parciales y el resto recibidas
 ALTER TABLE tmp_oc ADD COLUMN estado VARCHAR(10);
 UPDATE tmp_oc SET estado = CASE
     WHEN id_orden_compra IN (17, 41)                                 THEN 'CANCELADA'
@@ -441,7 +510,9 @@ SELECT id_proveedor, id_almacen_destino, id_empleado, fecha_orden, fecha_estimad
 FROM tmp_oc
 ORDER BY id_orden_compra;
 
--- Cada orden pide entre 2 y 4 productos al azar de los que ofrece su proveedor
+-- cada orden pide entre 2 y 4 productos al azar de los que ofrece su
+-- proveedor (JOIN con producto_proveedor). el costo pactado varia un
+-- poco alrededor del costo de referencia (RN-27).
 INSERT INTO compras.detalle_orden_compra (id_orden_compra, id_producto, cantidad_solicitada, costo_unitario)
 SELECT x.id_orden_compra, x.id_producto,
        (2 + floor(random() * 10)::int) * 10,
@@ -452,10 +523,12 @@ FROM (SELECT o.id_orden_compra, pp.id_producto, pp.costo_referencia,
       JOIN catalogo.producto_proveedor pp ON pp.id_proveedor = o.id_proveedor) x
 WHERE x.n <= 2 + x.id_orden_compra % 3;
 
--- Recepciones: las órdenes recibidas llegan en 1 o 2 entregas;
--- las parciales tienen una sola entrega con la mitad de lo pedido.
--- La fecha de recepción no puede ser anterior a la orden ni posterior a
--- la fecha de corte.
+-- recepciones (RN-11): las ordenes recibidas llegan en 1 o 2 entregas;
+-- las parciales tienen una sola entrega con la mitad de lo pedido
+-- (consulta 12). la fecha de recepcion no puede ser anterior a la orden
+-- ni posterior a la fecha de corte.
+-- el UNION ALL arma la primera entrega de todas y la segunda solo de
+-- las que llegan en dos partes.
 CREATE TEMP TABLE tmp_rec AS
 SELECT (ROW_NUMBER() OVER (ORDER BY x.id_orden_compra, x.nro))::int AS id_recepcion,
        x.id_orden_compra, x.nro, x.estado, x.dos_entregas,
@@ -475,6 +548,8 @@ FROM (
 INSERT INTO compras.recepciones_compra (id_orden_compra, fecha_recepcion, estado)
 SELECT id_orden_compra, fecha_recepcion, 'REGISTRADA' FROM tmp_rec ORDER BY id_recepcion;
 
+-- cada recepcion recibe los productos de su orden (RN-12): la mitad si
+-- es parcial, todo si es una sola entrega, o 60 % + 40 % si son dos
 INSERT INTO compras.detalle_recepcion (id_recepcion, id_producto, cantidad_recibida)
 SELECT r.id_recepcion, d.id_producto,
        CASE
@@ -487,7 +562,10 @@ FROM tmp_rec r
 JOIN compras.detalle_orden_compra d ON d.id_orden_compra = r.id_orden_compra;
 
 -- ---------------------------------------------------------------------
--- TRANSFERENCIAS: 25 (la mayoría del CEDI hacia las sedes)
+-- transferencias: 25, la mayoria del CEDI (almacen 4) hacia las sedes.
+-- estados fijos: 4 despachadas sin recibir (en transito, consulta 13),
+-- 2 solicitadas, 1 cancelada y el resto recibidas. las fechas de
+-- despacho y recepcion solo existen cuando corresponde (RN-20).
 -- ---------------------------------------------------------------------
 CREATE TEMP TABLE tmp_tr AS
 SELECT t.*,
@@ -511,7 +589,8 @@ SELECT origen, destino, fecha_solicitud, fecha_despacho,
 FROM tmp_tr
 ORDER BY id_transferencia;
 
--- Cada transferencia lleva entre 2 y 4 productos con existencia en el origen
+-- cada transferencia lleva entre 2 y 4 productos con existencia en el
+-- origen. cantidad_recibida queda NULL si todavia no se recibe (RN-21).
 INSERT INTO inventarios.detalle_transferencia (id_transferencia, id_producto, cantidad_enviada, cantidad_recibida)
 SELECT x.id_transferencia, x.id_producto, x.enviada,
        CASE WHEN x.estado = 'RECIBIDA' THEN x.enviada END
@@ -522,7 +601,9 @@ FROM (SELECT s.id_transferencia, s.estado, s.id_producto, 10 + floor(random() * 
             JOIN tmp_inv i ON i.id_almacen = t.origen AND i.existencia_actual > 0) s
       WHERE s.n <= 2 + s.id_transferencia % 3) x;
 
--- Diferencias entre enviado y recibido en algunas transferencias recibidas
+-- diferencias entre enviado y recibido en algunas transferencias
+-- recibidas (RN-23, consulta 14): llegan 1 a 3 unidades menos del
+-- primer producto
 UPDATE inventarios.detalle_transferencia dt
 SET cantidad_recibida = dt.cantidad_enviada - (1 + dt.id_transferencia % 3)
 FROM inventarios.transferencias t
@@ -532,4 +613,5 @@ WHERE t.id_transferencia = dt.id_transferencia
   AND dt.id_producto = (SELECT min(id_producto) FROM inventarios.detalle_transferencia d2
                         WHERE d2.id_transferencia = dt.id_transferencia);
 
+-- limpieza de las tablas temporales
 DROP TABLE tmp_inv, tmp_ped_base, tmp_ped, tmp_det, tmp_pag, tmp_dev, tmp_oc, tmp_rec, tmp_tr;
