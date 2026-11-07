@@ -1,23 +1,31 @@
 -- =====================================================================
 -- 05_inventarios.sql
--- Microservicio de Inventarios y Transferencias.
+-- microservicio de inventarios y transferencias.
 --
--- FRAGMENTACIÓN HORIZONTAL: el inventario se guarda en una tabla física
--- por sede, todas con las mismas columnas:
---     inv_bogota (1) · inv_medellin (2) · inv_cali (3) · inv_cedi (4)
--- La condición de cada fragmento es id_sede = n y se asegura con un
--- CHECK: una fila con otra sede se rechaza, así un registro nunca puede
--- quedar en dos fragmentos. La vista reportes.vista_inventario_consolidado
--- reúne los cuatro con UNION ALL.
+-- la idea principal: el inventario no va en una sola tabla, va partido
+-- por sede (fragmentacion horizontal). cada sede tiene su propia tabla:
+--     inv_bogota (1), inv_medellin (2), inv_cali (3), inv_cedi (4)
+-- las 4 tienen las mismas columnas. lo unico que cambia es el numero
+-- de sede en el CHECK: en inv_bogota solo pueden entrar filas con
+-- id_sede = 1, asi una fila nunca queda en dos tablas (RN-17).
+--
+-- para ver el inventario de toda la empresa se juntan las 4 con la
+-- vista reportes.vista_inventario_consolidado (UNION ALL).
+--
+-- ojo: id_almacen ya dice de que sede es, asi que id_sede sobra un
+-- poco. se deja porque es la columna que usa el CHECK para partir la
+-- tabla (ver docs/normalizacion.md, seccion 4.1).
 -- =====================================================================
 
 CREATE TABLE inventarios.inv_bogota (
-    id_sede             INTEGER   NOT NULL DEFAULT 1 CHECK (id_sede = 1),  -- † catalogo.sedes
-    id_almacen          INTEGER   NOT NULL,             -- † catalogo.almacenes
-    id_producto         INTEGER   NOT NULL,             -- † catalogo.productos
-    existencia_actual   INTEGER   NOT NULL CHECK (existencia_actual >= 0),
+    -- DEFAULT 1: si el INSERT no indica la sede, se usa la del fragmento
+    id_sede             INTEGER   NOT NULL DEFAULT 1 CHECK (id_sede = 1),  -- ref: catalogo.sedes
+    id_almacen          INTEGER   NOT NULL,             -- ref: catalogo.almacenes
+    id_producto         INTEGER   NOT NULL,             -- ref: catalogo.productos
+    existencia_actual   INTEGER   NOT NULL CHECK (existencia_actual >= 0),  -- RN-16
     stock_minimo        INTEGER   NOT NULL CHECK (stock_minimo >= 0),
     fecha_actualizacion TIMESTAMP NOT NULL DEFAULT now(),
+    -- un solo registro por sede, almacen y producto (RN-15)
     PRIMARY KEY (id_sede, id_almacen, id_producto)
 );
 
@@ -41,6 +49,7 @@ CREATE TABLE inventarios.inv_cali (
     PRIMARY KEY (id_sede, id_almacen, id_producto)
 );
 
+-- el CEDI tiene dos almacenes (4 y 5), ambos en este fragmento
 CREATE TABLE inventarios.inv_cedi (
     id_sede             INTEGER   NOT NULL DEFAULT 4 CHECK (id_sede = 4),
     id_almacen          INTEGER   NOT NULL,
@@ -51,30 +60,41 @@ CREATE TABLE inventarios.inv_cedi (
     PRIMARY KEY (id_sede, id_almacen, id_producto)
 );
 
+-- traslado entre dos almacenes. no se fragmenta: puede ir de una sede a
+-- otra. las dos columnas de almacen son dos relaciones distintas con
+-- almacenes (origen y destino), por eso hay dos identificadores.
+-- las fechas quedan vacias (NULL) hasta que ocurre cada paso.
 CREATE TABLE inventarios.transferencias (
     id_transferencia   INTEGER     GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    id_almacen_origen  INTEGER     NOT NULL,            -- † catalogo.almacenes
-    id_almacen_destino INTEGER     NOT NULL,            -- † catalogo.almacenes
+    id_almacen_origen  INTEGER     NOT NULL,            -- ref: catalogo.almacenes
+    id_almacen_destino INTEGER     NOT NULL,            -- ref: catalogo.almacenes
     fecha_solicitud    DATE        NOT NULL,
-    fecha_despacho     DATE,                            -- NULL hasta despachar
-    fecha_recepcion    DATE,                            -- NULL hasta recibir
+    fecha_despacho     DATE,
+    fecha_recepcion    DATE,
     estado             VARCHAR(10) NOT NULL DEFAULT 'SOLICITADA'
                        CHECK (estado IN ('SOLICITADA', 'DESPACHADA', 'RECIBIDA', 'CANCELADA')),
-    CHECK (id_almacen_origen <> id_almacen_destino),                        -- RN-19
-    CHECK (fecha_despacho  IS NULL OR fecha_despacho  >= fecha_solicitud),  -- RN-20
+    -- origen y destino distintos (RN-19)
+    CHECK (id_almacen_origen <> id_almacen_destino),
+    -- orden de las fechas: solicitud <= despacho <= recepcion (RN-20).
+    -- "col IS NULL OR ..." deja pasar la fila mientras la fecha no exista;
+    -- no se puede recibir algo que no se ha despachado.
+    CHECK (fecha_despacho  IS NULL OR fecha_despacho  >= fecha_solicitud),
     CHECK (fecha_recepcion IS NULL OR (fecha_despacho IS NOT NULL AND fecha_recepcion >= fecha_despacho))
 );
 
+-- productos de cada transferencia. cantidad_recibida queda NULL
+-- mientras esta en transito y puede diferir de la enviada (RN-21, RN-23).
 CREATE TABLE inventarios.detalle_transferencia (
     id_transferencia  INTEGER NOT NULL REFERENCES inventarios.transferencias (id_transferencia),
-    id_producto       INTEGER NOT NULL,                 -- † catalogo.productos
+    id_producto       INTEGER NOT NULL,                 -- ref: catalogo.productos
     cantidad_enviada  INTEGER NOT NULL CHECK (cantidad_enviada > 0),
-    cantidad_recibida INTEGER CHECK (cantidad_recibida >= 0),  -- NULL hasta recibir (RN-21)
+    cantidad_recibida INTEGER CHECK (cantidad_recibida >= 0),
     PRIMARY KEY (id_transferencia, id_producto)
 );
 
-COMMENT ON TABLE inventarios.inv_bogota            IS 'Responsable: Inventarios y Transferencias. Fragmento de inventario: id_sede = 1 (Sede Bogotá)';
-COMMENT ON TABLE inventarios.inv_medellin          IS 'Responsable: Inventarios y Transferencias. Fragmento de inventario: id_sede = 2 (Sede Medellín)';
+-- el comentario de cada fragmento documenta su condicion
+COMMENT ON TABLE inventarios.inv_bogota            IS 'Responsable: Inventarios y Transferencias. Fragmento de inventario: id_sede = 1 (Sede Bogota)';
+COMMENT ON TABLE inventarios.inv_medellin          IS 'Responsable: Inventarios y Transferencias. Fragmento de inventario: id_sede = 2 (Sede Medellin)';
 COMMENT ON TABLE inventarios.inv_cali              IS 'Responsable: Inventarios y Transferencias. Fragmento de inventario: id_sede = 3 (Sede Cali)';
 COMMENT ON TABLE inventarios.inv_cedi              IS 'Responsable: Inventarios y Transferencias. Fragmento de inventario: id_sede = 4 (CEDI Funza)';
 COMMENT ON TABLE inventarios.transferencias        IS 'Responsable: Inventarios y Transferencias';
