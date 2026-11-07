@@ -6,7 +6,7 @@ Oct 23, 2026 · @Yeremy
 
 ## 1. Descripción del problema
 
-Comercializadora Andina S.A.S. (empresa ficticia) necesita una base de datos que le permita operar cada sede por separado y, al mismo tiempo, obtener reportes consolidados de toda la organización.
+Comercializadora Andina S.A.S. (empresa ficticia xd) necesita una base de datos que le permita operar cada sede por separado y, al mismo tiempo, obtener reportes consolidados de toda la organización.
 
 ### 1.1 Contexto
 
@@ -48,7 +48,7 @@ Diseñar e implementar en PostgreSQL la capa de datos de un sistema comercial mu
 
 ## 3. Alcance
 
-El proyecto cubre el diseño completo y la implementación en PostgreSQL de la capa de datos; la arquitectura de microservicios se diseña y documenta, pero no se programa.
+El proyecto cubre el diseño completo y la implementación en PostgreSQL de la capa de datos; la arquitectura de microservicios se diseña y documenta, se espera programarla pero la primera parte es todo el flujo de datos y tenerlo listo.
 
 ### 3.1 Sedes y almacenes
 
@@ -86,9 +86,7 @@ Se fragmentan dos conjuntos operacionales por sede: los **inventarios** y los **
 
 ### 3.5 Excluido
 
-- Programación de microservicios, API REST, Docker o interfaces web y móviles.
-- Despliegue de varias instancias o servidores de base de datos.
-- Sincronización en tiempo real entre servicios.
+- Docker
 - Triggers, políticas RLS, autenticación web y pruebas de concurrencia, bloqueo o reversión de transacciones.
 - Conciliación automática de movimientos de inventario.
 
