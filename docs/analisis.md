@@ -1,6 +1,8 @@
 # Análisis del Proyecto Final de Bases de Datos
 ## Sistema de gestión comercial multisede basado en una arquitectura de microservicios
 
+> **Cambio respecto al enunciado (indicado por el profesor, noviembre de 2026).** Este análisis resume el enunciado original, que acepta una sola base con un esquema por microservicio como "simulación académica" y no exige backend. El profesor pidió después **microservicios reales**: cada microservicio con su propia base de datos, backend obligatorio y despliegue en la nube. Las secciones 9.6 y 16.2 quedan reemplazadas por esa decisión; el diseño actual está en `problema-alcance-supuestos-reglasdenegocio.md` y en `manual-ejecucion.md`.
+
 ## 1. Descripción general del proyecto
 
 ### 1.1. Contexto del problema
@@ -617,6 +619,8 @@ Una única instancia de PostgreSQL con esquemas separados constituye una simulac
 
 Esto no equivale a desplegar microservicios independientes. La documentación debe explicar esta diferencia y representar conceptualmente las interacciones entre los módulos.
 
+> **Reemplazado:** el profesor pidió microservicios reales, con una base de datos por microservicio (ver la nota al inicio).
+
 ---
 
 ## 10. Requisitos de seguridad, usuarios y permisos
@@ -1159,6 +1163,8 @@ Los nombres de referencia propuestos por el documento son:
 - `reportes`
 
 El esquema `reportes` debe contener únicamente vistas y consultas de integración, sin tablas adicionales de negocio.
+
+> **Reemplazado:** ahora cada microservicio tiene su propia base (`andina_catalogo`, `andina_compras`…), con un esquema del mismo nombre dentro. Como una vista no puede leer otra base, `andina_reportes` guarda una copia de solo lectura de los demás servicios y sus vistas leen esa copia; sigue sin tener tablas propias de negocio.
 
 La organización definitiva debe conservar la separación por responsabilidades y permitir identificar claramente la propiedad lógica de cada entidad.
 

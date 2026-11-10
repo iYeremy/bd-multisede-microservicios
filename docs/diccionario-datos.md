@@ -4,13 +4,15 @@ Proyecto final de Bases de Datos · Comercializadora Andina S.A.S.
 
 Este documento cubre la parte de diccionario de datos del entregable 4. Se generó a partir de los scripts `sql/02` a `sql/08`, que son la fuente de verdad.
 
+Cada microservicio tiene su **propia base de datos** (`andina_<servicio>`) y dentro de ella un esquema con el nombre del servicio. Por eso cada tabla se nombra `esquema.tabla` (por ejemplo `ventas.ped_bogota`), igual en su base y en la copia de lectura de `andina_reportes`.
+
 ## Convenciones
 
 | Marca | Significado |
 | --- | --- |
 | **PK** | Clave primaria o parte de ella |
-| **FK → tabla** | Clave foránea declarada en PostgreSQL (siempre dentro del mismo esquema) |
-| **† → esquema.tabla** | Identificador compartido: guarda el id de una tabla de otro microservicio, **sin FK**. Se valida con `NOT EXISTS` en `11_pruebas.sql`. |
+| **FK → tabla** | Clave foránea declarada en PostgreSQL (siempre dentro de la misma base: una FK no puede apuntar a otra base) |
+| **ref → esquema.tabla** | Identificador compartido: guarda el id de una tabla de otro microservicio (que vive en otra base), **sin FK**. Se valida con `NOT EXISTS` en `11_pruebas.sql`, sobre la copia de `andina_reportes`. En los scripts aparece como el comentario `-- ref:`. |
 | **UQ** | Restricción `UNIQUE`. Si dice `UQ (a, b)`, la unicidad es de la combinación. |
 | **IDENTITY** | `GENERATED ALWAYS AS IDENTITY`: PostgreSQL asigna el número al insertar. |
 | Nulo: **No** | La columna es `NOT NULL` |
@@ -19,20 +21,20 @@ Tipos usados: `INTEGER` para identificadores y cantidades (unidades enteras, S-1
 
 ## Resumen de tablas
 
-| Esquema (microservicio) | Tablas |
+| Base · esquema (microservicio) | Tablas |
 | --- | --- |
-| `catalogo` (Catálogo y Terceros) | sedes, almacenes, categorias, productos, proveedores, producto_proveedor, clientes |
-| `identidad` (Identidad y Accesos) | empleados, usuarios, auditoria_accesos |
-| `compras` (Compras y Abastecimiento) | ordenes_compra, detalle_orden_compra, recepciones_compra, detalle_recepcion |
-| `inventarios` (Inventarios y Transferencias) | inv_bogota, inv_medellin, inv_cali, inv_cedi, transferencias, detalle_transferencia |
-| `ventas` (Ventas y Pagos) | ped_bogota, ped_medellin, ped_cali, ped_cedi, det_ped_bogota, det_ped_medellin, det_ped_cali, det_ped_cedi, pagos, devoluciones, detalle_devolucion |
-| `reportes` (Reportes Corporativos) | Solo vistas (sección 7) |
+| `andina_catalogo` · `catalogo` (Catálogo y Terceros) | sedes, almacenes, categorias, productos, proveedores, producto_proveedor, clientes |
+| `andina_identidad` · `identidad` (Identidad y Accesos) | empleados, usuarios, auditoria_accesos |
+| `andina_compras` · `compras` (Compras y Abastecimiento) | ordenes_compra, detalle_orden_compra, recepciones_compra, detalle_recepcion |
+| `andina_inventarios` · `inventarios` (Inventarios y Transferencias) | inv_bogota, inv_medellin, inv_cali, inv_cedi, transferencias, detalle_transferencia |
+| `andina_ventas` · `ventas` (Ventas y Pagos) | ped_bogota, ped_medellin, ped_cali, ped_cedi, det_ped_bogota, det_ped_medellin, det_ped_cali, det_ped_cedi, pagos, devoluciones, detalle_devolucion |
+| `andina_reportes` · `reportes` (Reportes Corporativos) | Ninguna tabla propia: copia de lectura de los demás + vistas (sección 7) |
 
-En total hay 31 tablas físicas, que corresponden a 22 tablas lógicas.
+En total hay 31 tablas físicas, que corresponden a 22 tablas lógicas. Además, `andina_reportes` guarda una copia de 29 de ellas (todas menos `identidad.usuarios` y `identidad.auditoria_accesos`, que no salen de su servicio porque tienen contraseñas).
 
 ---
 
-## 1. Esquema `catalogo`
+## 1. Base `andina_catalogo` (esquema `catalogo`)
 
 ### 1.1 sedes
 Sedes de la empresa: tres de venta y un centro de distribución.
@@ -118,7 +120,7 @@ Clientes de la empresa. Son corporativos: pueden comprar en cualquier sede (S-04
 
 ---
 
-## 2. Esquema `identidad`
+## 2. Base `andina_identidad` (esquema `identidad`)
 
 ### 2.1 empleados
 Personal de la empresa. Cada empleado trabaja en una sede (RN-35).
@@ -126,7 +128,7 @@ Personal de la empresa. Cada empleado trabaja en una sede (RN-35).
 | Columna | Tipo | Nulo | Clave | Default | Restricciones | Descripción |
 | --- | --- | --- | --- | --- | --- | --- |
 | id_empleado | INTEGER | No | PK | IDENTITY | | Identificador del empleado |
-| id_sede | INTEGER | No | † → catalogo.sedes | | | Sede donde trabaja |
+| id_sede | INTEGER | No | ref → catalogo.sedes | | | Sede donde trabaja |
 | num_documento | VARCHAR(20) | No | UQ | | | Documento de identidad |
 | nombre_completo | VARCHAR(120) | No | | | | Nombre del empleado |
 | cargo | VARCHAR(30) | No | | | `ADMINISTRADOR`, `GERENTE`, `JEFE_INVENTARIO`, `COMPRADOR`, `VENDEDOR`, `AUDITOR`, `BODEGUERO` | Puesto de trabajo |
@@ -159,7 +161,7 @@ Registro de las acciones relevantes de los usuarios (RN-38).
 
 ---
 
-## 3. Esquema `compras`
+## 3. Base `andina_compras` (esquema `compras`)
 
 ### 3.1 ordenes_compra
 Pedidos de mercancía a los proveedores (RN-08).
@@ -167,9 +169,9 @@ Pedidos de mercancía a los proveedores (RN-08).
 | Columna | Tipo | Nulo | Clave | Default | Restricciones | Descripción |
 | --- | --- | --- | --- | --- | --- | --- |
 | id_orden_compra | INTEGER | No | PK | IDENTITY | | Identificador de la orden |
-| id_proveedor | INTEGER | No | † → catalogo.proveedores | | | Proveedor al que se compra |
-| id_almacen_destino | INTEGER | No | † → catalogo.almacenes | | | Almacén donde se recibe la mercancía |
-| id_empleado | INTEGER | No | † → identidad.empleados | | | Empleado que emite la orden |
+| id_proveedor | INTEGER | No | ref → catalogo.proveedores | | | Proveedor al que se compra |
+| id_almacen_destino | INTEGER | No | ref → catalogo.almacenes | | | Almacén donde se recibe la mercancía |
+| id_empleado | INTEGER | No | ref → identidad.empleados | | | Empleado que emite la orden |
 | fecha_orden | DATE | No | | | | Fecha de emisión |
 | fecha_estimada | DATE | No | | | `>= fecha_orden` (RN-10) | Fecha de entrega prometida |
 | estado | VARCHAR(10) | No | | `EMITIDA` | `EMITIDA`, `PARCIAL`, `RECIBIDA`, `CANCELADA` | Avance de la orden según lo recibido (RN-13) |
@@ -180,7 +182,7 @@ Productos de cada orden (RN-09).
 | Columna | Tipo | Nulo | Clave | Default | Restricciones | Descripción |
 | --- | --- | --- | --- | --- | --- | --- |
 | id_orden_compra | INTEGER | No | PK · FK → ordenes_compra | | | Orden a la que pertenece la línea |
-| id_producto | INTEGER | No | PK · † → catalogo.productos | | | Producto solicitado |
+| id_producto | INTEGER | No | PK · ref → catalogo.productos | | | Producto solicitado |
 | cantidad_solicitada | INTEGER | No | | | `> 0` | Unidades pedidas |
 | costo_unitario | NUMERIC(14,2) | No | | | `> 0` | Costo pactado en esta orden. Es histórico (RN-27). |
 
@@ -200,12 +202,12 @@ Cantidades recibidas por producto en cada recepción.
 | Columna | Tipo | Nulo | Clave | Default | Restricciones | Descripción |
 | --- | --- | --- | --- | --- | --- | --- |
 | id_recepcion | INTEGER | No | PK · FK → recepciones_compra | | | Recepción a la que pertenece la línea |
-| id_producto | INTEGER | No | PK · † → catalogo.productos | | | Producto recibido. Debe estar en el detalle de la orden (RN-12). |
+| id_producto | INTEGER | No | PK · ref → catalogo.productos | | | Producto recibido. Debe estar en el detalle de la orden (RN-12). |
 | cantidad_recibida | INTEGER | No | | | `>= 0` | Unidades recibidas |
 
 ---
 
-## 4. Esquema `inventarios`
+## 4. Base `andina_inventarios` (esquema `inventarios`)
 
 ### 4.1 inv_bogota, inv_medellin, inv_cali, inv_cedi (fragmentos de `inventarios`)
 Existencias por sede, almacén y producto (RN-15). Son **cuatro tablas físicas con la misma estructura**, una por sede. Cada fragmento acepta solo filas de su sede (RN-17).
@@ -219,9 +221,9 @@ Existencias por sede, almacén y producto (RN-15). Son **cuatro tablas físicas 
 
 | Columna | Tipo | Nulo | Clave | Default | Restricciones | Descripción |
 | --- | --- | --- | --- | --- | --- | --- |
-| id_sede | INTEGER | No | PK · † → catalogo.sedes | n (la sede del fragmento) | `= n` | Sede del registro. Es la **clave de fragmentación**. |
-| id_almacen | INTEGER | No | PK · † → catalogo.almacenes | | | Almacén donde está la mercancía. Debe pertenecer a la sede. |
-| id_producto | INTEGER | No | PK · † → catalogo.productos | | | Producto |
+| id_sede | INTEGER | No | PK · ref → catalogo.sedes | n (la sede del fragmento) | `= n` | Sede del registro. Es la **clave de fragmentación**. |
+| id_almacen | INTEGER | No | PK · ref → catalogo.almacenes | | | Almacén donde está la mercancía. Debe pertenecer a la sede. |
+| id_producto | INTEGER | No | PK · ref → catalogo.productos | | | Producto |
 | existencia_actual | INTEGER | No | | | `>= 0` (RN-16) | Unidades disponibles registradas. Es la cifra oficial (S-17). |
 | stock_minimo | INTEGER | No | | | `>= 0` (RN-16) | Nivel bajo el cual se genera alerta (RN-18) |
 | fecha_actualizacion | TIMESTAMP | No | | `now()` | | Última actualización del registro |
@@ -234,8 +236,8 @@ Traslados de mercancía entre almacenes.
 | Columna | Tipo | Nulo | Clave | Default | Restricciones | Descripción |
 | --- | --- | --- | --- | --- | --- | --- |
 | id_transferencia | INTEGER | No | PK | IDENTITY | | Identificador de la transferencia |
-| id_almacen_origen | INTEGER | No | † → catalogo.almacenes | | `<> id_almacen_destino` (RN-19) | Almacén que despacha |
-| id_almacen_destino | INTEGER | No | † → catalogo.almacenes | | | Almacén que recibe |
+| id_almacen_origen | INTEGER | No | ref → catalogo.almacenes | | `<> id_almacen_destino` (RN-19) | Almacén que despacha |
+| id_almacen_destino | INTEGER | No | ref → catalogo.almacenes | | | Almacén que recibe |
 | fecha_solicitud | DATE | No | | | | Fecha en que se pidió el traslado |
 | fecha_despacho | DATE | Sí | | | `>= fecha_solicitud` (RN-20) | Fecha de salida. Vacía hasta despachar. |
 | fecha_recepcion | DATE | Sí | | | Solo si hay despacho, y `>= fecha_despacho` (RN-20) | Fecha de llegada. Vacía hasta recibir. |
@@ -247,24 +249,24 @@ Productos y cantidades de cada transferencia.
 | Columna | Tipo | Nulo | Clave | Default | Restricciones | Descripción |
 | --- | --- | --- | --- | --- | --- | --- |
 | id_transferencia | INTEGER | No | PK · FK → transferencias | | | Transferencia a la que pertenece la línea |
-| id_producto | INTEGER | No | PK · † → catalogo.productos | | | Producto trasladado |
+| id_producto | INTEGER | No | PK · ref → catalogo.productos | | | Producto trasladado |
 | cantidad_enviada | INTEGER | No | | | `> 0` (RN-21) | Unidades despachadas |
 | cantidad_recibida | INTEGER | Sí | | | `>= 0` (RN-21) | Unidades que llegaron. Vacía hasta recibir. Puede diferir de la enviada (RN-23). |
 
 ---
 
-## 5. Esquema `ventas`
+## 5. Base `andina_ventas` (esquema `ventas`)
 
 ### 5.1 ped_bogota, ped_medellin, ped_cali, ped_cedi (fragmentos de `pedidos_venta`)
 Pedidos de venta. Son **cuatro tablas físicas con la misma estructura**, una por sede, con las condiciones `id_sede = 1` a `id_sede = 4` (RN-25). Cada fragmento numera sus pedidos por separado, así que un pedido se identifica con `(id_sede, id_pedido)`.
 
 | Columna | Tipo | Nulo | Clave | Default | Restricciones | Descripción |
 | --- | --- | --- | --- | --- | --- | --- |
-| id_sede | INTEGER | No | PK · † → catalogo.sedes | n (la sede del fragmento) | `= n` | Sede donde se registró el pedido. Es la **clave de fragmentación**. |
+| id_sede | INTEGER | No | PK · ref → catalogo.sedes | n (la sede del fragmento) | `= n` | Sede donde se registró el pedido. Es la **clave de fragmentación**. |
 | id_pedido | INTEGER | No | PK | IDENTITY (propio de cada fragmento) | | Número del pedido dentro de su sede |
-| id_almacen | INTEGER | No | † → catalogo.almacenes | | | Almacén que despacha. Debe ser de la sede del pedido (RN-24). |
-| id_cliente | INTEGER | No | † → catalogo.clientes | | | Cliente que compra |
-| id_empleado | INTEGER | No | † → identidad.empleados | | | Vendedor que registra el pedido |
+| id_almacen | INTEGER | No | ref → catalogo.almacenes | | | Almacén que despacha. Debe ser de la sede del pedido (RN-24). |
+| id_cliente | INTEGER | No | ref → catalogo.clientes | | | Cliente que compra |
+| id_empleado | INTEGER | No | ref → identidad.empleados | | | Vendedor que registra el pedido |
 | fecha_pedido | DATE | No | | | | Fecha del pedido |
 | estado | VARCHAR(10) | No | | `PENDIENTE` | `PENDIENTE`, `CONFIRMADO`, `ENTREGADO`, `ANULADO` | Solo `CONFIRMADO` y `ENTREGADO` cuentan como venta (RN-29) |
 | total_registrado | NUMERIC(14,2) | No | | `0` | `>= 0` | Σ cantidad × precio_unitario de sus detalles (RN-28). Valor derivado que se almacena. |
@@ -276,7 +278,7 @@ Productos de cada pedido (RN-26). Se fragmentan con la **misma condición** que 
 | --- | --- | --- | --- | --- | --- | --- |
 | id_sede | INTEGER | No | PK · FK (id_sede, id_pedido) → ped_\<sede\> | n (la sede del fragmento) | `= n` | Sede del pedido |
 | id_pedido | INTEGER | No | PK · FK (id_sede, id_pedido) → ped_\<sede\> | | | Pedido al que pertenece la línea |
-| id_producto | INTEGER | No | PK · † → catalogo.productos | | | Producto vendido. No se repite dentro del pedido (RN-26). |
+| id_producto | INTEGER | No | PK · ref → catalogo.productos | | | Producto vendido. No se repite dentro del pedido (RN-26). |
 | cantidad | INTEGER | No | | | `> 0` | Unidades vendidas |
 | precio_unitario | NUMERIC(14,2) | No | | | `> 0` | Precio al momento de la venta. Es histórico (RN-27). |
 
@@ -286,8 +288,8 @@ Pagos de los pedidos. Un pedido puede tener varios pagos (RN-30). No se fragment
 | Columna | Tipo | Nulo | Clave | Default | Restricciones | Descripción |
 | --- | --- | --- | --- | --- | --- | --- |
 | id_pago | INTEGER | No | PK | IDENTITY | | Identificador del pago |
-| id_sede | INTEGER | No | † → ped_\<sede\> (con id_pedido) | | | Sede del pedido. Indica en qué fragmento está. |
-| id_pedido | INTEGER | No | † → ped_\<sede\> (con id_sede) | | | Pedido que se paga |
+| id_sede | INTEGER | No | ref → ped_\<sede\> (con id_pedido) | | | Sede del pedido. Indica en qué fragmento está. |
+| id_pedido | INTEGER | No | ref → ped_\<sede\> (con id_sede) | | | Pedido que se paga |
 | fecha_pago | DATE | No | | | | Fecha del pago |
 | valor | NUMERIC(14,2) | No | | | `> 0` | Monto pagado |
 | medio_pago | VARCHAR(20) | No | | | `EFECTIVO`, `TARJETA_DEBITO`, `TARJETA_CREDITO`, `TRANSFERENCIA` | Forma de pago |
@@ -301,8 +303,8 @@ Solicitudes de devolución sobre pedidos existentes (RN-32). No se fragmenta.
 | Columna | Tipo | Nulo | Clave | Default | Restricciones | Descripción |
 | --- | --- | --- | --- | --- | --- | --- |
 | id_devolucion | INTEGER | No | PK | IDENTITY | | Identificador de la devolución |
-| id_sede | INTEGER | No | † → ped_\<sede\> (con id_pedido) | | | Sede del pedido |
-| id_pedido | INTEGER | No | † → ped_\<sede\> (con id_sede) | | | Pedido que se devuelve |
+| id_sede | INTEGER | No | ref → ped_\<sede\> (con id_pedido) | | | Sede del pedido |
+| id_pedido | INTEGER | No | ref → ped_\<sede\> (con id_sede) | | | Pedido que se devuelve |
 | fecha_solicitud | DATE | No | | | | Fecha de la solicitud |
 | motivo | VARCHAR(200) | No | | | | Razón de la devolución |
 | estado | VARCHAR(10) | No | | `SOLICITADA` | `SOLICITADA`, `APROBADA`, `RECHAZADA` | Solo las aprobadas cuentan en el porcentaje de devolución (RN-34) |
@@ -313,7 +315,7 @@ Productos y cantidades de cada devolución.
 | Columna | Tipo | Nulo | Clave | Default | Restricciones | Descripción |
 | --- | --- | --- | --- | --- | --- | --- |
 | id_devolucion | INTEGER | No | PK · FK → devoluciones | | | Devolución a la que pertenece la línea |
-| id_producto | INTEGER | No | PK · † → catalogo.productos | | | Producto devuelto. Debe estar en el pedido (RN-32). |
+| id_producto | INTEGER | No | PK · ref → catalogo.productos | | | Producto devuelto. Debe estar en el pedido (RN-32). |
 | cantidad | INTEGER | No | | | `> 0` | Unidades devueltas. No supera lo vendido (RN-33). |
 | condicion_producto | VARCHAR(10) | No | | | `BUENO`, `AVERIADO` | Estado en que llegó el producto |
 
@@ -325,7 +327,7 @@ Estas reglas están en el modelo, pero no hay una restricción que las haga cump
 
 | Regla | Motivo |
 | --- | --- |
-| Todos los identificadores compartidos (†) existen en su tabla de origen | No se declaran FK entre microservicios (S-09) |
+| Todos los identificadores compartidos (ref) existen en su tabla de origen | No se declaran FK entre microservicios: están en bases distintas (S-09) |
 | `pagos` y `devoluciones` apuntan a un pedido existente | El pedido puede estar en cualquiera de los cuatro fragmentos |
 | El almacén de un inventario o de un pedido pertenece a la sede de la fila | Entre servicios no hay FK |
 | El producto recibido estaba en la orden (RN-12) y el producto devuelto estaba en el pedido (RN-32) | `detalle_recepcion` y `detalle_devolucion` no tienen FK hacia la línea correspondiente |
@@ -334,9 +336,14 @@ Estas reglas están en el modelo, pero no hay una restricción que las haga cump
 
 ---
 
-## 7. Vistas del esquema `reportes`
+## 7. Base `andina_reportes`
 
-El esquema `reportes` no tiene tablas. Todas sus vistas son de solo lectura (`08_vistas.sql`).
+Reportes no es dueño de ninguna tabla. Su base tiene dos partes:
+
+- **Copia de lectura** (esquemas `catalogo`, `identidad`, `compras`, `inventarios` y `ventas`): las mismas tablas de las secciones 1 a 5, creadas con los mismos scripts y cargadas desde los CSV que exporta cada servicio (`sql/sync/`). Puede ir un poco atrasada respecto a la base original (consistencia eventual). De `identidad` solo se copia `empleados`.
+- **Esquema `reportes`**: solo vistas de lectura (`08_vistas.sql`), que leen la copia. Las fuentes de la tabla de abajo se refieren a esa copia.
+
+Vistas del esquema `reportes`:
 
 | Vista | Tipo | Fuentes | Contenido |
 | --- | --- | --- | --- |
