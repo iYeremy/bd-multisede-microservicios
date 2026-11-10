@@ -4,6 +4,10 @@
 -- la "fecha de hoy" es siempre 2026-10-15 (sale de reportes.parametros),
 -- asi los resultados no cambian segun el dia en que se corran.
 --
+-- se corren en la base andina_reportes, el unico lugar donde estan los
+-- datos de todos los servicios juntos (la copia de lectura). por eso
+-- pueden cruzar ventas con productos, compras con proveedores, etc.
+--
 -- casi todas leen las vistas consolidadas (vista_*_consolidado), que ya
 -- juntan las 4 sedes. por eso sirven para toda la empresa.
 --

@@ -2,9 +2,16 @@
 -- 11_pruebas.sql
 -- pruebas minimas de verificacion (seccion 11 del enunciado).
 --
--- todo va entre BEGIN y ROLLBACK: lo que se inserta o cambia aqui se
+-- ahora cada servicio tiene su base, asi que las pruebas van por partes:
+-- cada parte se conecta (\c) a la base donde esta lo que prueba, por eso
+-- los numeros no van en orden (la prueba 9 de permisos esta repartida en
+-- varias bases). al final hay una prueba nueva (11) que muestra que una
+-- base no puede leer las tablas de otra.
+--
+-- cada parte va entre BEGIN y ROLLBACK: lo que se inserta o cambia se
 -- deshace al final, asi el script se puede correr las veces que sea sin
--- ensuciar los datos.
+-- ensuciar los datos. (una transaccion no puede abarcar dos bases, por
+-- eso hay un BEGIN ... ROLLBACK por base.)
 --
 -- varias pruebas DEBEN fallar (SKU repetido, permiso denegado...). el
 -- ERROR que muestra psql es justo la prueba de que la base lo rechazo.
@@ -13,11 +20,18 @@
 --   ON_ERROR_ROLLBACK on  deshace solo la instruccion que fallo; sin
 --                         esto, un error dentro de BEGIN rompe toda la
 --                         transaccion y todo lo que sigue tambien falla.
+--
+-- SET ROLE hace que la sesion actue como ese usuario, con sus permisos
+-- (sin tener que conectarse de nuevo). RESET ROLE vuelve a ser postgres.
 -- =====================================================================
 
 \set ON_ERROR_STOP off
 \set ON_ERROR_ROLLBACK on
 
+-- ---------------------------------------------------------------------
+-- base andina_catalogo: pruebas 1, 2, 4 y 9.5
+-- ---------------------------------------------------------------------
+\c andina_catalogo
 BEGIN;
 
 \echo
@@ -36,23 +50,52 @@ INSERT INTO catalogo.productos (sku, nombre, id_categoria, unidad_medida, precio
 VALUES ('ALI-001', 'Arroz duplicado', 1, 'KG', 5000);
 
 \echo
-\echo '=== Prueba 3. Cantidad negativa (CHECK) -> esperado: ERROR viola la restriccion check ==='
--- dos intentos: una cantidad pedida negativa y una existencia negativa
-INSERT INTO compras.detalle_orden_compra (id_orden_compra, id_producto, cantidad_solicitada, costo_unitario)
-VALUES (1, 80, -5, 1000);
-
-UPDATE inventarios.inv_bogota SET existencia_actual = -1 WHERE id_producto = 1;
-
-\echo
 \echo '=== Prueba 4. Clave foranea local inexistente (FK) -> esperado: ERROR viola la llave foranea ==='
 -- la categoria 999 no existe
 INSERT INTO catalogo.productos (sku, nombre, id_categoria, unidad_medida, precio_lista)
 VALUES ('XXX-001', 'Producto sin categoría', 999, 'UND', 1000);
 
--- detalle de un pedido que no existe en el fragmento de bogota
--- (la FK compuesta det_ped_bogota -> ped_bogota lo rechaza)
-INSERT INTO ventas.det_ped_bogota (id_sede, id_pedido, id_producto, cantidad, precio_unitario)
-VALUES (1, 99999, 1, 1, 4800);
+\echo
+\echo '=== Prueba 9. Accesos permitidos y denegados por rol (por partes, en cada base) ==='
+\echo '--- 9.5 vendedor_bogota: modifica el precio de un producto del catalogo (DENEGADO) -> esperado: ERROR permiso denegado ---'
+-- ventas no puede tocar tablas de catalogo (RN-39). el vendedor si entra
+-- a andina_catalogo, pero solo para leer productos y clientes.
+SET ROLE vendedor_bogota;
+UPDATE catalogo.productos SET precio_lista = 1 WHERE id_producto = 1;
+
+RESET ROLE;
+
+ROLLBACK;
+
+-- ---------------------------------------------------------------------
+-- base andina_compras: prueba 3 (cantidad negativa) y 9.8b
+-- ---------------------------------------------------------------------
+\c andina_compras
+BEGIN;
+
+\echo
+\echo '=== Prueba 3. Cantidad negativa (CHECK) -> esperado: ERROR viola la restriccion check ==='
+-- una cantidad pedida negativa (la existencia negativa se prueba en
+-- inventarios, 3b)
+INSERT INTO compras.detalle_orden_compra (id_orden_compra, id_producto, cantidad_solicitada, costo_unitario)
+VALUES (1, 80, -5, 1000);
+
+\echo '--- 9.8b auditor_interno: modificar una orden de compra -> esperado: ERROR permiso denegado ---'
+SET ROLE auditor_interno;
+UPDATE compras.ordenes_compra SET estado = 'CANCELADA' WHERE id_orden_compra = 1;
+RESET ROLE;
+
+ROLLBACK;
+
+-- ---------------------------------------------------------------------
+-- base andina_inventarios: pruebas 3, 4b, 5, 8 y 9.7
+-- ---------------------------------------------------------------------
+\c andina_inventarios
+BEGIN;
+
+\echo
+\echo '--- 3b. Existencia negativa (CHECK) -> esperado: ERROR viola la restriccion check ---'
+UPDATE inventarios.inv_bogota SET existencia_actual = -1 WHERE id_producto = 1;
 
 \echo
 \echo '--- 4b. Una fila de otra sede no entra en el fragmento de Bogota -> esperado: ERROR viola la restriccion check ---'
@@ -69,12 +112,6 @@ UNION ALL
 SELECT 'inv_cali', COUNT(*), MIN(id_sede), MAX(id_sede)
 FROM inventarios.inv_cali;
 
-SELECT 'ped_bogota' AS fragmento, COUNT(*) AS pedidos, MIN(fecha_pedido) AS desde, MAX(fecha_pedido) AS hasta
-FROM ventas.ped_bogota
-UNION ALL
-SELECT 'ped_cali', COUNT(*), MIN(fecha_pedido), MAX(fecha_pedido)
-FROM ventas.ped_cali;
-
 -- ninguna fila esta en dos fragmentos: la interseccion da 0
 SELECT COUNT(*) AS filas_repetidas_entre_fragmentos
 FROM (SELECT id_sede, id_almacen, id_producto FROM inventarios.inv_bogota
@@ -82,6 +119,102 @@ FROM (SELECT id_sede, id_almacen, id_producto FROM inventarios.inv_bogota
       SELECT id_sede, id_almacen, id_producto FROM inventarios.inv_cali) x;
 
 \echo
+\echo '=== Prueba 8. Comparacion de surtido Bogota vs Medellin (EXCEPT / INTERSECT) ==='
+-- cuantos productos tiene solo una sede, solo la otra, o las dos
+SELECT 'Solo en Bogota' AS conjunto, COUNT(*) AS productos
+FROM (SELECT id_producto FROM inventarios.inv_bogota EXCEPT SELECT id_producto FROM inventarios.inv_medellin) a
+UNION ALL
+SELECT 'Solo en Medellin', COUNT(*)
+FROM (SELECT id_producto FROM inventarios.inv_medellin EXCEPT SELECT id_producto FROM inventarios.inv_bogota) b
+UNION ALL
+SELECT 'En ambas', COUNT(*)
+FROM (SELECT id_producto FROM inventarios.inv_bogota INTERSECT SELECT id_producto FROM inventarios.inv_medellin) c;
+
+\echo '--- 9.7 inventario_cedi: actualiza su fragmento (PERMITIDO) y el de Bogota (DENEGADO -> esperado: ERROR permiso denegado) ---'
+SET ROLE inventario_cedi;
+UPDATE inventarios.inv_cedi SET existencia_actual = existencia_actual + 10, fecha_actualizacion = now()
+WHERE id_almacen = 4 AND id_producto = 1
+RETURNING id_sede, id_almacen, id_producto, existencia_actual;
+
+UPDATE inventarios.inv_bogota SET existencia_actual = 0 WHERE id_producto = 1;
+RESET ROLE;
+
+ROLLBACK;
+
+-- ---------------------------------------------------------------------
+-- base andina_ventas: pruebas 4, 5, 9.2, 9.3, 9.4 y 9.6
+-- ---------------------------------------------------------------------
+\c andina_ventas
+BEGIN;
+
+\echo
+\echo '--- 4c. Detalle de un pedido que no existe (FK compuesta) -> esperado: ERROR viola la llave foranea ---'
+-- detalle de un pedido que no existe en el fragmento de bogota
+-- (la FK compuesta det_ped_bogota -> ped_bogota lo rechaza)
+INSERT INTO ventas.det_ped_bogota (id_sede, id_pedido, id_producto, cantidad, precio_unitario)
+VALUES (1, 99999, 1, 1, 4800);
+
+\echo
+\echo '--- 5b. Fragmentos de pedidos de dos sedes ---'
+SELECT 'ped_bogota' AS fragmento, COUNT(*) AS pedidos, MIN(fecha_pedido) AS desde, MAX(fecha_pedido) AS hasta
+FROM ventas.ped_bogota
+UNION ALL
+SELECT 'ped_cali', COUNT(*), MIN(fecha_pedido), MAX(fecha_pedido)
+FROM ventas.ped_cali;
+
+\echo '--- 9.2 gerente_general: INSERT en ventas.pagos (DENEGADO) -> esperado: ERROR permiso denegado ---'
+-- gerente_general ni siquiera tiene CONNECT a andina_ventas (no podria
+-- conectarse); con SET ROLE se ve que tampoco tiene permiso en la tabla.
+SET ROLE gerente_general;
+INSERT INTO ventas.pagos (id_sede, id_pedido, fecha_pago, valor, medio_pago, estado)
+VALUES (1, 1, DATE '2026-10-15', 1000, 'EFECTIVO', 'CONFIRMADO');
+RESET ROLE;
+
+\echo '--- 9.3 vendedor_bogota: registra un pedido en el fragmento de su sede (PERMITIDO) ---'
+-- no se indica id_sede ni id_pedido: el DEFAULT pone la sede 1 y el
+-- IDENTITY el siguiente numero. RETURNING muestra lo que se inserto.
+SET ROLE vendedor_bogota;
+INSERT INTO ventas.ped_bogota (id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado)
+VALUES (1, 5, 3, DATE '2026-10-15', 'PENDIENTE', 9600)
+RETURNING id_sede, id_pedido, estado, total_registrado;
+
+INSERT INTO ventas.det_ped_bogota (id_sede, id_pedido, id_producto, cantidad, precio_unitario)
+SELECT 1, MAX(id_pedido), 1, 2, 4800 FROM ventas.ped_bogota;
+
+\echo '--- 9.4 vendedor_bogota: consulta pedidos de Cali (DENEGADO) -> esperado: ERROR permiso denegado ---'
+SELECT COUNT(*) FROM ventas.ped_cali;
+
+\echo '--- 9.6 vendedor_bogota: borra un pago (DENEGADO por el REVOKE DELETE) -> esperado: ERROR permiso denegado ---'
+DELETE FROM ventas.pagos WHERE id_pago = 1;
+RESET ROLE;
+
+ROLLBACK;
+
+-- ---------------------------------------------------------------------
+-- base andina_identidad: prueba 9.8
+-- ---------------------------------------------------------------------
+\c andina_identidad
+BEGIN;
+
+\echo '--- 9.8 auditor_interno: lee todo, pero leer password_hash -> esperado: ERROR permiso denegado ---'
+-- el primer SELECT funciona; el de password_hash falla
+SET ROLE auditor_interno;
+SELECT nombre_usuario, rol, estado FROM identidad.usuarios ORDER BY id_usuario LIMIT 3;
+
+SELECT password_hash FROM identidad.usuarios LIMIT 1;
+
+RESET ROLE;
+
+ROLLBACK;
+
+-- ---------------------------------------------------------------------
+-- base andina_reportes: pruebas 6, 7, 9.1, 10 y la de referencias sin FK
+-- aqui estan las copias de todos los servicios, por eso es el unico
+-- lugar donde se pueden cruzar (y revisar los huerfanos).
+-- ---------------------------------------------------------------------
+\c andina_reportes
+BEGIN;
+
 \echo '=== Prueba 6. La vista consolidada reune los fragmentos de las 4 sedes ==='
 -- salen las 4 sedes y el total de la vista es igual a la suma de los
 -- 4 fragmentos (no falta ni sobra nada)
@@ -117,82 +250,15 @@ FROM reportes.vista_ventas_mensuales_por_sede
 GROUP BY sede;
 
 \echo
-\echo '=== Prueba 8. Comparacion de surtido Bogota vs Medellin (EXCEPT / INTERSECT) ==='
--- cuantos productos tiene solo una sede, solo la otra, o las dos
-SELECT 'Solo en Bogota' AS conjunto, COUNT(*) AS productos
-FROM (SELECT id_producto FROM inventarios.inv_bogota EXCEPT SELECT id_producto FROM inventarios.inv_medellin) a
-UNION ALL
-SELECT 'Solo en Medellin', COUNT(*)
-FROM (SELECT id_producto FROM inventarios.inv_medellin EXCEPT SELECT id_producto FROM inventarios.inv_bogota) b
-UNION ALL
-SELECT 'En ambas', COUNT(*)
-FROM (SELECT id_producto FROM inventarios.inv_bogota INTERSECT SELECT id_producto FROM inventarios.inv_medellin) c;
-
-\echo
-\echo '=== Prueba 9. Accesos permitidos y denegados por rol ==='
--- SET ROLE hace que la sesion actue como ese usuario, con sus permisos
--- (sin tener que conectarse de nuevo). RESET ROLE vuelve a
--- ser postgres.
-
 \echo '--- 9.1 gerente_general: SELECT sobre el reporte corporativo (PERMITIDO) ---'
 SET ROLE gerente_general;
 SELECT sede, valor_ventas, pedidos_pendientes FROM reportes.vista_reporte_corporativo ORDER BY id_sede;
 
-\echo '--- 9.2 gerente_general: INSERT en ventas.pagos (DENEGADO) -> esperado: ERROR permiso denegado ---'
-INSERT INTO ventas.pagos (id_sede, id_pedido, fecha_pago, valor, medio_pago, estado)
-VALUES (1, 1, DATE '2026-10-15', 1000, 'EFECTIVO', 'CONFIRMADO');
+\echo '--- 9.1b gerente_general: leer la copia de ventas en reportes (DENEGADO) -> esperado: ERROR permiso denegado ---'
+-- ve el reporte, pero no las tablas que hay debajo
+SELECT COUNT(*) FROM ventas.ped_bogota;
 RESET ROLE;
 
-\echo '--- 9.3 vendedor_bogota: registra un pedido en el fragmento de su sede (PERMITIDO) ---'
--- no se indica id_sede ni id_pedido: el DEFAULT pone la sede 1 y el
--- IDENTITY el siguiente numero. RETURNING muestra lo que se inserto.
-SET ROLE vendedor_bogota;
-INSERT INTO ventas.ped_bogota (id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado)
-VALUES (1, 5, 3, DATE '2026-10-15', 'PENDIENTE', 9600)
-RETURNING id_sede, id_pedido, estado, total_registrado;
-
-INSERT INTO ventas.det_ped_bogota (id_sede, id_pedido, id_producto, cantidad, precio_unitario)
-SELECT 1, MAX(id_pedido), 1, 2, 4800 FROM ventas.ped_bogota;
-
-\echo '--- 9.4 vendedor_bogota: consulta pedidos de Cali (DENEGADO) -> esperado: ERROR permiso denegado ---'
-SELECT COUNT(*) FROM ventas.ped_cali;
-
-\echo '--- 9.5 vendedor_bogota: modifica el precio de un producto del catalogo (DENEGADO) -> esperado: ERROR permiso denegado ---'
--- ventas no puede tocar tablas de catalogo (RN-39)
-UPDATE catalogo.productos SET precio_lista = 1 WHERE id_producto = 1;
-
-\echo '--- 9.6 vendedor_bogota: borra un pago (DENEGADO por el REVOKE DELETE) -> esperado: ERROR permiso denegado ---'
-DELETE FROM ventas.pagos WHERE id_pago = 1;
-RESET ROLE;
-
-\echo '--- 9.7 inventario_cedi: actualiza su fragmento (PERMITIDO) y el de Bogota (DENEGADO -> esperado: ERROR permiso denegado) ---'
-SET ROLE inventario_cedi;
-UPDATE inventarios.inv_cedi SET existencia_actual = existencia_actual + 10, fecha_actualizacion = now()
-WHERE id_almacen = 4 AND id_producto = 1
-RETURNING id_sede, id_almacen, id_producto, existencia_actual;
-
-UPDATE inventarios.inv_bogota SET existencia_actual = 0 WHERE id_producto = 1;
-RESET ROLE;
-
-\echo '--- 9.8 auditor_interno: lee todo, pero leer password_hash y modificar -> esperado: ERROR permiso denegado ---'
--- el primer SELECT funciona; el de password_hash y el UPDATE fallan
-SET ROLE auditor_interno;
-SELECT nombre_usuario, rol, estado FROM identidad.usuarios ORDER BY id_usuario LIMIT 3;
-
-SELECT password_hash FROM identidad.usuarios LIMIT 1;
-
-UPDATE compras.ordenes_compra SET estado = 'CANCELADA' WHERE id_orden_compra = 1;
-RESET ROLE;
-
-\echo '--- 9.9 Privilegios efectivos (has_table_privilege) ---'
--- tabla resumen: has_table_privilege(rol, tabla, operacion) responde
--- true o false sin tener que intentar la operacion
-SELECT r.rol, t.tabla, op.operacion, has_table_privilege(r.rol, t.tabla, op.operacion) AS permitido
-FROM (VALUES ('gerente_general'), ('vendedor_bogota'), ('inventario_cedi'), ('compras_cedi'), ('auditor_interno')) r(rol)
-CROSS JOIN (VALUES ('ventas.ped_bogota'), ('inventarios.inv_cedi'), ('compras.ordenes_compra'),
-                   ('reportes.vista_reporte_corporativo')) t(tabla)
-CROSS JOIN (VALUES ('SELECT'), ('INSERT')) op(operacion)
-ORDER BY r.rol, t.tabla, op.operacion;
 
 \echo
 \echo '=== Prueba 10. El reporte corporativo no duplica ventas ni cantidades ==='
@@ -286,11 +352,37 @@ SELECT 'identidad.empleados.id_sede', COUNT(*)
 FROM identidad.empleados e
 WHERE NOT EXISTS (SELECT 1 FROM catalogo.sedes s WHERE s.id_sede = e.id_sede);
 
--- se deshace todo lo que hicieron las pruebas
 ROLLBACK;
 
 \echo
-\echo '--- Volumen de datos de prueba (despues del ROLLBACK, sin las filas de las pruebas) ---'
+\echo '=== Prueba 11. Cada servicio solo ve su propia base ==='
+-- conectados a ventas, las tablas de catalogo no existen: viven en otra
+-- base. esto es lo que obliga a que ventas le pida los datos al
+-- servicio de catalogo (o a que reportes guarde una copia).
+\c andina_ventas
+\echo '--- 11.1 desde andina_ventas: leer catalogo.productos -> esperado: ERROR la relacion no existe ---'
+SELECT COUNT(*) FROM catalogo.productos;
+
+\echo '--- 11.2 nombrando la otra base (base.esquema.tabla) -> esperado: ERROR no estan implementadas las referencias entre bases ---'
+SELECT COUNT(*) FROM andina_catalogo.catalogo.productos;
+
+\echo '--- 11.3 a que base puede entrar cada rol (has_database_privilege) ---'
+-- has_database_privilege(rol, base, 'CONNECT') responde true o false.
+-- se compara con la matriz de 09_roles.sql.
+SELECT r.rol,
+       has_database_privilege(r.rol, 'andina_catalogo',    'CONNECT') AS catalogo,
+       has_database_privilege(r.rol, 'andina_identidad',   'CONNECT') AS identidad,
+       has_database_privilege(r.rol, 'andina_compras',     'CONNECT') AS compras,
+       has_database_privilege(r.rol, 'andina_inventarios', 'CONNECT') AS inventarios,
+       has_database_privilege(r.rol, 'andina_ventas',      'CONNECT') AS ventas,
+       has_database_privilege(r.rol, 'andina_reportes',    'CONNECT') AS reportes
+FROM (VALUES ('gerente_general'), ('vendedor_bogota'), ('inventario_cedi'), ('compras_cedi'),
+             ('auditor_interno'), ('svc_ventas'), ('svc_reportes')) r(rol)
+ORDER BY r.rol;
+
+\c andina_reportes
+\echo
+\echo '--- Volumen de datos de prueba (en la copia de reportes, sin las filas de las pruebas) ---'
 -- conteo final para comparar con los minimos de la seccion 10
 SELECT 'sedes' AS tabla, COUNT(*) FROM catalogo.sedes
 UNION ALL SELECT 'almacenes', COUNT(*) FROM catalogo.almacenes

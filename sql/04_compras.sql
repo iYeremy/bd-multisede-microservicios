@@ -3,10 +3,16 @@
 -- microservicio de compras y abastecimiento: ordenes de compra y sus
 -- recepciones, cada una con su detalle.
 --
--- ids que vienen de otros servicios ("ref:", sin FK): id_proveedor,
--- id_almacen_destino, id_empleado e id_producto. las FK locales unen
--- cada detalle con su encabezado dentro de compras.
+-- se corre en andina_compras (y en andina_reportes para la copia).
+--
+-- ids que vienen de otros servicios ("ref:", sin FK porque estan en
+-- otra base): id_proveedor, id_almacen_destino, id_empleado e
+-- id_producto. las FK locales unen cada detalle con su encabezado
+-- dentro de compras.
 -- =====================================================================
+
+CREATE SCHEMA compras;
+COMMENT ON SCHEMA compras IS 'Microservicio de Compras y Abastecimiento';
 
 -- una orden: un proveedor, un almacen destino y el empleado que la emite
 -- (RN-08). el estado se actualiza segun lo recibido: PARCIAL si llego

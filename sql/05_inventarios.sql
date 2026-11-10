@@ -1,6 +1,7 @@
 -- =====================================================================
 -- 05_inventarios.sql
--- microservicio de inventarios y transferencias.
+-- microservicio de inventarios y transferencias. se corre en
+-- andina_inventarios (y en andina_reportes para la copia).
 --
 -- la idea principal: el inventario no va en una sola tabla, va partido
 -- por sede (fragmentacion horizontal). cada sede tiene su propia tabla:
@@ -10,12 +11,16 @@
 -- id_sede = 1, asi una fila nunca queda en dos tablas (RN-17).
 --
 -- para ver el inventario de toda la empresa se juntan las 4 con la
--- vista reportes.vista_inventario_consolidado (UNION ALL).
+-- vista reportes.vista_inventario_consolidado (UNION ALL), en la base
+-- de reportes.
 --
 -- ojo: id_almacen ya dice de que sede es, asi que id_sede sobra un
 -- poco. se deja porque es la columna que usa el CHECK para partir la
 -- tabla (ver docs/normalizacion.md, seccion 4.1).
 -- =====================================================================
+
+CREATE SCHEMA inventarios;
+COMMENT ON SCHEMA inventarios IS 'Microservicio de Inventarios y Transferencias (inventarios fragmentado por sede)';
 
 CREATE TABLE inventarios.inv_bogota (
     -- DEFAULT 1: si el INSERT no indica la sede, se usa la del fragmento

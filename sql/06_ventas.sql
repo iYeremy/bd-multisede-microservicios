@@ -1,6 +1,7 @@
 -- =====================================================================
 -- 06_ventas.sql
--- microservicio de ventas y pagos.
+-- microservicio de ventas y pagos. se corre en andina_ventas (y en
+-- andina_reportes para la copia).
 --
 -- igual que el inventario, los pedidos van partidos por sede. y los
 -- detalles se parten igual que su pedido, asi un pedido y sus lineas
@@ -17,8 +18,12 @@
 -- (id_sede, id_pedido) y no solo con id_pedido.
 --
 -- para toda la empresa se usan las vistas vista_pedidos_consolidado y
--- vista_detalle_pedido_consolidado (UNION ALL de las 4 sedes).
+-- vista_detalle_pedido_consolidado (UNION ALL de las 4 sedes), en la
+-- base de reportes.
 -- =====================================================================
+
+CREATE SCHEMA ventas;
+COMMENT ON SCHEMA ventas IS 'Microservicio de Ventas y Pagos (pedidos y detalles fragmentados por sede)';
 
 -- ---------------------------------------------------------------------
 -- pedidos (uno por sede)

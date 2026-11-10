@@ -2,9 +2,18 @@
 -- 03_identidad.sql
 -- microservicio de identidad y accesos: empleados, usuarios y auditoria.
 --
+-- se corre en andina_identidad. en andina_reportes tambien, pero ahi
+-- solo se deja la copia de empleados (reportes no necesita usuarios ni
+-- contrasenas).
+--
 -- "ref:" marca un id que viene de otro servicio: se guarda el id de esa
--- tabla pero SIN FK. que exista se revisa con NOT EXISTS en 11_pruebas.sql.
+-- tabla pero SIN FK, porque esa tabla vive en otra base. que exista se
+-- revisa con NOT EXISTS en 11_pruebas.sql (en reportes, donde estan las
+-- copias de todo).
 -- =====================================================================
+
+CREATE SCHEMA identidad;
+COMMENT ON SCHEMA identidad IS 'Microservicio de Identidad y Accesos';
 
 -- cada empleado trabaja en una sede (RN-35, S-03). la sede vive en
 -- catalogo, por eso id_sede no tiene FK.

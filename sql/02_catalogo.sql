@@ -3,9 +3,14 @@
 -- microservicio de catalogo y terceros: las tablas "base" que usan
 -- todos los demas (sedes, almacenes, productos, clientes...).
 --
+-- se corre en la base andina_catalogo. tambien se corre en
+-- andina_reportes para crear ahi la copia de estas tablas (mismas
+-- columnas, mismas restricciones).
+--
 -- aqui las FK son normales porque todo esta dentro de catalogo. los
 -- otros servicios guardan los id de estas tablas pero sin FK
--- (identificadores compartidos, S-09).
+-- (identificadores compartidos, S-09): una FK no puede apuntar a otra
+-- base.
 --
 -- cosas que se repiten en todos los scripts de tablas:
 --   GENERATED ALWAYS AS IDENTITY  la base pone el numero sola al
@@ -14,6 +19,9 @@
 --   DEFAULT                       valor que se usa si no se indica uno
 --   NUMERIC(14,2)                 plata en pesos con 2 decimales
 -- =====================================================================
+
+CREATE SCHEMA catalogo;
+COMMENT ON SCHEMA catalogo IS 'Microservicio de Catalogo y Terceros (datos maestros)';
 
 -- sedes de la empresa: 3 de venta y el CEDI de Funza (RN-01)
 CREATE TABLE catalogo.sedes (

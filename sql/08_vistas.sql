@@ -1,9 +1,15 @@
 -- =====================================================================
 -- 08_vistas.sql
--- microservicio de reportes: aqui no hay tablas, solo vistas.
+-- microservicio de reportes (base andina_reportes).
+--
+-- reportes no es dueno de ninguna tabla. en su base tiene la copia de
+-- solo lectura de los otros servicios (esquemas catalogo, identidad,
+-- compras, inventarios y ventas, cargados por sync/importar_reportes.sql)
+-- y aqui, en el esquema reportes, solo crea vistas encima de esa copia.
 --
 -- una vista es una consulta guardada con nombre. no copia datos: cada
--- vez que se usa, lee las tablas en ese momento, asi siempre esta al dia.
+-- vez que se usa, lee las tablas en ese momento. ojo: esas tablas son la
+-- copia, asi que la vista esta tan al dia como la ultima sincronizacion.
 --
 -- parte a: vistas que juntan las 4 sedes en una sola (UNION ALL).
 -- parte b: las 10 vistas que pide el enunciado, hechas encima de las
@@ -12,6 +18,9 @@
 -- si una vista tiene id_sede, sirve para una sede (WHERE id_sede = n)
 -- o para toda la empresa (sin WHERE).
 -- =====================================================================
+
+CREATE SCHEMA reportes;
+COMMENT ON SCHEMA reportes IS 'Microservicio de Reportes Corporativos: solo vistas de integracion de solo lectura';
 
 -- ---------------------------------------------------------------------
 -- a. parametros y unificacion de fragmentos
