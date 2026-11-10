@@ -29,6 +29,7 @@ Más detalle en el [manual](docs/manual-ejecucion.md).
 
 | Ruta | Qué es |
 | --- | --- |
+| `sql/README.md` | **qué hace cada script** y lo que no es SQL de clase (comandos de psql, trucos) |
 | `sql/00_reset.sql`, `sql/01_bases.sql` | borra todo y crea las 6 bases |
 | `sql/02`–`06` | tablas, un archivo por microservicio (también se usan para crear la copia en reportes) |
 | `sql/07_datos_<servicio>.sql` | datos de prueba de cada servicio: 300 pedidos, 80 productos, 100 clientes… Totalmente generadas con IA :) |
@@ -45,7 +46,9 @@ Más detalle en el [manual](docs/manual-ejecucion.md).
 - [x] Modelo E-R conceptual y modelo relacional
 - [x] Base de datos completa: tablas, fragmentos, datos, vistas, roles, consultas y pruebas
 - [x] Una base por microservicio + copia de lectura para reportes
-- [x] Diagrama de arquitectura (falta actualizarlo a una base por servicio)
+- [x] Diagrama de arquitectura (una base por servicio + ETL hacia reportes)
+- [ ] Reportes con ETL y vistas materializadas que se refrescan cada X minutos
+- [ ] Diagrama de despliegue y ajustes del relacional
 - [x] Normalización y diccionario de datos
 - [ ] Análisis de resultados, conclusiones y matriz de pruebas para el informe
 - [ ] Backend en Go (un proceso por microservicio + gateway) y un front básico
