@@ -4,7 +4,7 @@ Proyecto final de Bases de Datos · Comercializadora Andina S.A.S.
 
 Este documento cubre la parte de diccionario de datos del entregable 4. Se generó a partir de los scripts `sql/02` a `sql/08`, que son la fuente de verdad.
 
-Cada microservicio tiene su **propia base de datos** (`andina_<servicio>`) y dentro de ella un esquema con el nombre del servicio. Por eso cada tabla se nombra `esquema.tabla` (por ejemplo `ventas.ped_bogota`), igual en su base y en la copia de lectura de `andina_reportes`.
+Cada microservicio tiene su **propia base de datos** (`andina_<servicio>`) y dentro de ella un esquema con el nombre del servicio. Por eso cada tabla se nombra `esquema.tabla` (por ejemplo `ventas.ped_bogota`), igual en su base y en las consultas por `dblink` de `andina_reportes`.
 
 ## Convenciones
 
@@ -12,7 +12,7 @@ Cada microservicio tiene su **propia base de datos** (`andina_<servicio>`) y den
 | --- | --- |
 | **PK** | Clave primaria o parte de ella |
 | **FK → tabla** | Clave foránea declarada en PostgreSQL (siempre dentro de la misma base: una FK no puede apuntar a otra base) |
-| **ref → esquema.tabla** | Identificador compartido: guarda el id de una tabla de otro microservicio (que vive en otra base), **sin FK**. Se valida con `NOT EXISTS` en `11_pruebas.sql`, sobre la copia de `andina_reportes`. En los scripts aparece como el comentario `-- ref:`. |
+| **ref → esquema.tabla** | Identificador compartido: guarda el id de una tabla de otro microservicio (que vive en otra base), **sin FK**. Se valida con `NOT EXISTS` en `11_pruebas.sql`, desde `andina_reportes` con `dblink`. En los scripts aparece como el comentario `-- ref:`. |
 | **UQ** | Restricción `UNIQUE`. Si dice `UQ (a, b)`, la unicidad es de la combinación. |
 | **IDENTITY** | `GENERATED ALWAYS AS IDENTITY`: PostgreSQL asigna el número al insertar. |
 | Nulo: **No** | La columna es `NOT NULL` |
@@ -28,9 +28,9 @@ Tipos usados: `INTEGER` para identificadores y cantidades (unidades enteras, S-1
 | `andina_compras` · `compras` (Compras y Abastecimiento) | ordenes_compra, detalle_orden_compra, recepciones_compra, detalle_recepcion |
 | `andina_inventarios` · `inventarios` (Inventarios y Transferencias) | inv_bogota, inv_medellin, inv_cali, inv_cedi, transferencias, detalle_transferencia |
 | `andina_ventas` · `ventas` (Ventas y Pagos) | ped_bogota, ped_medellin, ped_cali, ped_cedi, det_ped_bogota, det_ped_medellin, det_ped_cali, det_ped_cedi, pagos, devoluciones, detalle_devolucion |
-| `andina_reportes` · `reportes` (Reportes Corporativos) | Ninguna tabla de negocio: staging que carga el ETL, control de cargas (`etl.cargas`) y vistas materializadas (sección 7) |
+| `andina_reportes` · `reportes` (Reportes Corporativos) | Ninguna tabla: vistas materializadas que traen los datos por `dblink` (sección 7) |
 
-En total hay 31 tablas físicas, que corresponden a 22 tablas lógicas. Además, el staging de `andina_reportes` guarda una copia de 29 de ellas (todas menos `identidad.usuarios` y `identidad.auditoria_accesos`, que no salen de su servicio porque tienen contraseñas).
+En total hay 31 tablas físicas, que corresponden a 22 tablas lógicas.
 
 ---
 
@@ -338,23 +338,8 @@ Estas reglas están en el modelo, pero no hay una restricción que las haga cump
 
 ## 7. Base `andina_reportes`
 
-Reportes no es dueño de ninguna tabla de negocio. Su base se alimenta con un **ETL** (`sql/etl/`) y tiene tres partes:
+Reportes no tiene tablas. Su base tiene la extensión `dblink` (con un servidor remoto registrado por cada base: `srv_catalogo`, `srv_ventas`…) y el esquema `reportes`, con solo vistas (`08_vistas.sql`). Las de la tabla de abajo son **materializadas**: traen los datos de las otras bases por `dblink`, guardan el resultado y se actualizan con `REFRESH MATERIALIZED VIEW` (`sql/refrescar_reportes.sql`). `parametros` es una vista normal.
 
-- **Staging** (esquemas `catalogo`, `identidad`, `compras`, `inventarios` y `ventas`): las mismas tablas de las secciones 1 a 5, creadas con los mismos scripts y cargadas por el ETL desde los CSV que se extraen de cada servicio. Puede ir atrasado hasta la siguiente corrida del ETL (consistencia eventual). De `identidad` solo se copia `empleados`. Nadie escribe aquí salvo el ETL.
-- **Control de cargas** (esquema `etl`, tabla `cargas`, abajo).
-- **Esquema `reportes`**: solo vistas (`08_vistas.sql`). Las de la tabla de abajo son **materializadas** (guardan su resultado y se actualizan con `REFRESH MATERIALIZED VIEW` en cada corrida del ETL), salvo `parametros` y `vista_ultima_carga`, que son vistas normales. Las fuentes se refieren al staging.
-
-### etl.cargas
-
-Una fila por tabla en cada carga del ETL.
-
-| Columna | Tipo | Nulo | Clave | Default | Restricciones | Descripción |
-| --- | --- | --- | --- | --- | --- | --- |
-| id_carga | INTEGER | No | PK | IDENTITY | | Identificador de la fila |
-| fecha_carga | TIMESTAMP | No | UQ (fecha_carga, tabla) | | | Hora de la carga (la misma para todas las tablas de una corrida) |
-| tabla | VARCHAR(60) | No | UQ (fecha_carga, tabla) | | | Tabla cargada (`esquema.tabla`) |
-| filas_origen | INTEGER | No | | | `>= 0` | Filas que había en la base del servicio al extraer |
-| filas_staging | INTEGER | No | | | `>= 0`; `= filas_origen` (`carga_cuadra`) | Filas que quedaron en el staging. Si no cuadran, la carga entera se deshace |
 
 ### Vistas del esquema `reportes`
 
@@ -374,4 +359,4 @@ Una fila por tabla en cada carga del ETL.
 | vista_transferencias_en_transito | Obligatoria 8 | Inventarios, Catálogo | Traslados despachados y no recibidos |
 | vista_devoluciones_por_producto | Obligatoria 9 | Ventas, Catálogo | Cantidades vendidas, devueltas y porcentaje |
 | vista_reporte_corporativo | Obligatoria 10 | Compras, Ventas, Inventarios, Catálogo | Resumen por sede sin conteos duplicados (RN-42) |
-| vista_ultima_carga | Control (vista normal) | `etl.cargas` | Fecha de la última carga del ETL, tablas y filas cargadas |
+| vista_ultima_actualizacion | Control | — | Hora del último `REFRESH` de los reportes |

@@ -1164,7 +1164,7 @@ Los nombres de referencia propuestos por el documento son:
 
 El esquema `reportes` debe contener únicamente vistas y consultas de integración, sin tablas adicionales de negocio.
 
-> **Reemplazado:** ahora cada microservicio tiene su propia base (`andina_catalogo`, `andina_compras`…), con un esquema del mismo nombre dentro. Como una vista no puede leer otra base, `andina_reportes` se alimenta con un ETL: el staging guarda la copia de los demás servicios y las vistas materializadas se refrescan en cada carga; sigue sin tener tablas propias de negocio.
+> **Reemplazado:** ahora cada microservicio tiene su propia base (`andina_catalogo`, `andina_compras`…), con un esquema del mismo nombre dentro. Como una vista no puede leer otra base, `andina_reportes` usa `dblink` para traer los datos y los guarda en vistas materializadas que se refrescan cada X minutos; sigue sin tener tablas.
 
 La organización definitiva debe conservar la separación por responsabilidades y permitir identificar claramente la propiedad lógica de cada entidad.
 

@@ -167,7 +167,7 @@ En `detalle_pedido`, `pagos` y `devoluciones`, `id_sede` no es redundante: forma
 2. El enunciado propone `Inventarios = (id_sede, id_almacen, id_producto, …)` y el requerimiento 6 pide guardar las existencias "por sede y almacén".
 3. Dentro de un fragmento, `id_sede` es constante, así que no puede tomar valores distintos para el mismo almacén. La anomalía de actualización que evita la 2FN no aparece mientras un almacén no cambie de sede.
 
-**Cómo se controla:** `11_pruebas.sql` comprueba con `NOT EXISTS`, sobre el staging de `andina_reportes`, que cada fila tenga un almacén que pertenezca a la sede de su fragmento (resultado esperado: 0 filas). La base de datos no lo impide por sí sola, porque `almacenes` vive en otra base (`andina_catalogo`) y una FK no puede apuntar a otra base (S-09). En el sistema real lo valida el servicio de inventarios, preguntándole a catálogo antes de guardar.
+**Cómo se controla:** `11_pruebas.sql` comprueba con `NOT EXISTS`, desde `andina_reportes` con `dblink`, que cada fila tenga un almacén que pertenezca a la sede de su fragmento (resultado esperado: 0 filas). La base de datos no lo impide por sí sola, porque `almacenes` vive en otra base (`andina_catalogo`) y una FK no puede apuntar a otra base (S-09). En el sistema real lo valida el servicio de inventarios, preguntándole a catálogo antes de guardar.
 
 **Alternativa evaluada:** quitar `id_sede` y fragmentar por almacén, con `CHECK (id_almacen = 1)` en Bogotá, … y `CHECK (id_almacen IN (4, 5))` en el CEDI. La tabla quedaría en 3FN y la fragmentación seguiría siendo por sede, pero se apartaría de la estructura del enunciado y el `CHECK` dependería de los identificadores de los almacenes. Se mantiene la versión del enunciado.
 
