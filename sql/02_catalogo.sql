@@ -4,8 +4,8 @@
 -- todos los demas (sedes, almacenes, productos, clientes...).
 --
 -- se corre en la base andina_catalogo. tambien se corre en
--- andina_reportes para crear ahi la copia de estas tablas (mismas
--- columnas, mismas restricciones).
+-- andina_reportes para crear ahi el staging del ETL: las mismas tablas
+-- (mismas columnas, mismas restricciones) donde llega la copia.
 --
 -- aqui las FK son normales porque todo esta dentro de catalogo. los
 -- otros servicios guardan los id de estas tablas pero sin FK

@@ -2,14 +2,23 @@
 -- 08_vistas.sql
 -- microservicio de reportes (base andina_reportes).
 --
--- reportes no es dueno de ninguna tabla. en su base tiene la copia de
--- solo lectura de los otros servicios (esquemas catalogo, identidad,
--- compras, inventarios y ventas, cargados por sync/importar_reportes.sql)
--- y aqui, en el esquema reportes, solo crea vistas encima de esa copia.
+-- reportes no es dueno de ninguna tabla. el ETL (carpeta etl/) le deja
+-- en el staging (esquemas catalogo, identidad, compras, inventarios y
+-- ventas) una copia de lo que hay en cada servicio, y aqui, en el
+-- esquema reportes, se crean las vistas encima de ese staging.
 --
--- una vista es una consulta guardada con nombre. no copia datos: cada
--- vez que se usa, lee las tablas en ese momento. ojo: esas tablas son la
--- copia, asi que la vista esta tan al dia como la ultima sincronizacion.
+-- las vistas son MATERIALIZADAS:
+--   una vista normal es una consulta guardada con nombre: no guarda
+--   datos, cada vez que se lee vuelve a ejecutar su consulta.
+--   una vista materializada ejecuta la consulta y GUARDA el resultado,
+--   como si fuera una tabla. leerla es rapido, pero no cambia sola: se
+--   actualiza solo con REFRESH MATERIALIZED VIEW (etl/transformar.sql),
+--   que se programa cada X minutos. o sea, es "la vista que se va
+--   actualizando cada X tiempo".
+--
+-- WITH NO DATA: crea la vista vacia, sin ejecutar la consulta todavia.
+-- se llena la primera vez que corre etl/transformar.sql. hasta entonces,
+-- leerla da error ("no ha sido poblada").
 --
 -- parte a: vistas que juntan las 4 sedes en una sola (UNION ALL).
 -- parte b: las 10 vistas que pide el enunciado, hechas encima de las
@@ -29,42 +38,47 @@ COMMENT ON SCHEMA reportes IS 'Microservicio de Reportes Corporativos: solo vist
 -- fecha de corte y umbrales que usan las vistas y las consultas
 -- (S-14, S-15, S-16). se usa una fecha fija en vez de current_date para
 -- que los resultados no cambien segun el dia en que se ejecute.
+-- esta si es una vista normal: son constantes, no hay nada que refrescar.
 CREATE VIEW reportes.parametros AS
 SELECT DATE '2026-10-15' AS fecha_corte,
        15                AS dias_pedido_antiguo,
        90                AS dias_baja_rotacion;
 
 -- junta los 4 inventarios en uno solo. la columna fragmento dice de que
--- tabla viene cada fila.
+-- base y tabla viene cada fila (seccion 6 del enunciado: que se vea la
+-- procedencia).
 -- UNION ALL y no UNION: UNION gasta tiempo buscando repetidos, y aqui no
 -- puede haber, porque el CHECK de cada sede ya lo impide.
-CREATE VIEW reportes.vista_inventario_consolidado AS
-SELECT 'inventarios.inv_bogota'   AS fragmento, i.* FROM inventarios.inv_bogota   i
+CREATE MATERIALIZED VIEW reportes.vista_inventario_consolidado AS
+SELECT 'andina_inventarios.inv_bogota'   AS fragmento, i.* FROM inventarios.inv_bogota   i
 UNION ALL
-SELECT 'inventarios.inv_medellin' AS fragmento, i.* FROM inventarios.inv_medellin i
+SELECT 'andina_inventarios.inv_medellin' AS fragmento, i.* FROM inventarios.inv_medellin i
 UNION ALL
-SELECT 'inventarios.inv_cali'     AS fragmento, i.* FROM inventarios.inv_cali     i
+SELECT 'andina_inventarios.inv_cali'     AS fragmento, i.* FROM inventarios.inv_cali     i
 UNION ALL
-SELECT 'inventarios.inv_cedi'     AS fragmento, i.* FROM inventarios.inv_cedi     i;
+SELECT 'andina_inventarios.inv_cedi'     AS fragmento, i.* FROM inventarios.inv_cedi     i
+WITH NO DATA;
 
 -- lo mismo para pedidos y para sus detalles
-CREATE VIEW reportes.vista_pedidos_consolidado AS
-SELECT 'ventas.ped_bogota'   AS fragmento, p.* FROM ventas.ped_bogota   p
+CREATE MATERIALIZED VIEW reportes.vista_pedidos_consolidado AS
+SELECT 'andina_ventas.ped_bogota'   AS fragmento, p.* FROM ventas.ped_bogota   p
 UNION ALL
-SELECT 'ventas.ped_medellin' AS fragmento, p.* FROM ventas.ped_medellin p
+SELECT 'andina_ventas.ped_medellin' AS fragmento, p.* FROM ventas.ped_medellin p
 UNION ALL
-SELECT 'ventas.ped_cali'     AS fragmento, p.* FROM ventas.ped_cali     p
+SELECT 'andina_ventas.ped_cali'     AS fragmento, p.* FROM ventas.ped_cali     p
 UNION ALL
-SELECT 'ventas.ped_cedi'     AS fragmento, p.* FROM ventas.ped_cedi     p;
+SELECT 'andina_ventas.ped_cedi'     AS fragmento, p.* FROM ventas.ped_cedi     p
+WITH NO DATA;
 
-CREATE VIEW reportes.vista_detalle_pedido_consolidado AS
-SELECT 'ventas.det_ped_bogota'   AS fragmento, d.* FROM ventas.det_ped_bogota   d
+CREATE MATERIALIZED VIEW reportes.vista_detalle_pedido_consolidado AS
+SELECT 'andina_ventas.det_ped_bogota'   AS fragmento, d.* FROM ventas.det_ped_bogota   d
 UNION ALL
-SELECT 'ventas.det_ped_medellin' AS fragmento, d.* FROM ventas.det_ped_medellin d
+SELECT 'andina_ventas.det_ped_medellin' AS fragmento, d.* FROM ventas.det_ped_medellin d
 UNION ALL
-SELECT 'ventas.det_ped_cali'     AS fragmento, d.* FROM ventas.det_ped_cali     d
+SELECT 'andina_ventas.det_ped_cali'     AS fragmento, d.* FROM ventas.det_ped_cali     d
 UNION ALL
-SELECT 'ventas.det_ped_cedi'     AS fragmento, d.* FROM ventas.det_ped_cedi     d;
+SELECT 'andina_ventas.det_ped_cedi'     AS fragmento, d.* FROM ventas.det_ped_cedi     d
+WITH NO DATA;
 
 -- ---------------------------------------------------------------------
 -- b. vistas obligatorias
@@ -74,7 +88,7 @@ SELECT 'ventas.det_ped_cedi'     AS fragmento, d.* FROM ventas.det_ped_cedi     
 --    para mostrar nombres en vez de ids, y calcula la valorizacion
 --    (existencia x precio de lista).
 --    fuentes: fragmentos de inventarios + catalogo
-CREATE VIEW reportes.vista_inventario_por_sede AS
+CREATE MATERIALIZED VIEW reportes.vista_inventario_por_sede AS
 SELECT i.id_sede, s.nombre AS sede,
        i.id_almacen, a.nombre AS almacen,
        p.id_producto, p.sku, p.nombre AS producto, c.nombre AS categoria,
@@ -85,23 +99,25 @@ FROM reportes.vista_inventario_consolidado i
 JOIN catalogo.sedes      s ON s.id_sede      = i.id_sede
 JOIN catalogo.almacenes  a ON a.id_almacen   = i.id_almacen
 JOIN catalogo.productos  p ON p.id_producto  = i.id_producto
-JOIN catalogo.categorias c ON c.id_categoria = p.id_categoria;
+JOIN catalogo.categorias c ON c.id_categoria = p.id_categoria
+WITH NO DATA;
 
 -- 2. alertas de reabastecimiento: existencia cero o bajo el minimo
 --    (RN-18). se apoya en la vista 1, que ya trae los nombres.
-CREATE VIEW reportes.vista_alertas_reabastecimiento AS
+CREATE MATERIALIZED VIEW reportes.vista_alertas_reabastecimiento AS
 SELECT v.id_sede, v.sede, v.id_almacen, v.almacen, v.id_producto, v.sku, v.producto, v.categoria,
        v.existencia_actual, v.stock_minimo,
        v.stock_minimo - v.existencia_actual AS faltante,
        CASE WHEN v.existencia_actual = 0 THEN 'SIN EXISTENCIA' ELSE 'BAJO MINIMO' END AS nivel_alerta
 FROM reportes.vista_inventario_por_sede v
 WHERE v.existencia_actual = 0
-   OR v.existencia_actual < v.stock_minimo;
+   OR v.existencia_actual < v.stock_minimo
+WITH NO DATA;
 
 -- 3. productos activos sin registro de inventario en una sede.
 --    CROSS JOIN arma todas las parejas producto-sede y NOT EXISTS deja
 --    solo las que no aparecen en ningun fragmento.
-CREATE VIEW reportes.vista_productos_sin_inventario AS
+CREATE MATERIALIZED VIEW reportes.vista_productos_sin_inventario AS
 SELECT s.id_sede, s.nombre AS sede, p.id_producto, p.sku, p.nombre AS producto, c.nombre AS categoria
 FROM catalogo.productos p
 JOIN catalogo.categorias c ON c.id_categoria = p.id_categoria
@@ -110,12 +126,13 @@ WHERE p.estado = 'ACTIVO'
   AND NOT EXISTS (SELECT 1
                   FROM reportes.vista_inventario_consolidado i
                   WHERE i.id_sede = s.id_sede
-                    AND i.id_producto = p.id_producto);
+                    AND i.id_producto = p.id_producto)
+WITH NO DATA;
 
 -- 4. ventas confirmadas (CONFIRMADO o ENTREGADO, RN-29) por sede y mes.
 --    date_trunc('month', fecha) lleva cada fecha al dia 1 de su mes para
 --    agrupar por mes.
-CREATE VIEW reportes.vista_ventas_mensuales_por_sede AS
+CREATE MATERIALIZED VIEW reportes.vista_ventas_mensuales_por_sede AS
 SELECT p.id_sede, s.nombre AS sede,
        date_trunc('month', p.fecha_pedido)::date AS mes,
        COUNT(*)                                  AS pedidos,
@@ -123,14 +140,15 @@ SELECT p.id_sede, s.nombre AS sede,
 FROM reportes.vista_pedidos_consolidado p
 JOIN catalogo.sedes s ON s.id_sede = p.id_sede
 WHERE p.estado IN ('CONFIRMADO', 'ENTREGADO')
-GROUP BY p.id_sede, s.nombre, date_trunc('month', p.fecha_pedido);
+GROUP BY p.id_sede, s.nombre, date_trunc('month', p.fecha_pedido)
+WITH NO DATA;
 
 -- 5. pedidos pendientes con su antiguedad respecto de la fecha de corte.
 --    restar dos DATE da los dias entre ellas. es_antiguo marca los que
 --    superan el umbral de 15 dias (S-15).
 --    CROSS JOIN con parametros (una sola fila) pega la fecha de corte a
 --    cada pedido.
-CREATE VIEW reportes.vista_pedidos_pendientes AS
+CREATE MATERIALIZED VIEW reportes.vista_pedidos_pendientes AS
 SELECT p.id_sede, s.nombre AS sede, p.id_pedido, p.fecha_pedido,
        pr.fecha_corte - p.fecha_pedido AS dias_antiguedad,
        (pr.fecha_corte - p.fecha_pedido) > pr.dias_pedido_antiguo AS es_antiguo,
@@ -142,14 +160,15 @@ CROSS JOIN reportes.parametros pr
 JOIN catalogo.sedes      s  ON s.id_sede      = p.id_sede
 JOIN catalogo.clientes   cl ON cl.id_cliente  = p.id_cliente
 JOIN identidad.empleados e  ON e.id_empleado  = p.id_empleado
-WHERE p.estado = 'PENDIENTE';
+WHERE p.estado = 'PENDIENTE'
+WITH NO DATA;
 
 -- 6. saldos pendientes: total registrado menos pagos confirmados (RN-31).
 --    los pagos se suman primero por pedido (subconsulta pg) y despues se
 --    unen, asi un pedido con varios pagos no se repite.
 --    LEFT JOIN conserva los pedidos sin ningun pago; para ellos la suma
 --    sale NULL y COALESCE(pg.pagado, 0) la convierte en 0.
-CREATE VIEW reportes.vista_saldos_pendientes AS
+CREATE MATERIALIZED VIEW reportes.vista_saldos_pendientes AS
 SELECT p.id_sede, s.nombre AS sede, p.id_pedido, p.fecha_pedido, p.estado,
        p.id_cliente, cl.nombre_completo AS cliente,
        p.total_registrado,
@@ -164,12 +183,13 @@ LEFT JOIN (SELECT id_sede, id_pedido, SUM(valor) AS pagado
            GROUP BY id_sede, id_pedido) pg
        ON pg.id_sede = p.id_sede AND pg.id_pedido = p.id_pedido
 WHERE p.estado <> 'ANULADO'
-  AND p.total_registrado - COALESCE(pg.pagado, 0) > 0;
+  AND p.total_registrado - COALESCE(pg.pagado, 0) > 0
+WITH NO DATA;
 
 -- 7. compras pendientes de recibir por orden y producto: solicitado
 --    menos lo recibido en todas sus recepciones registradas (RN-11).
 --    mismo patron que la vista 6: sumar primero, LEFT JOIN y COALESCE.
-CREATE VIEW reportes.vista_compras_pendientes AS
+CREATE MATERIALIZED VIEW reportes.vista_compras_pendientes AS
 SELECT oc.id_orden_compra, oc.fecha_orden, oc.fecha_estimada, oc.estado,
        pv.razon_social AS proveedor, a.nombre AS almacen_destino,
        d.id_producto, p.nombre AS producto,
@@ -188,13 +208,14 @@ LEFT JOIN (SELECT rc.id_orden_compra, dr.id_producto, SUM(dr.cantidad_recibida) 
            GROUP BY rc.id_orden_compra, dr.id_producto) r
        ON r.id_orden_compra = d.id_orden_compra AND r.id_producto = d.id_producto
 WHERE oc.estado <> 'CANCELADA'
-  AND d.cantidad_solicitada > COALESCE(r.recibida, 0);
+  AND d.cantidad_solicitada > COALESCE(r.recibida, 0)
+WITH NO DATA;
 
 -- 8. transferencias despachadas y aun no recibidas (RN-22).
 --    almacenes y sedes se unen dos veces, con alias distintos (ao/so
 --    para el origen, ad/sd para el destino), porque la transferencia
 --    tiene dos almacenes.
-CREATE VIEW reportes.vista_transferencias_en_transito AS
+CREATE MATERIALIZED VIEW reportes.vista_transferencias_en_transito AS
 SELECT t.id_transferencia,
        ao.nombre AS almacen_origen,  so.nombre AS sede_origen,
        ad.nombre AS almacen_destino, sd.nombre AS sede_destino,
@@ -210,12 +231,13 @@ JOIN catalogo.almacenes ad ON ad.id_almacen = t.id_almacen_destino
 JOIN catalogo.sedes     sd ON sd.id_sede    = ad.id_sede
 JOIN catalogo.productos p  ON p.id_producto = dt.id_producto
 WHERE t.estado = 'DESPACHADA'
-  AND t.fecha_recepcion IS NULL;
+  AND t.fecha_recepcion IS NULL
+WITH NO DATA;
 
 -- 9. devoluciones aprobadas frente a unidades vendidas, por producto
 --    (RN-34). WITH define dos subconsultas con nombre (CTE): vendidas y
 --    devueltas se calculan por separado y luego se unen por producto.
-CREATE VIEW reportes.vista_devoluciones_por_producto AS
+CREATE MATERIALIZED VIEW reportes.vista_devoluciones_por_producto AS
 WITH vendidas AS (
     SELECT d.id_producto, SUM(d.cantidad) AS unidades_vendidas
     FROM reportes.vista_detalle_pedido_consolidado d
@@ -237,7 +259,8 @@ SELECT p.id_producto, p.sku, p.nombre AS producto, c.nombre AS categoria,
 FROM vendidas v
 JOIN catalogo.productos  p ON p.id_producto  = v.id_producto
 JOIN catalogo.categorias c ON c.id_categoria = p.id_categoria
-LEFT JOIN devueltas dv ON dv.id_producto = v.id_producto;
+LEFT JOIN devueltas dv ON dv.id_producto = v.id_producto
+WITH NO DATA;
 
 -- 10. reporte corporativo: un resumen por sede.
 --     el truco: si se unen pedidos, inventario y compras en un solo JOIN,
@@ -247,7 +270,7 @@ LEFT JOIN devueltas dv ON dv.id_producto = v.id_producto;
 --     la prueba 10 de 11_pruebas.sql revisa que los totales cuadren.
 --     COUNT(CASE WHEN ... THEN 1 END) cuenta solo las filas que cumplen
 --     la condicion (las demas dan NULL y COUNT no las cuenta).
-CREATE VIEW reportes.vista_reporte_corporativo AS
+CREATE MATERIALIZED VIEW reportes.vista_reporte_corporativo AS
 WITH inv AS (
     SELECT id_sede,
            COUNT(DISTINCT CASE WHEN existencia_actual > 0 THEN id_producto END) AS productos_con_existencia,
@@ -306,19 +329,38 @@ LEFT JOIN inv        ON inv.id_sede = s.id_sede
 LEFT JOIN ven        ON ven.id_sede = s.id_sede
 LEFT JOIN com        ON com.id_sede = s.id_sede
 LEFT JOIN tr_sal ts  ON ts.id_sede  = s.id_sede
-LEFT JOIN tr_ent te  ON te.id_sede  = s.id_sede;
+LEFT JOIN tr_ent te  ON te.id_sede  = s.id_sede
+WITH NO DATA;
 
--- procedencia de cada vista, guardada en la base (seccion 6 del enunciado)
-COMMENT ON VIEW reportes.vista_inventario_consolidado      IS 'UNION ALL de inv_bogota, inv_medellin, inv_cali, inv_cedi';
-COMMENT ON VIEW reportes.vista_pedidos_consolidado         IS 'UNION ALL de ped_bogota, ped_medellin, ped_cali, ped_cedi';
-COMMENT ON VIEW reportes.vista_detalle_pedido_consolidado  IS 'UNION ALL de det_ped_bogota, det_ped_medellin, det_ped_cali, det_ped_cedi';
-COMMENT ON VIEW reportes.vista_inventario_por_sede         IS 'Fuentes: fragmentos de inventarios + catalogo';
-COMMENT ON VIEW reportes.vista_alertas_reabastecimiento    IS 'Fuentes: fragmentos de inventarios + catalogo';
-COMMENT ON VIEW reportes.vista_productos_sin_inventario    IS 'Fuentes: catalogo + fragmentos de inventarios';
-COMMENT ON VIEW reportes.vista_ventas_mensuales_por_sede   IS 'Fuentes: fragmentos de ventas + catalogo';
-COMMENT ON VIEW reportes.vista_pedidos_pendientes          IS 'Fuentes: fragmentos de ventas + catalogo + identidad';
-COMMENT ON VIEW reportes.vista_saldos_pendientes           IS 'Fuentes: fragmentos de ventas + ventas.pagos + catalogo';
-COMMENT ON VIEW reportes.vista_compras_pendientes          IS 'Fuentes: compras + catalogo';
-COMMENT ON VIEW reportes.vista_transferencias_en_transito  IS 'Fuentes: inventarios.transferencias + catalogo';
-COMMENT ON VIEW reportes.vista_devoluciones_por_producto   IS 'Fuentes: fragmentos de ventas + ventas.devoluciones + catalogo';
-COMMENT ON VIEW reportes.vista_reporte_corporativo         IS 'Fuentes: todos los microservicios, agregados por separado';
+-- procedencia de cada vista, guardada en la base (seccion 6 del enunciado).
+-- todas leen el staging, que el ETL carga desde la base de cada servicio.
+COMMENT ON MATERIALIZED VIEW reportes.vista_inventario_consolidado      IS 'UNION ALL de los fragmentos de andina_inventarios: inv_bogota, inv_medellin, inv_cali, inv_cedi';
+COMMENT ON MATERIALIZED VIEW reportes.vista_pedidos_consolidado         IS 'UNION ALL de los fragmentos de andina_ventas: ped_bogota, ped_medellin, ped_cali, ped_cedi';
+COMMENT ON MATERIALIZED VIEW reportes.vista_detalle_pedido_consolidado  IS 'UNION ALL de los fragmentos de andina_ventas: det_ped_bogota, det_ped_medellin, det_ped_cali, det_ped_cedi';
+COMMENT ON MATERIALIZED VIEW reportes.vista_inventario_por_sede         IS 'Fuentes: fragmentos de inventarios + catalogo';
+COMMENT ON MATERIALIZED VIEW reportes.vista_alertas_reabastecimiento    IS 'Fuentes: fragmentos de inventarios + catalogo';
+COMMENT ON MATERIALIZED VIEW reportes.vista_productos_sin_inventario    IS 'Fuentes: catalogo + fragmentos de inventarios';
+COMMENT ON MATERIALIZED VIEW reportes.vista_ventas_mensuales_por_sede   IS 'Fuentes: fragmentos de ventas + catalogo';
+COMMENT ON MATERIALIZED VIEW reportes.vista_pedidos_pendientes          IS 'Fuentes: fragmentos de ventas + catalogo + identidad';
+COMMENT ON MATERIALIZED VIEW reportes.vista_saldos_pendientes           IS 'Fuentes: fragmentos de ventas + ventas.pagos + catalogo';
+COMMENT ON MATERIALIZED VIEW reportes.vista_compras_pendientes          IS 'Fuentes: compras + catalogo';
+COMMENT ON MATERIALIZED VIEW reportes.vista_transferencias_en_transito  IS 'Fuentes: inventarios.transferencias + catalogo';
+COMMENT ON MATERIALIZED VIEW reportes.vista_devoluciones_por_producto   IS 'Fuentes: fragmentos de ventas + ventas.devoluciones + catalogo';
+COMMENT ON MATERIALIZED VIEW reportes.vista_reporte_corporativo         IS 'Fuentes: todos los microservicios, agregados por separado';
+
+-- ---------------------------------------------------------------------
+-- c. de cuando son los datos
+-- vista normal sobre el control del ETL (etl.cargas): cuando fue la
+-- ultima carga y cuantas filas trajo. asi quien lea un reporte sabe
+-- "datos al...". es normal (no materializada) para que siempre muestre
+-- la ultima carga.
+-- ---------------------------------------------------------------------
+CREATE VIEW reportes.vista_ultima_carga AS
+SELECT fecha_carga        AS ultima_carga,
+       COUNT(*)           AS tablas_cargadas,
+       SUM(filas_staging) AS filas_cargadas
+FROM etl.cargas
+WHERE fecha_carga = (SELECT MAX(fecha_carga) FROM etl.cargas)
+GROUP BY fecha_carga;
+
+COMMENT ON VIEW reportes.vista_ultima_carga IS 'Fuente: etl.cargas (control del ETL)';

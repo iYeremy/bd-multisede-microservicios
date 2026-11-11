@@ -5,7 +5,7 @@
 --
 -- cuando este servicio necesita datos de otro (ids, precios...) no los
 -- puede leer directo, porque estan en otra base. los toma del CSV que
--- ese servicio publico (carpeta csv/, ver sql/sync/). en el sistema
+-- ese servicio publico (carpeta csv/, ver sql/etl/extraer_*.sql). en el sistema
 -- real eso seria una llamada HTTP al otro servicio.
 -- aqui se necesita que productos vende cada proveedor y a que costo
 -- (catalogo.producto_proveedor). los ids de empleados compradores (16 y

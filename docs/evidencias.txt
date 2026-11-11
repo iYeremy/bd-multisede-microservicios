@@ -58,6 +58,9 @@ COPY 80
 COPY 10
 COPY 120
 COPY 100
+CREATE VIEW
+COPY 7
+DROP VIEW
 >> identidad
 Ahora está conectado a la base de datos «andina_identidad» con el usuario «postgres».
 CREATE SCHEMA
@@ -77,6 +80,9 @@ INSERT 0 20
 INSERT 0 12
 INSERT 0 60
 COPY 20
+CREATE VIEW
+COPY 1
+DROP VIEW
 >> compras
 Ahora está conectado a la base de datos «andina_compras» con el usuario «postgres».
 CREATE SCHEMA
@@ -109,6 +115,9 @@ COPY 60
 COPY 180
 COPY 70
 COPY 193
+CREATE VIEW
+COPY 4
+DROP VIEW
 >> inventarios (fragmentos por sede)
 Ahora está conectado a la base de datos «andina_inventarios» con el usuario «postgres».
 CREATE SCHEMA
@@ -151,6 +160,9 @@ COPY 64
 COPY 99
 COPY 25
 COPY 75
+CREATE VIEW
+COPY 6
+DROP VIEW
 >> ventas (fragmentos por sede)
 Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
 CREATE SCHEMA
@@ -220,7 +232,10 @@ COPY 156
 COPY 340
 COPY 22
 COPY 29
->> reportes: copia de lectura
+CREATE VIEW
+COPY 11
+DROP VIEW
+>> reportes: staging
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
 CREATE SCHEMA
 COMMENT
@@ -295,6 +310,78 @@ COMMENT
 COMMENT
 COMMENT
 DROP TABLE
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+CREATE SCHEMA
+COMMENT
+CREATE TABLE
+COMMENT
+>> 08 vistas (materializadas, todavia vacias)
+CREATE SCHEMA
+COMMENT
+CREATE VIEW
+CREATE MATERIALIZED VIEW
+CREATE MATERIALIZED VIEW
+CREATE MATERIALIZED VIEW
+CREATE MATERIALIZED VIEW
+CREATE MATERIALIZED VIEW
+CREATE MATERIALIZED VIEW
+CREATE MATERIALIZED VIEW
+CREATE MATERIALIZED VIEW
+CREATE MATERIALIZED VIEW
+CREATE MATERIALIZED VIEW
+CREATE MATERIALIZED VIEW
+CREATE MATERIALIZED VIEW
+CREATE MATERIALIZED VIEW
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+CREATE VIEW
+COMMENT
+>> ETL: cargar el staging y transformar
+BEGIN
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
 COPY 4
 COPY 5
 COPY 5
@@ -324,41 +411,30 @@ COPY 156
 COPY 340
 COPY 22
 COPY 29
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
->> 08 vistas
-CREATE SCHEMA
-COMMENT
-CREATE VIEW
-CREATE VIEW
-CREATE VIEW
-CREATE VIEW
-CREATE VIEW
-CREATE VIEW
-CREATE VIEW
-CREATE VIEW
-CREATE VIEW
-CREATE VIEW
-CREATE VIEW
-CREATE VIEW
-CREATE VIEW
-CREATE VIEW
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
+CREATE TABLE
+COPY 7
+COPY 1
+COPY 4
+COPY 6
+COPY 11
+INSERT 0 29
+DROP TABLE
+COMMIT
+BEGIN
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+COMMIT
 >> 09 roles y permisos
 CREATE ROLE
 CREATE ROLE
@@ -429,6 +505,8 @@ REVOKE
 GRANT
 GRANT
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
+GRANT
+GRANT
 GRANT
 GRANT
 GRANT
@@ -1407,106 +1485,106 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
            producto           | sede_con_excedente | excedente | sede_con_faltante | faltante | unidades_sugeridas 
 ------------------------------+--------------------+-----------+-------------------+----------+--------------------
  Galletas de soda x6          | Sede Cali          |        56 | CEDI Funza        |       44 |                 44
- Toallas higiénicas x10       | CEDI Funza         |       185 | Sede Bogotá       |       28 |                 28
  Toallas higiénicas x10       | Sede Cali          |        94 | Sede Bogotá       |       28 |                 28
+ Toallas higiénicas x10       | CEDI Funza         |       185 | Sede Bogotá       |       28 |                 28
  Harina de maíz 1 kg          | CEDI Funza         |       172 | Sede Medellín     |       26 |                 26
  Café listo para tomar 250 ml | Sede Bogotá        |        26 | Sede Medellín     |       25 |                 25
  Café listo para tomar 250 ml | Sede Cali          |        69 | Sede Medellín     |       25 |                 25
  Café listo para tomar 250 ml | CEDI Funza         |       183 | Sede Medellín     |       25 |                 25
  Bebida de soya 1 L           | CEDI Funza         |       389 | Sede Cali         |       22 |                 22
- Marcador permanente x4       | CEDI Funza         |       302 | Sede Medellín     |       22 |                 22
- Marcador permanente x4       | Sede Cali          |        88 | Sede Medellín     |       22 |                 22
  Marcador permanente x4       | Sede Bogotá        |        56 | Sede Medellín     |       22 |                 22
- Mayonesa 400 g               | CEDI Funza         |       345 | Sede Bogotá       |       22 |                 22
+ Marcador permanente x4       | Sede Cali          |        88 | Sede Medellín     |       22 |                 22
+ Marcador permanente x4       | CEDI Funza         |       302 | Sede Medellín     |       22 |                 22
  Mayonesa 400 g               | Sede Medellín      |        52 | Sede Bogotá       |       22 |                 22
  Mayonesa 400 g               | Sede Cali          |        65 | Sede Bogotá       |       22 |                 22
+ Mayonesa 400 g               | CEDI Funza         |       345 | Sede Bogotá       |       22 |                 22
  Agua con gas 600 ml          | Sede Medellín      |        95 | Sede Bogotá       |       20 |                 20
  Agua con gas 600 ml          | CEDI Funza         |       143 | Sede Bogotá       |       20 |                 20
  Máquina de afeitar x3        | Sede Bogotá        |        40 | Sede Medellín     |       20 |                 20
- Máquina de afeitar x3        | CEDI Funza         |       275 | Sede Medellín     |       20 |                 20
  Máquina de afeitar x3        | Sede Cali          |        89 | Sede Medellín     |       20 |                 20
- Cerveza lager six pack       | CEDI Funza         |        81 | Sede Medellín     |       19 |                 19
- Cerveza lager six pack       | Sede Cali          |        75 | Sede Medellín     |       19 |                 19
+ Máquina de afeitar x3        | CEDI Funza         |       275 | Sede Medellín     |       20 |                 20
  Cerveza lager six pack       | Sede Bogotá        |        37 | Sede Medellín     |       19 |                 19
+ Cerveza lager six pack       | Sede Cali          |        75 | Sede Medellín     |       19 |                 19
+ Cerveza lager six pack       | CEDI Funza         |        81 | Sede Medellín     |       19 |                 19
  Desodorante roll-on          | Sede Medellín      |        92 | Sede Bogotá       |       19 |                 19
- Desodorante roll-on          | CEDI Funza         |       129 | Sede Bogotá       |       19 |                 19
  Desodorante roll-on          | Sede Cali          |        74 | Sede Bogotá       |       19 |                 19
- Escoba plástica              | CEDI Funza         |       306 | Sede Bogotá       |       19 |                 19
+ Desodorante roll-on          | CEDI Funza         |       129 | Sede Bogotá       |       19 |                 19
  Escoba plástica              | Sede Medellín      |        68 | Sede Bogotá       |       19 |                 19
- Toallas de cocina x3         | CEDI Funza         |       175 | Sede Medellín     |       19 |                 19
- Toallas de cocina x3         | Sede Cali          |        55 | Sede Medellín     |       19 |                 19
+ Escoba plástica              | CEDI Funza         |       306 | Sede Bogotá       |       19 |                 19
  Toallas de cocina x3         | Sede Bogotá        |        23 | Sede Medellín     |       19 |                 19
- Colores x24                  | CEDI Funza         |       106 | Sede Bogotá       |       18 |                 18
+ Toallas de cocina x3         | Sede Cali          |        55 | Sede Medellín     |       19 |                 19
+ Toallas de cocina x3         | CEDI Funza         |       175 | Sede Medellín     |       19 |                 19
  Colores x24                  | Sede Medellín      |        33 | Sede Bogotá       |       18 |                 18
  Colores x24                  | Sede Cali          |        49 | Sede Bogotá       |       18 |                 18
+ Colores x24                  | CEDI Funza         |       106 | Sede Bogotá       |       18 |                 18
  Talco para pies 120 g        | Sede Bogotá        |        44 | Sede Cali         |       18 |                 18
  Talco para pies 120 g        | CEDI Funza         |       275 | Sede Cali         |       18 |                 18
  Arroz blanco 1 kg            | Sede Medellín      |        72 | Sede Cali         |       17 |                 17
  Arroz blanco 1 kg            | CEDI Funza         |       211 | Sede Cali         |       17 |                 17
- Atún en lata 170 g           | CEDI Funza         |       142 | Sede Cali         |       17 |                 17
  Atún en lata 170 g           | Sede Medellín      |        93 | Sede Cali         |       17 |                 17
- Escoba plástica              | CEDI Funza         |       306 | Sede Cali         |       15 |                 15
+ Atún en lata 170 g           | CEDI Funza         |       142 | Sede Cali         |       17 |                 17
  Escoba plástica              | Sede Medellín      |        68 | Sede Cali         |       15 |                 15
+ Escoba plástica              | CEDI Funza         |       306 | Sede Cali         |       15 |                 15
  Harina de maíz 1 kg          | Sede Bogotá        |        15 | Sede Medellín     |       26 |                 15
  Trapero de algodón           | Sede Medellín      |        94 | Sede Bogotá       |       15 |                 15
  Trapero de algodón           | Sede Cali          |        73 | Sede Bogotá       |       15 |                 15
  Trapero de algodón           | CEDI Funza         |       352 | Sede Bogotá       |       15 |                 15
  Té helado limón 500 ml       | Sede Bogotá        |        59 | Sede Cali         |       15 |                 15
- Té helado limón 500 ml       | CEDI Funza         |       162 | Sede Cali         |       15 |                 15
  Té helado limón 500 ml       | Sede Medellín      |        79 | Sede Cali         |       15 |                 15
- Blanqueador 1 L              | CEDI Funza         |       168 | Sede Bogotá       |       14 |                 14
+ Té helado limón 500 ml       | CEDI Funza         |       162 | Sede Cali         |       15 |                 15
  Blanqueador 1 L              | Sede Cali          |        22 | Sede Bogotá       |       14 |                 14
+ Blanqueador 1 L              | CEDI Funza         |       168 | Sede Bogotá       |       14 |                 14
  Detergente en polvo 1 kg     | Sede Bogotá        |        34 | Sede Cali         |       13 |                 13
  Detergente en polvo 1 kg     | CEDI Funza         |       295 | Sede Cali         |       13 |                 13
- Azúcar refinada 1 kg         | CEDI Funza         |        37 | Sede Cali         |       12 |                 12
- Azúcar refinada 1 kg         | Sede Medellín      |        89 | Sede Cali         |       12 |                 12
  Azúcar refinada 1 kg         | Sede Bogotá        |        14 | Sede Cali         |       12 |                 12
+ Azúcar refinada 1 kg         | Sede Medellín      |        89 | Sede Cali         |       12 |                 12
+ Azúcar refinada 1 kg         | CEDI Funza         |        37 | Sede Cali         |       12 |                 12
  Jabón de tocador x3          | Sede Bogotá        |        47 | Sede Cali         |       11 |                 11
- Jabón de tocador x3          | CEDI Funza         |        88 | Sede Cali         |       11 |                 11
  Jabón de tocador x3          | Sede Medellín      |        95 | Sede Cali         |       11 |                 11
- Toallas higiénicas x10       | CEDI Funza         |       185 | Sede Medellín     |       11 |                 11
+ Jabón de tocador x3          | CEDI Funza         |        88 | Sede Cali         |       11 |                 11
  Toallas higiénicas x10       | Sede Cali          |        94 | Sede Medellín     |       11 |                 11
- Vino tinto 750 ml            | CEDI Funza         |       262 | Sede Medellín     |       11 |                 11
+ Toallas higiénicas x10       | CEDI Funza         |       185 | Sede Medellín     |       11 |                 11
  Vino tinto 750 ml            | Sede Bogotá        |        88 | Sede Medellín     |       11 |                 11
+ Vino tinto 750 ml            | CEDI Funza         |       262 | Sede Medellín     |       11 |                 11
  Bolígrafo negro x12          | Sede Cali          |        64 | Sede Medellín     |       10 |                 10
  Bolígrafo negro x12          | CEDI Funza         |       357 | Sede Medellín     |       10 |                 10
- Cuaderno cuadriculado 100 h  | CEDI Funza         |       300 | Sede Medellín     |       10 |                 10
  Cuaderno cuadriculado 100 h  | Sede Bogotá        |        42 | Sede Medellín     |       10 |                 10
+ Cuaderno cuadriculado 100 h  | CEDI Funza         |       300 | Sede Medellín     |       10 |                 10
  Blanqueador 1 L              | Sede Medellín      |         9 | Sede Bogotá       |       14 |                  9
  Protector solar 120 ml       | Sede Medellín      |        74 | Sede Bogotá       |        9 |                  9
- Protector solar 120 ml       | CEDI Funza         |       280 | Sede Bogotá       |        9 |                  9
  Protector solar 120 ml       | Sede Cali          |        34 | Sede Bogotá       |        9 |                  9
+ Protector solar 120 ml       | CEDI Funza         |       280 | Sede Bogotá       |        9 |                  9
+ Sal refinada 1 kg            | Sede Medellín      |        18 | Sede Bogotá       |        9 |                  9
  Sal refinada 1 kg            | Sede Cali          |        89 | Sede Bogotá       |        9 |                  9
  Sal refinada 1 kg            | CEDI Funza         |       319 | Sede Bogotá       |        9 |                  9
- Sal refinada 1 kg            | Sede Medellín      |        18 | Sede Bogotá       |        9 |                  9
- Cinta adhesiva transparente  | CEDI Funza         |       138 | Sede Cali         |        8 |                  8
- Cinta adhesiva transparente  | Sede Medellín      |        50 | Sede Cali         |        8 |                  8
  Cinta adhesiva transparente  | Sede Bogotá        |        76 | Sede Cali         |        8 |                  8
- Fríjol rojo 500 g            | CEDI Funza         |       272 | Sede Bogotá       |        8 |                  8
+ Cinta adhesiva transparente  | Sede Medellín      |        50 | Sede Cali         |        8 |                  8
+ Cinta adhesiva transparente  | CEDI Funza         |       138 | Sede Cali         |        8 |                  8
  Fríjol rojo 500 g            | Sede Medellín      |        55 | Sede Bogotá       |        8 |                  8
- Shampoo 400 ml               | CEDI Funza         |       192 | Sede Cali         |        8 |                  8
+ Fríjol rojo 500 g            | CEDI Funza         |       272 | Sede Bogotá       |        8 |                  8
  Shampoo 400 ml               | Sede Medellín      |        46 | Sede Cali         |        8 |                  8
- Toallas húmedas x50          | CEDI Funza         |       182 | Sede Cali         |        8 |                  8
+ Shampoo 400 ml               | CEDI Funza         |       192 | Sede Cali         |        8 |                  8
  Toallas húmedas x50          | Sede Bogotá        |        30 | Sede Cali         |        8 |                  8
  Toallas húmedas x50          | Sede Medellín      |        40 | Sede Cali         |        8 |                  8
+ Toallas húmedas x50          | CEDI Funza         |       182 | Sede Cali         |        8 |                  8
+ Avena en hojuelas 500 g      | Sede Medellín      |        15 | Sede Bogotá       |        7 |                  7
  Avena en hojuelas 500 g      | Sede Cali          |        55 | Sede Bogotá       |        7 |                  7
  Avena en hojuelas 500 g      | CEDI Funza         |        91 | Sede Bogotá       |        7 |                  7
- Avena en hojuelas 500 g      | Sede Medellín      |        15 | Sede Bogotá       |        7 |                  7
- Leche entera 1 L             | CEDI Funza         |       181 | Sede Medellín     |        7 |                  7
- Leche entera 1 L             | Sede Cali          |        87 | Sede Medellín     |        7 |                  7
  Leche entera 1 L             | Sede Bogotá        |        86 | Sede Medellín     |        7 |                  7
- Cera para pisos 1 L          | CEDI Funza         |       185 | Sede Cali         |        6 |                  6
- Cera para pisos 1 L          | Sede Medellín      |        37 | Sede Cali         |        6 |                  6
+ Leche entera 1 L             | Sede Cali          |        87 | Sede Medellín     |        7 |                  7
+ Leche entera 1 L             | CEDI Funza         |       181 | Sede Medellín     |        7 |                  7
  Cera para pisos 1 L          | Sede Bogotá        |        40 | Sede Cali         |        6 |                  6
+ Cera para pisos 1 L          | Sede Medellín      |        37 | Sede Cali         |        6 |                  6
+ Cera para pisos 1 L          | CEDI Funza         |       185 | Sede Cali         |        6 |                  6
  Guantes de caucho            | Sede Bogotá        |        44 | Sede Medellín     |        6 |                  6
  Guantes de caucho            | Sede Cali          |        14 | Sede Medellín     |        6 |                  6
  Guantes de caucho            | CEDI Funza         |       361 | Sede Medellín     |        6 |                  6
- Lápiz grafito x12            | CEDI Funza         |       287 | Sede Cali         |        6 |                  6
  Lápiz grafito x12            | Sede Bogotá        |        85 | Sede Cali         |        6 |                  6
+ Lápiz grafito x12            | CEDI Funza         |       287 | Sede Cali         |        6 |                  6
  Ambientador en aerosol       | Sede Medellín      |         5 | CEDI Funza        |        6 |                  5
  Jabón en barra para ropa x3  | Sede Bogotá        |        31 | Sede Cali         |        5 |                  5
- Jabón en barra para ropa x3  | CEDI Funza         |       265 | Sede Cali         |        5 |                  5
  Jabón en barra para ropa x3  | Sede Medellín      |        36 | Sede Cali         |        5 |                  5
+ Jabón en barra para ropa x3  | CEDI Funza         |       265 | Sede Cali         |        5 |                  5
  Shampoo 400 ml               | Sede Bogotá        |         5 | Sede Cali         |        8 |                  5
  Galletas de soda x6          | Sede Medellín      |         4 | CEDI Funza        |       44 |                  4
  Lápiz grafito x12            | Sede Medellín      |         4 | Sede Cali         |        6 |                  4
@@ -1514,8 +1592,8 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
  Fríjol rojo 500 g            | CEDI Funza         |       272 | Sede Cali         |        3 |                  3
  Bebida de soya 1 L           | Sede Bogotá        |         2 | Sede Cali         |       22 |                  2
  Bolígrafo negro x12          | Sede Bogotá        |         2 | Sede Medellín     |       10 |                  2
- Cepillo dental               | CEDI Funza         |        72 | Sede Medellín     |        2 |                  2
  Cepillo dental               | Sede Cali          |        73 | Sede Medellín     |        2 |                  2
+ Cepillo dental               | CEDI Funza         |        72 | Sede Medellín     |        2 |                  2
  Galletas de soda x6          | Sede Bogotá        |         2 | CEDI Funza        |       44 |                  2
  Vino tinto 750 ml            | Sede Cali          |         2 | Sede Medellín     |       11 |                  2
  Ambientador en aerosol       | Sede Bogotá        |         1 | CEDI Funza        |        6 |                  1
@@ -1739,40 +1817,40 @@ INSERT 0 1
 
 
 === Prueba 2. SKU duplicado (UNIQUE) -> esperado: ERROR llave duplicada ===
-psql:sql/11_pruebas.sql:50: ERROR:  duplicate key value violates unique constraint "productos_sku_key"
+psql:sql/11_pruebas.sql:51: ERROR:  duplicate key value violates unique constraint "productos_sku_key"
 DETALLE:  Key (sku)=(ALI-001) already exists.
 
 === Prueba 4. Clave foranea local inexistente (FK) -> esperado: ERROR viola la llave foranea ===
-psql:sql/11_pruebas.sql:56: ERROR:  insert or update on table "productos" violates foreign key constraint "productos_id_categoria_fkey"
+psql:sql/11_pruebas.sql:57: ERROR:  insert or update on table "productos" violates foreign key constraint "productos_id_categoria_fkey"
 DETALLE:  Key (id_categoria)=(999) is not present in table "categorias".
 
 === Prueba 9. Accesos permitidos y denegados por rol (por partes, en cada base) ===
 --- 9.5 vendedor_bogota: modifica el precio de un producto del catalogo (DENEGADO) -> esperado: ERROR permiso denegado ---
 SET
-psql:sql/11_pruebas.sql:64: ERROR:  permission denied for table productos
+psql:sql/11_pruebas.sql:65: ERROR:  permission denied for table productos
 RESET
 ROLLBACK
 Ahora está conectado a la base de datos «andina_compras» con el usuario «postgres».
 BEGIN
 
 === Prueba 3. Cantidad negativa (CHECK) -> esperado: ERROR viola la restriccion check ===
-psql:sql/11_pruebas.sql:81: ERROR:  new row for relation "detalle_orden_compra" violates check constraint "detalle_orden_compra_cantidad_solicitada_check"
+psql:sql/11_pruebas.sql:82: ERROR:  new row for relation "detalle_orden_compra" violates check constraint "detalle_orden_compra_cantidad_solicitada_check"
 DETALLE:  Failing row contains (1, 80, -5, 1000.00).
 --- 9.8b auditor_interno: modificar una orden de compra -> esperado: ERROR permiso denegado ---
 SET
-psql:sql/11_pruebas.sql:85: ERROR:  permission denied for table ordenes_compra
+psql:sql/11_pruebas.sql:86: ERROR:  permission denied for table ordenes_compra
 RESET
 ROLLBACK
 Ahora está conectado a la base de datos «andina_inventarios» con el usuario «postgres».
 BEGIN
 
 --- 3b. Existencia negativa (CHECK) -> esperado: ERROR viola la restriccion check ---
-psql:sql/11_pruebas.sql:98: ERROR:  new row for relation "inv_bogota" violates check constraint "inv_bogota_existencia_actual_check"
+psql:sql/11_pruebas.sql:99: ERROR:  new row for relation "inv_bogota" violates check constraint "inv_bogota_existencia_actual_check"
 DETALLE:  Failing row contains (1, 1, 1, -1, 13, 2026-10-15 18:00:00).
 
 --- 4b. Una fila de otra sede no entra en el fragmento de Bogota -> esperado: ERROR viola la restriccion check ---
-psql:sql/11_pruebas.sql:104: ERROR:  new row for relation "inv_bogota" violates check constraint "inv_bogota_id_sede_check"
-DETALLE:  Failing row contains (2, 2, 1, 10, 5, 2026-11-09 21:59:32.088549).
+psql:sql/11_pruebas.sql:105: ERROR:  new row for relation "inv_bogota" violates check constraint "inv_bogota_id_sede_check"
+DETALLE:  Failing row contains (2, 2, 1, 10, 5, 2026-11-10 10:19:59.007705).
 
 === Prueba 5. Los fragmentos de dos sedes contienen registros distintos ===
  fragmento  | filas | sede_min | sede_max 
@@ -1803,14 +1881,14 @@ SET
 (1 fila)
 
 UPDATE 1
-psql:sql/11_pruebas.sql:139: ERROR:  permission denied for table inv_bogota
+psql:sql/11_pruebas.sql:140: ERROR:  permission denied for table inv_bogota
 RESET
 ROLLBACK
 Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
 BEGIN
 
 --- 4c. Detalle de un pedido que no existe (FK compuesta) -> esperado: ERROR viola la llave foranea ---
-psql:sql/11_pruebas.sql:155: ERROR:  insert or update on table "det_ped_bogota" violates foreign key constraint "det_ped_bogota_id_sede_id_pedido_fkey"
+psql:sql/11_pruebas.sql:156: ERROR:  insert or update on table "det_ped_bogota" violates foreign key constraint "det_ped_bogota_id_sede_id_pedido_fkey"
 DETALLE:  Key (id_sede, id_pedido)=(1, 99999) is not present in table "ped_bogota".
 
 --- 5b. Fragmentos de pedidos de dos sedes ---
@@ -1822,7 +1900,7 @@ DETALLE:  Key (id_sede, id_pedido)=(1, 99999) is not present in table "ped_bogot
 
 --- 9.2 gerente_general: INSERT en ventas.pagos (DENEGADO) -> esperado: ERROR permiso denegado ---
 SET
-psql:sql/11_pruebas.sql:170: ERROR:  permission denied for schema ventas
+psql:sql/11_pruebas.sql:171: ERROR:  permission denied for schema ventas
 LÍNEA 1: INSERT INTO ventas.pagos (id_sede, id_pedido, fecha_pago, va...
                      ^
 RESET
@@ -1836,9 +1914,9 @@ SET
 INSERT 0 1
 INSERT 0 1
 --- 9.4 vendedor_bogota: consulta pedidos de Cali (DENEGADO) -> esperado: ERROR permiso denegado ---
-psql:sql/11_pruebas.sql:185: ERROR:  permission denied for table ped_cali
+psql:sql/11_pruebas.sql:186: ERROR:  permission denied for table ped_cali
 --- 9.6 vendedor_bogota: borra un pago (DENEGADO por el REVOKE DELETE) -> esperado: ERROR permiso denegado ---
-psql:sql/11_pruebas.sql:188: ERROR:  permission denied for table pagos
+psql:sql/11_pruebas.sql:189: ERROR:  permission denied for table pagos
 RESET
 ROLLBACK
 Ahora está conectado a la base de datos «andina_identidad» con el usuario «postgres».
@@ -1852,18 +1930,18 @@ SET
  inventario_bogota | INVENTARIO    | ACTIVO
 (3 filas)
 
-psql:sql/11_pruebas.sql:204: ERROR:  permission denied for table usuarios
+psql:sql/11_pruebas.sql:205: ERROR:  permission denied for table usuarios
 RESET
 ROLLBACK
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
 BEGIN
 === Prueba 6. La vista consolidada reune los fragmentos de las 4 sedes ===
-        fragmento         | id_sede | filas 
---------------------------+---------+-------
- inventarios.inv_bogota   |       1 |    72
- inventarios.inv_medellin |       2 |    69
- inventarios.inv_cali     |       3 |    64
- inventarios.inv_cedi     |       4 |    99
+            fragmento            | id_sede | filas 
+---------------------------------+---------+-------
+ andina_inventarios.inv_bogota   |       1 |    72
+ andina_inventarios.inv_medellin |       2 |    69
+ andina_inventarios.inv_cali     |       3 |    64
+ andina_inventarios.inv_cedi     |       4 |    99
 (4 filas)
 
  filas_vista | suma_fragmentos 
@@ -1902,8 +1980,8 @@ SET
  CEDI Funza    |  20298590.00 |                  7
 (4 filas)
 
---- 9.1b gerente_general: leer la copia de ventas en reportes (DENEGADO) -> esperado: ERROR permiso denegado ---
-psql:sql/11_pruebas.sql:259: ERROR:  permission denied for schema ventas
+--- 9.1b gerente_general: leer el staging de ventas en reportes (DENEGADO) -> esperado: ERROR permiso denegado ---
+psql:sql/11_pruebas.sql:260: ERROR:  permission denied for schema ventas
 LÍNEA 1: SELECT COUNT(*) FROM ventas.ped_bogota;
                               ^
 RESET
@@ -1947,11 +2025,11 @@ ROLLBACK
 === Prueba 11. Cada servicio solo ve su propia base ===
 Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
 --- 11.1 desde andina_ventas: leer catalogo.productos -> esperado: ERROR la relacion no existe ---
-psql:sql/11_pruebas.sql:364: ERROR:  relation "catalogo.productos" does not exist
+psql:sql/11_pruebas.sql:365: ERROR:  relation "catalogo.productos" does not exist
 LÍNEA 1: SELECT COUNT(*) FROM catalogo.productos;
                               ^
 --- 11.2 nombrando la otra base (base.esquema.tabla) -> esperado: ERROR no estan implementadas las referencias entre bases ---
-psql:sql/11_pruebas.sql:367: ERROR:  cross-database references are not implemented: "andina_catalogo.catalogo.productos"
+psql:sql/11_pruebas.sql:368: ERROR:  cross-database references are not implemented: "andina_catalogo.catalogo.productos"
 LÍNEA 1: SELECT COUNT(*) FROM andina_catalogo.catalogo.productos;
                               ^
 --- 11.3 a que base puede entrar cada rol (has_database_privilege) ---
@@ -1966,9 +2044,333 @@ LÍNEA 1: SELECT COUNT(*) FROM andina_catalogo.catalogo.productos;
  vendedor_bogota | t        | f         | f       | f           | t      | f
 (7 filas)
 
+
+=== Prueba 12. ETL: los reportes van atrasados hasta que corre el ETL (consistencia eventual) ===
+--- 12.1 antes: pedidos de Bogota que ve el reporte ---
+Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
+ pedidos_bogota_en_reporte 
+---------------------------
+                       100
+(1 fila)
+
+--- 12.2 se registra un pedido nuevo en andina_ventas (queda guardado) ---
+Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
+INSERT 0 1
+ pedidos_bogota_en_ventas 
+--------------------------
+                      101
+(1 fila)
+
+--- 12.3 el reporte todavia NO lo ve: sigue con la ultima carga ---
+Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
+ pedidos_bogota_en_reporte 
+---------------------------
+                       100
+(1 fila)
+
+--- 12.4 se corre el ETL completo ---
+>> ETL: extraer de cada servicio
+Ahora está conectado a la base de datos «andina_catalogo» con el usuario «postgres».
+COPY 4
+COPY 5
+COPY 5
+COPY 80
+COPY 10
+COPY 120
+COPY 100
+CREATE VIEW
+COPY 7
+DROP VIEW
+Ahora está conectado a la base de datos «andina_identidad» con el usuario «postgres».
+COPY 20
+CREATE VIEW
+COPY 1
+DROP VIEW
+Ahora está conectado a la base de datos «andina_compras» con el usuario «postgres».
+COPY 60
+COPY 180
+COPY 70
+COPY 193
+CREATE VIEW
+COPY 4
+DROP VIEW
+Ahora está conectado a la base de datos «andina_inventarios» con el usuario «postgres».
+COPY 72
+COPY 69
+COPY 64
+COPY 99
+COPY 25
+COPY 75
+CREATE VIEW
+COPY 6
+DROP VIEW
+Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
+COPY 101
+COPY 80
+COPY 70
+COPY 50
+COPY 281
+COPY 237
+COPY 202
+COPY 156
+COPY 340
+COPY 22
+COPY 29
+CREATE VIEW
+COPY 11
+DROP VIEW
+>> ETL: cargar el staging de reportes
+Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
+BEGIN
+DELETE 120
+DELETE 5
+DELETE 80
+DELETE 4
+DELETE 5
+DELETE 10
+DELETE 100
+DELETE 20
+DELETE 193
+DELETE 70
+DELETE 180
+DELETE 60
+DELETE 75
+DELETE 25
+DELETE 72
+DELETE 69
+DELETE 64
+DELETE 99
+DELETE 281
+DELETE 237
+DELETE 202
+DELETE 156
+DELETE 100
+DELETE 80
+DELETE 70
+DELETE 50
+DELETE 29
+DELETE 22
+DELETE 340
+COPY 4
+COPY 5
+COPY 5
+COPY 80
+COPY 10
+COPY 120
+COPY 100
+COPY 20
+COPY 60
+COPY 180
+COPY 70
+COPY 193
+COPY 72
+COPY 69
+COPY 64
+COPY 99
+COPY 25
+COPY 75
+COPY 101
+COPY 80
+COPY 70
+COPY 50
+COPY 281
+COPY 237
+COPY 202
+COPY 156
+COPY 340
+COPY 22
+COPY 29
+CREATE TABLE
+COPY 7
+COPY 1
+COPY 4
+COPY 6
+COPY 11
+INSERT 0 29
+DROP TABLE
+COMMIT
+>> ETL: transformar (refrescar las vistas materializadas)
+BEGIN
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+COMMIT
+>> ETL: ultima carga
+        ultima_carga        | tablas_cargadas | filas_cargadas 
+----------------------------+-----------------+----------------
+ 2026-11-10 10:19:59.148125 |              29 |           2819
+(1 fila)
+
+--- 12.5 ahora el reporte si lo ve (uno mas que en 12.1) ---
+ pedidos_bogota_en_reporte 
+---------------------------
+                       101
+(1 fila)
+
+--- 12.6 control de la carga: tablas donde no cuadran las filas de origen y de staging (debe dar 0) ---
+ tablas_que_no_cuadran 
+-----------------------
+                     0
+(1 fila)
+
+--- 12.7 limpieza: se borra el pedido de prueba y se corre el ETL otra vez ---
+Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
+DELETE 1
+>> ETL: extraer de cada servicio
+Ahora está conectado a la base de datos «andina_catalogo» con el usuario «postgres».
+COPY 4
+COPY 5
+COPY 5
+COPY 80
+COPY 10
+COPY 120
+COPY 100
+CREATE VIEW
+COPY 7
+DROP VIEW
+Ahora está conectado a la base de datos «andina_identidad» con el usuario «postgres».
+COPY 20
+CREATE VIEW
+COPY 1
+DROP VIEW
+Ahora está conectado a la base de datos «andina_compras» con el usuario «postgres».
+COPY 60
+COPY 180
+COPY 70
+COPY 193
+CREATE VIEW
+COPY 4
+DROP VIEW
+Ahora está conectado a la base de datos «andina_inventarios» con el usuario «postgres».
+COPY 72
+COPY 69
+COPY 64
+COPY 99
+COPY 25
+COPY 75
+CREATE VIEW
+COPY 6
+DROP VIEW
+Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
+COPY 100
+COPY 80
+COPY 70
+COPY 50
+COPY 281
+COPY 237
+COPY 202
+COPY 156
+COPY 340
+COPY 22
+COPY 29
+CREATE VIEW
+COPY 11
+DROP VIEW
+>> ETL: cargar el staging de reportes
+Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
+BEGIN
+DELETE 120
+DELETE 5
+DELETE 80
+DELETE 4
+DELETE 5
+DELETE 10
+DELETE 100
+DELETE 20
+DELETE 193
+DELETE 70
+DELETE 180
+DELETE 60
+DELETE 75
+DELETE 25
+DELETE 72
+DELETE 69
+DELETE 64
+DELETE 99
+DELETE 281
+DELETE 237
+DELETE 202
+DELETE 156
+DELETE 101
+DELETE 80
+DELETE 70
+DELETE 50
+DELETE 29
+DELETE 22
+DELETE 340
+COPY 4
+COPY 5
+COPY 5
+COPY 80
+COPY 10
+COPY 120
+COPY 100
+COPY 20
+COPY 60
+COPY 180
+COPY 70
+COPY 193
+COPY 72
+COPY 69
+COPY 64
+COPY 99
+COPY 25
+COPY 75
+COPY 100
+COPY 80
+COPY 70
+COPY 50
+COPY 281
+COPY 237
+COPY 202
+COPY 156
+COPY 340
+COPY 22
+COPY 29
+CREATE TABLE
+COPY 7
+COPY 1
+COPY 4
+COPY 6
+COPY 11
+INSERT 0 29
+DROP TABLE
+COMMIT
+>> ETL: transformar (refrescar las vistas materializadas)
+BEGIN
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
+COMMIT
+>> ETL: ultima carga
+        ultima_carga        | tablas_cargadas | filas_cargadas 
+----------------------------+-----------------+----------------
+ 2026-11-10 10:19:59.325105 |              29 |           2818
+(1 fila)
+
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
 
---- Volumen de datos de prueba (en la copia de reportes, sin las filas de las pruebas) ---
+--- Volumen de datos de prueba (en el staging de reportes, sin las filas de las pruebas) ---
        tabla        | count 
 --------------------+-------
  sedes              |     4

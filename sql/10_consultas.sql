@@ -5,11 +5,14 @@
 -- asi los resultados no cambian segun el dia en que se corran.
 --
 -- se corren en la base andina_reportes, el unico lugar donde estan los
--- datos de todos los servicios juntos (la copia de lectura). por eso
--- pueden cruzar ventas con productos, compras con proveedores, etc.
+-- datos de todos los servicios juntos (el staging que carga el ETL). por
+-- eso pueden cruzar ventas con productos, compras con proveedores, etc.
+-- los datos estan tan al dia como la ultima corrida del ETL
+-- (reportes.vista_ultima_carga).
 --
--- casi todas leen las vistas consolidadas (vista_*_consolidado), que ya
--- juntan las 4 sedes. por eso sirven para toda la empresa.
+-- casi todas leen las vistas consolidadas (vista_*_consolidado, que son
+-- materializadas), que ya juntan las 4 sedes. por eso sirven para toda
+-- la empresa.
 --
 -- donde se usa cada cosa que pide el enunciado:
 --   JOIN ................. 1, 2, 4, 6, 7, 10, 11, 13, 14, 15, 17, 19
@@ -333,7 +336,9 @@ JOIN catalogo.sedes     so ON so.id_sede    = ex.id_sede
 JOIN catalogo.sedes     sd ON sd.id_sede    = fa.id_sede
 WHERE ex.existencia > ex.minimo
   AND fa.existencia < fa.minimo
-ORDER BY unidades_sugeridas DESC, p.nombre;
+-- ex.id_sede y fa.id_sede desempatan: sin eso, dos filas con el mismo
+-- producto y las mismas unidades podrian salir en cualquier orden
+ORDER BY unidades_sugeridas DESC, p.nombre, ex.id_sede, fa.id_sede;
 
 \echo
 \echo '=== Consulta 16. Productos de baja rotacion (existencia > 0 y sin ventas en 90 dias) ==='

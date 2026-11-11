@@ -1,7 +1,7 @@
 -- =====================================================================
 -- 06_ventas.sql
 -- microservicio de ventas y pagos. se corre en andina_ventas (y en
--- andina_reportes para la copia).
+-- andina_reportes para el staging del ETL).
 --
 -- igual que el inventario, los pedidos van partidos por sede. y los
 -- detalles se parten igual que su pedido, asi un pedido y sus lineas

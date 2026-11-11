@@ -5,8 +5,9 @@
 -- ahora cada servicio tiene su base, asi que las pruebas van por partes:
 -- cada parte se conecta (\c) a la base donde esta lo que prueba, por eso
 -- los numeros no van en orden (la prueba 9 de permisos esta repartida en
--- varias bases). al final hay una prueba nueva (11) que muestra que una
--- base no puede leer las tablas de otra.
+-- varias bases). al final hay dos pruebas nuevas: la 11 muestra que una
+-- base no puede leer las tablas de otra, y la 12 muestra el ETL: un
+-- pedido nuevo no aparece en los reportes hasta que corre el ETL.
 --
 -- cada parte va entre BEGIN y ROLLBACK: lo que se inserta o cambia se
 -- deshace al final, asi el script se puede correr las veces que sea sin
@@ -209,8 +210,8 @@ ROLLBACK;
 
 -- ---------------------------------------------------------------------
 -- base andina_reportes: pruebas 6, 7, 9.1, 10 y la de referencias sin FK
--- aqui estan las copias de todos los servicios, por eso es el unico
--- lugar donde se pueden cruzar (y revisar los huerfanos).
+-- aqui esta el staging con los datos de todos los servicios, por eso es
+-- el unico lugar donde se pueden cruzar (y revisar los huerfanos).
 -- ---------------------------------------------------------------------
 \c andina_reportes
 BEGIN;
@@ -254,7 +255,7 @@ GROUP BY sede;
 SET ROLE gerente_general;
 SELECT sede, valor_ventas, pedidos_pendientes FROM reportes.vista_reporte_corporativo ORDER BY id_sede;
 
-\echo '--- 9.1b gerente_general: leer la copia de ventas en reportes (DENEGADO) -> esperado: ERROR permiso denegado ---'
+\echo '--- 9.1b gerente_general: leer el staging de ventas en reportes (DENEGADO) -> esperado: ERROR permiso denegado ---'
 -- ve el reporte, pero no las tablas que hay debajo
 SELECT COUNT(*) FROM ventas.ped_bogota;
 RESET ROLE;
@@ -358,7 +359,7 @@ ROLLBACK;
 \echo '=== Prueba 11. Cada servicio solo ve su propia base ==='
 -- conectados a ventas, las tablas de catalogo no existen: viven en otra
 -- base. esto es lo que obliga a que ventas le pida los datos al
--- servicio de catalogo (o a que reportes guarde una copia).
+-- servicio de catalogo (y a que reportes reciba los datos por un ETL).
 \c andina_ventas
 \echo '--- 11.1 desde andina_ventas: leer catalogo.productos -> esperado: ERROR la relacion no existe ---'
 SELECT COUNT(*) FROM catalogo.productos;
@@ -380,9 +381,65 @@ FROM (VALUES ('gerente_general'), ('vendedor_bogota'), ('inventario_cedi'), ('co
              ('auditor_interno'), ('svc_ventas'), ('svc_reportes')) r(rol)
 ORDER BY r.rol;
 
+\echo
+\echo '=== Prueba 12. ETL: los reportes van atrasados hasta que corre el ETL (consistencia eventual) ==='
+-- la idea: un pedido nuevo se guarda en andina_ventas, pero los reportes
+-- no lo ven hasta que el ETL lo lleva a reportes y refresca las vistas
+-- materializadas.
+-- esta prueba NO va en BEGIN ... ROLLBACK: el ETL tiene que ver el
+-- pedido guardado de verdad. al final se borra y se corre el ETL otra
+-- vez, asi los datos quedan como estaban.
+
+\echo '--- 12.1 antes: pedidos de Bogota que ve el reporte ---'
+\c andina_reportes
+SELECT COUNT(*) AS pedidos_bogota_en_reporte
+FROM reportes.vista_pedidos_consolidado
+WHERE id_sede = 1;
+
+\echo '--- 12.2 se registra un pedido nuevo en andina_ventas (queda guardado) ---'
+-- \gset guarda el id_pedido que devuelve RETURNING en la variable de
+-- psql :pedido_prueba, para poder borrarlo al final
+\c andina_ventas
+INSERT INTO ventas.ped_bogota (id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado)
+VALUES (1, 5, 3, DATE '2026-10-15', 'PENDIENTE', 0)
+RETURNING id_pedido AS pedido_prueba \gset
+SELECT COUNT(*) AS pedidos_bogota_en_ventas FROM ventas.ped_bogota;
+
+\echo '--- 12.3 el reporte todavia NO lo ve: sigue con la ultima carga ---'
+\c andina_reportes
+SELECT COUNT(*) AS pedidos_bogota_en_reporte
+FROM reportes.vista_pedidos_consolidado
+WHERE id_sede = 1;
+
+\echo '--- 12.4 se corre el ETL completo ---'
+\ir etl/refrescar_reportes.sql
+
+\echo '--- 12.5 ahora el reporte si lo ve (uno mas que en 12.1) ---'
+SELECT COUNT(*) AS pedidos_bogota_en_reporte
+FROM reportes.vista_pedidos_consolidado
+WHERE id_sede = 1;
+
+\echo '--- 12.6 control de la carga: tablas donde no cuadran las filas de origen y de staging (debe dar 0) ---'
+-- etl.cargas no deja guardar una fila que no cuadre (CHECK), asi que
+-- esto siempre da 0. si una tabla no cuadrara, la carga entera se habria
+-- deshecho.
+SELECT COUNT(*) AS tablas_que_no_cuadran
+FROM etl.cargas
+WHERE fecha_carga = (SELECT MAX(fecha_carga) FROM etl.cargas)
+  AND filas_origen <> filas_staging;
+
+\echo '--- 12.7 limpieza: se borra el pedido de prueba y se corre el ETL otra vez ---'
+-- es la unica vez que se borra algo: es solo la limpieza de esta prueba
+\c andina_ventas
+DELETE FROM ventas.ped_bogota WHERE id_pedido = :pedido_prueba;
+\ir etl/refrescar_reportes.sql
+
+-- refrescar_reportes.sql prende ON_ERROR_STOP, se vuelve a apagar
+\set ON_ERROR_STOP off
+
 \c andina_reportes
 \echo
-\echo '--- Volumen de datos de prueba (en la copia de reportes, sin las filas de las pruebas) ---'
+\echo '--- Volumen de datos de prueba (en el staging de reportes, sin las filas de las pruebas) ---'
 -- conteo final para comparar con los minimos de la seccion 10
 SELECT 'sedes' AS tabla, COUNT(*) FROM catalogo.sedes
 UNION ALL SELECT 'almacenes', COUNT(*) FROM catalogo.almacenes

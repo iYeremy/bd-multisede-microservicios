@@ -1,8 +1,8 @@
 -- =====================================================================
 -- run_all.sql
 -- ejecuta todo el proyecto en orden: borra, crea las 6 bases, crea las
--- tablas y los datos de cada servicio, arma la copia de reportes con
--- sus vistas, da los permisos, corre las 20 consultas y las pruebas.
+-- tablas y los datos de cada servicio, corre el ETL hacia reportes y
+-- crea sus vistas, da los permisos, corre las 20 consultas y las pruebas.
 --
 -- uso (DESDE LA CARPETA DEL PROYECTO, porque los CSV se guardan en csv/):
 --     psql -U postgres -f run_all.sql
@@ -16,11 +16,16 @@
 --
 -- como funciona, en corto:
 --   1. cada microservicio tiene su base (andina_catalogo, andina_ventas...)
---      con sus tablas y sus datos.
---   2. cada servicio exporta sus tablas a CSV (sql/sync/exportar_*.sql).
---   3. andina_reportes crea las mismas tablas, carga los CSV (su copia
---      de lectura) y encima crea las vistas.
---   4. las consultas corren en andina_reportes, donde esta todo junto.
+--      con sus tablas y sus datos. ninguna base se conecta a otra.
+--   2. ETL hacia reportes (carpeta sql/etl/):
+--        E  extraer: cada base deja sus tablas en CSV (extraer_*.sql)
+--        L  cargar: andina_reportes las mete en su staging (cargar.sql)
+--        T  transformar: se refrescan las vistas materializadas
+--           (transformar.sql)
+--   3. las consultas corren en andina_reportes, donde esta todo junto.
+--
+-- despues, para poner los reportes al dia, solo se corre el ETL:
+--     psql -U postgres -d postgres -f sql/etl/refrescar_reportes.sql
 -- =====================================================================
 
 -- si una instruccion falla, psql se detiene en vez de seguir con todo a
@@ -51,7 +56,9 @@ SET client_min_messages = warning;
 \ir sql/01_bases.sql
 
 -- ---------------------------------------------------------------------
--- un servicio a la vez: tablas, datos y exportar a CSV.
+-- un servicio a la vez: tablas, datos y extraer a CSV (paso E del ETL;
+-- se hace aqui de una vez porque los datos de prueba de otros servicios
+-- leen esos CSV).
 -- el orden importa: catalogo va primero porque los demas usan sus ids
 -- y sus CSV; ventas va despues de inventarios porque solo vende lo que
 -- hay en cada almacen.
@@ -60,46 +67,49 @@ SET client_min_messages = warning;
 \c andina_catalogo
 \ir sql/02_catalogo.sql
 \ir sql/07_datos_catalogo.sql
-\ir sql/sync/exportar_catalogo.sql
+\ir sql/etl/extraer_catalogo.sql
 
 \echo '>> identidad'
 \c andina_identidad
 \ir sql/03_identidad.sql
 \ir sql/07_datos_identidad.sql
-\ir sql/sync/exportar_identidad.sql
+\ir sql/etl/extraer_identidad.sql
 
 \echo '>> compras'
 \c andina_compras
 \ir sql/04_compras.sql
 \ir sql/07_datos_compras.sql
-\ir sql/sync/exportar_compras.sql
+\ir sql/etl/extraer_compras.sql
 
 \echo '>> inventarios (fragmentos por sede)'
 \c andina_inventarios
 \ir sql/05_inventarios.sql
 \ir sql/07_datos_inventarios.sql
-\ir sql/sync/exportar_inventarios.sql
+\ir sql/etl/extraer_inventarios.sql
 
 \echo '>> ventas (fragmentos por sede)'
 \c andina_ventas
 \ir sql/06_ventas.sql
 \ir sql/07_datos_ventas.sql
-\ir sql/sync/exportar_ventas.sql
+\ir sql/etl/extraer_ventas.sql
 
 -- ---------------------------------------------------------------------
--- reportes: las mismas tablas (02 a 06) para la copia, los CSV y las
--- vistas
+-- reportes: el staging (las mismas tablas 02 a 06), las vistas
+-- materializadas (vacias) y la primera corrida de L y T
 -- ---------------------------------------------------------------------
-\echo '>> reportes: copia de lectura'
+\echo '>> reportes: staging'
 \c andina_reportes
 \ir sql/02_catalogo.sql
 \ir sql/03_identidad.sql
 \ir sql/04_compras.sql
 \ir sql/05_inventarios.sql
 \ir sql/06_ventas.sql
-\ir sql/sync/importar_reportes.sql
-\echo '>> 08 vistas'
+\ir sql/etl/staging.sql
+\echo '>> 08 vistas (materializadas, todavia vacias)'
 \ir sql/08_vistas.sql
+\echo '>> ETL: cargar el staging y transformar'
+\ir sql/etl/cargar.sql
+\ir sql/etl/transformar.sql
 
 -- los roles van al final porque los GRANT ... ON ALL TABLES solo
 -- alcanzan a las tablas que ya existen. 09 se conecta a cada base.

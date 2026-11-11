@@ -3,7 +3,7 @@
 -- microservicio de compras y abastecimiento: ordenes de compra y sus
 -- recepciones, cada una con su detalle.
 --
--- se corre en andina_compras (y en andina_reportes para la copia).
+-- se corre en andina_compras (y en andina_reportes para el staging del ETL).
 --
 -- ids que vienen de otros servicios ("ref:", sin FK porque estan en
 -- otra base): id_proveedor, id_almacen_destino, id_empleado e

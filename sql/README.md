@@ -12,20 +12,22 @@ detalle está en `docs/diccionario-datos.md`; aquí va lo que destaca.
 ```
 run_all.sql
  ├─ \c postgres          00_reset · 01_bases           → borra y crea las 6 bases
- ├─ \c andina_catalogo   02 · 07_datos_catalogo · sync/exportar_catalogo
- ├─ \c andina_identidad  03 · 07_datos_identidad · sync/exportar_identidad
- ├─ \c andina_compras    04 · 07_datos_compras · sync/exportar_compras
- ├─ \c andina_inventarios 05 · 07_datos_inventarios · sync/exportar_inventarios
- ├─ \c andina_ventas     06 · 07_datos_ventas · sync/exportar_ventas
- ├─ \c andina_reportes   02–06 (copia) · sync/importar_reportes · 08_vistas
+ ├─ \c andina_catalogo    02 · 07_datos_catalogo · etl/extraer_catalogo
+ ├─ \c andina_identidad   03 · 07_datos_identidad · etl/extraer_identidad
+ ├─ \c andina_compras     04 · 07_datos_compras · etl/extraer_compras
+ ├─ \c andina_inventarios 05 · 07_datos_inventarios · etl/extraer_inventarios
+ ├─ \c andina_ventas      06 · 07_datos_ventas · etl/extraer_ventas
+ ├─ \c andina_reportes    02–06 (staging) · etl/staging · 08_vistas · etl/cargar · etl/transformar
  ├─ 09_roles             (hace sus propios \c, base por base)
  ├─ \c andina_reportes   10_consultas
  └─ 11_pruebas           (hace sus propios \c, base por base)
 ```
 
 **Regla de oro:** cada microservicio tiene su base y una consulta **no puede leer otra base**.
-Por eso los datos viajan entre bases por archivos CSV (`csv/`), y reportes trabaja sobre su
-propia copia.
+Por eso reportes se alimenta con un **ETL**: un proceso aparte (psql) saca los datos de cada base
+a CSV (`csv/`), los carga en el *staging* de `andina_reportes` y refresca las **vistas
+materializadas**. Después, para poner los reportes al día, solo se corre
+`sql/etl/refrescar_reportes.sql`.
 
 ## Comandos de psql que aparecen (no son SQL)
 
@@ -39,8 +41,9 @@ pgAdmin no lo entiende.
 | `\pset pager off` | Muestra todo seguido, sin la pantalla de "más" | `run_all` |
 | `\c base` | Se conecta a otra base (cierra la conexión anterior) | `run_all`, `09`, `11` |
 | `\ir archivo` | Ejecuta otro archivo con ruta relativa **a este archivo** (`\i` la tomaría relativa a donde se abrió psql) | `run_all` |
-| `\copy ... TO 'archivo'` | Exporta una tabla a un archivo **del computador donde corre psql** | `sync/exportar_*` |
-| `\copy ... FROM 'archivo'` | Importa un archivo a una tabla | `sync/importar_reportes`, `07_datos_*` |
+| `\copy ... TO 'archivo'` | Exporta una tabla (o el resultado de una consulta) a un archivo **del computador donde corre psql** | `etl/extraer_*` |
+| `\copy ... FROM 'archivo'` | Importa un archivo a una tabla | `etl/cargar`, `07_datos_*` |
+| `consulta \gset` | Guarda el resultado de la consulta en variables de psql (`:nombre`) | `11` (prueba 12) |
 | `\echo 'texto'` | Imprime un título en la salida | todos |
 
 `\copy` vs `COPY`: `COPY` es SQL y usa archivos **del servidor** (pide superusuario); `\copy` es
@@ -75,10 +78,10 @@ Crea las 6 bases (`CREATE DATABASE`), una por microservicio.
 
 ## `02_catalogo.sql` a `06_ventas.sql` (tablas)
 Cada uno crea el esquema de su servicio (`CREATE SCHEMA catalogo`) y sus tablas.
-- **Se corren dos veces:** en la base del servicio y en `andina_reportes`, para crear ahí la copia
-  con las mismas columnas y restricciones.
+- **Se corren dos veces:** en la base del servicio y en `andina_reportes`, para crear ahí el
+  **staging** del ETL con las mismas columnas y restricciones.
 - **El esquema se llama igual que el servicio** para que las tablas tengan el mismo nombre en su
-  base y en la copia (`ventas.ped_bogota`). Así las vistas y consultas no cambian.
+  base y en el staging (`ventas.ped_bogota`). Así las vistas y consultas no cambian.
 - **`-- ref: catalogo.sedes`**: un id de otra tabla **sin FK**, porque está en otra base. Es el
   `FK+` del diagrama relacional.
 - **`GENERATED ALWAYS AS IDENTITY`**: la base numera sola. Usa una secuencia por debajo sin tener
@@ -110,33 +113,71 @@ Un script por servicio. Volúmenes y escenarios forzados están en la cabecera d
 | `UPDATE ... FROM (subconsulta)` | Actualizar filas con valores calculados en otra consulta (el total de cada pedido) |
 | `x::int`, `floor()`, `round()`, `lpad()` | Conversión de tipo, redondeos y rellenar con ceros |
 
-## `sync/exportar_<servicio>.sql` y `sync/importar_reportes.sql`
-El puente entre bases.
-- **Exportar** (en cada base): `\copy tabla TO 'csv/esquema.tabla.csv' WITH (FORMAT csv, HEADER)`.
-  `HEADER` pone los nombres de las columnas en la primera línea.
-- **Importar** (en `andina_reportes`): lo mismo con `FROM`, en orden de padres a hijas por las FK.
-- `\copy FROM` **sí guarda el id** que trae el archivo aunque la columna sea
-  `GENERATED ALWAYS AS IDENTITY`. Así la copia queda con los mismos ids que el original.
-- De identidad solo se exporta `empleados`: usuarios y auditoría tienen contraseñas y no salen
-  de su servicio.
+## `etl/` (el ETL hacia reportes)
+**ETL = Extract, Transform, Load.** Ninguna base se conecta a otra (por eso no usamos `dblink` ni
+`postgres_fdw`): es psql, un proceso aparte, el que entra a cada base y lleva los datos.
 
-> **Próximo cambio:** esto se convierte en un **ETL** explícito: un script que se puede volver a
-> correr cada X minutos, que recarga el staging y refresca **vistas materializadas**
-> (`REFRESH MATERIALIZED VIEW`). Esta sección se actualiza cuando esté implementado.
+| Archivo | Paso | Qué hace |
+|---|---|---|
+| `extraer_<servicio>.sql` | **E** | En la base del servicio: `\copy tabla TO 'csv/esquema.tabla.csv'`. Solo lee. También deja `csv/conteo_<servicio>.csv` con las filas de cada tabla |
+| `staging.sql` | — | Una sola vez, al crear reportes: borra del staging `usuarios` y `auditoria_accesos` (tienen contraseñas), marca los esquemas como staging y crea `etl.cargas` |
+| `cargar.sql` | **L** | En `andina_reportes`, **en una transacción**: vacía el staging (hijas antes que padres, por las FK), carga los CSV (padres antes que hijas) y registra el control en `etl.cargas` |
+| `transformar.sql` | **T** | `REFRESH MATERIALIZED VIEW` de las 13 vistas, en orden y en una transacción |
+| `refrescar_reportes.sql` | E + L + T | Corre todo lo anterior. Es lo que se programa cada X minutos |
+
+Lo que destaca:
+- **Carga completa:** cada vez se borra el staging y se llena de nuevo. Simple y suficiente con
+  estos volúmenes (la alternativa, carga incremental, trae solo lo que cambió).
+- **Todo o nada:** `cargar.sql` va entre `BEGIN` y `COMMIT`. Si algo falla, el staging se queda
+  como estaba y los reportes nunca ven datos a medias. Por eso `refrescar_reportes.sql` pone
+  `ON_ERROR_ROLLBACK off`: con eso, un error tumba la carga entera y no solo esa instrucción.
+- **Control de cargas:** `etl.cargas` guarda, por tabla, las filas del origen y las del staging.
+  Tiene `CONSTRAINT carga_cuadra CHECK (filas_origen = filas_staging)`: si no cuadran, el
+  `INSERT` falla y la carga completa se deshace. `reportes.vista_ultima_carga` dice de cuándo
+  son los datos.
+- **`CREATE TEMP VIEW`** (en `extraer_*`): una vista que desaparece al cerrar la conexión. Se usa
+  porque `\copy` tiene que ir en **una sola línea**, y así la consulta del conteo queda aparte.
+- **`\copy FROM` sí guarda el id** que trae el archivo aunque la columna sea
+  `GENERATED ALWAYS AS IDENTITY`. Así el staging queda con los mismos ids que el original.
+- **`now()` en una transacción** da siempre la misma hora (la del `BEGIN`), así todas las filas de
+  una carga quedan con la misma `fecha_carga`.
+- **Programarlo cada X minutos** (no visto en clase): con `cron` en el servidor.
+  ```
+  */5 * * * * cd /ruta/del/proyecto && psql -U postgres -d postgres -f sql/etl/refrescar_reportes.sql
+  ```
+  `*/5 * * * *` = cada 5 minutos. Cuando exista el backend, lo hará el servicio de reportes.
 
 ## `08_vistas.sql`
-Corre en `andina_reportes`. El esquema `reportes` **solo tiene vistas**.
+Corre en `andina_reportes`. El esquema `reportes` **solo tiene vistas**, y casi todas son
+**materializadas** (no visto en clase):
+- **Vista normal:** una consulta guardada con nombre. No guarda datos; cada vez que se lee, se
+  ejecuta.
+- **Vista materializada** (`CREATE MATERIALIZED VIEW`): ejecuta la consulta y **guarda el
+  resultado**, como una tabla. Leerla es rápido, pero no cambia sola: se actualiza con
+  `REFRESH MATERIALIZED VIEW` (lo hace `etl/transformar.sql`). Es "la vista que se va actualizando
+  cada X minutos".
+- **`WITH NO DATA`:** la crea vacía, sin ejecutar la consulta. Se llena en el primer `REFRESH`;
+  antes, leerla da error ("no ha sido poblada").
+- **El orden de refresco importa:** si una vista lee de otra, la de abajo se refresca primero
+  (primero las consolidadas, al final `vista_alertas_reabastecimiento`, que lee
+  `vista_inventario_por_sede`).
+- `parametros` y `vista_ultima_carga` son vistas **normales**: una son constantes y la otra tiene que
+  mostrar siempre la última carga.
+- 🔁 `REFRESH ... CONCURRENTLY` deja leer mientras refresca, pero exige un índice UNIQUE (no
+  vimos índices). Con estos datos el bloqueo dura casi nada.
+
 - **`reportes.parametros`**: una vista con la fecha de corte fija (2026-10-15) y los umbrales.
   Las consultas la usan en vez de `current_date`, así los resultados no cambian según el día.
 - **Vistas consolidadas** (`vista_*_consolidado`): `UNION ALL` de los 4 fragmentos, con una
-  columna `fragmento` que dice de qué tabla viene cada fila. `UNION ALL` y no `UNION`: no puede
+  columna `fragmento` que dice de qué base y tabla viene cada fila (`andina_ventas.ped_cali`). `UNION ALL` y no `UNION`: no puede
   haber repetidos (el CHECK de cada sede lo impide), así que buscarlos sería trabajo perdido.
 - **Las 10 obligatorias**, encima de las consolidadas.
 - **`vista_reporte_corporativo`**: agrega **cada fuente por separado** (una CTE por fuente) antes de
   unirlas. Si se uniera todo en un solo JOIN, cada pedido se sumaría una vez por cada línea
   (conteo duplicado; la prueba 10 lo muestra).
-- **Permisos:** una vista lee las tablas con los permisos de **su dueño**. Por eso gerencia puede
-  leer los reportes sin tener permisos sobre las tablas.
+- **Permisos:** una vista materializada ya tiene el resultado guardado, así que leerla solo pide
+  permiso sobre la vista. Por eso gerencia lee los reportes sin permisos sobre el staging. (En
+  una vista normal pasa algo parecido: lee las tablas con los permisos de **su dueño**.)
 - **`COALESCE(x, 0)`** (no visto en clase; es `CASE WHEN x IS NULL THEN 0 ELSE x END`):
   después de un `LEFT JOIN`, convierte en 0 lo que no tiene pareja. Sin él, un pedido sin pagos
   quedaría con saldo NULL y desaparecería de los reportes.
@@ -159,6 +200,9 @@ Lo que destaca:
 - **`REVOKE` a propósito:** al vendedor se le da `DELETE` y luego se le quita, para demostrar
   `REVOKE` (lo pide la sección 8). La prueba 9.6 lo comprueba.
 - **`WITH GRANT OPTION`:** el administrador puede conceder sus permisos a otros.
+- **`MAINTAIN`** (PostgreSQL 17+): el permiso para hacer `REFRESH` de una vista materializada sin ser
+  su dueño. Se le da a `svc_reportes`, que hará el ETL cuando exista el backend. Por esto el
+  proyecto necesita PostgreSQL 17 o superior.
 
 ## `10_consultas.sql`
 Las 20 consultas, en `andina_reportes` (el único lugar con los datos de todos los servicios).
@@ -185,5 +229,10 @@ Por eso los números no van en orden: la prueba 9 de permisos está repartida en
   existe", y nombrar la otra base (`andina_catalogo.catalogo.productos`) da "cross-database
   references are not implemented". Es la evidencia de que cada base está aislada.
 - **Prueba extra (referencias sin FK):** cuenta con `NOT EXISTS` los ids que apuntan a algo que no
-  existe (huérfanos). Corre en reportes, sobre la copia, porque es el único lugar donde se pueden
+  existe (huérfanos). Corre en reportes, sobre el staging, porque es el único lugar donde se pueden
   cruzar los datos de varios servicios. Todas deben dar 0.
+- **Prueba 12 (ETL y consistencia eventual):** se guarda un pedido nuevo en `andina_ventas` y el
+  reporte **no lo ve**. Se corre `etl/refrescar_reportes.sql` y **ahora sí**. Esta prueba no va en
+  `ROLLBACK` (el ETL tiene que ver el pedido guardado), así que al final borra el pedido y corre el
+  ETL otra vez. `RETURNING id_pedido AS pedido_prueba \gset` guarda el id en `:pedido_prueba`
+  para poder borrarlo.
