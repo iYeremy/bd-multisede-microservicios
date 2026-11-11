@@ -11,23 +11,26 @@ detalle está en `docs/diccionario-datos.md`; aquí va lo que destaca.
 
 ```
 run_all.sql
- ├─ \c postgres          00_reset · 01_bases           → borra y crea las 6 bases
- ├─ \c andina_catalogo    02 · 07_datos_catalogo · etl/extraer_catalogo
- ├─ \c andina_identidad   03 · 07_datos_identidad · etl/extraer_identidad
- ├─ \c andina_compras     04 · 07_datos_compras · etl/extraer_compras
- ├─ \c andina_inventarios 05 · 07_datos_inventarios · etl/extraer_inventarios
- ├─ \c andina_ventas      06 · 07_datos_ventas · etl/extraer_ventas
- ├─ \c andina_reportes    02–06 (staging) · etl/staging · 08_vistas · etl/cargar · etl/transformar
- ├─ 09_roles             (hace sus propios \c, base por base)
- ├─ \c andina_reportes   10_consultas
- └─ 11_pruebas           (hace sus propios \c, base por base)
+ ├─ \c postgres           00_reset · 01_bases           → borra y crea las 6 bases
+ ├─ \c andina_catalogo    02 · 07_datos_catalogo
+ ├─ \c andina_identidad   03 · 07_datos_identidad
+ ├─ \c andina_compras     04 · 07_datos_compras       (lee catálogo con dblink y luego lo quita)
+ ├─ \c andina_inventarios 05 · 07_datos_inventarios   (lee catálogo con dblink y luego lo quita)
+ ├─ \c andina_ventas      06 · 07_datos_ventas        (lee catálogo e inventarios con dblink y luego lo quita)
+ ├─ \c andina_reportes    dblink/servidores · 08_vistas · refrescar_reportes
+ ├─ 09_roles              (hace sus propios \c, base por base)
+ ├─ \c andina_reportes    10_consultas
+ └─ 11_pruebas            (hace sus propios \c, base por base)
 ```
 
-**Regla de oro:** cada microservicio tiene su base y una consulta **no puede leer otra base**.
-Por eso reportes se alimenta con un **ETL**: un proceso aparte (psql) saca los datos de cada base
-a CSV (`csv/`), los carga en el *staging* de `andina_reportes` y refresca las **vistas
-materializadas**. Después, para poner los reportes al día, solo se corre
-`sql/etl/refrescar_reportes.sql`.
+**La idea:** cada microservicio tiene su base y una consulta normal **no puede leer otra base**.
+`dblink` es la excepción: deja que una base ejecute una consulta en otra y traiga el resultado.
+Solo `andina_reportes` lo tiene; sus vistas son **materializadas** (guardan el resultado) y se
+refrescan cada X minutos con `sql/refrescar_reportes.sql`.
+
+> Esta es la versión con `dblink`, más simple de explicar. Rompe un poco el aislamiento entre
+> servicios: reportes depende de las tablas de los demás. La versión donde ninguna base se conecta
+> a otra (un ETL por CSV) está en la rama `feat/microservicios-reales`.
 
 ## Comandos de psql que aparecen (no son SQL)
 
@@ -40,23 +43,18 @@ pgAdmin no lo entiende.
 | `\set ON_ERROR_ROLLBACK on` | Dentro de una transacción, si una instrucción falla deshace solo esa y sigue | `11` |
 | `\pset pager off` | Muestra todo seguido, sin la pantalla de "más" | `run_all` |
 | `\c base` | Se conecta a otra base (cierra la conexión anterior) | `run_all`, `09`, `11` |
-| `\ir archivo` | Ejecuta otro archivo con ruta relativa **a este archivo** (`\i` la tomaría relativa a donde se abrió psql) | `run_all` |
-| `\copy ... TO 'archivo'` | Exporta una tabla (o el resultado de una consulta) a un archivo **del computador donde corre psql** | `etl/extraer_*` |
-| `\copy ... FROM 'archivo'` | Importa un archivo a una tabla | `etl/cargar`, `07_datos_*` |
+| `\ir archivo` | Ejecuta otro archivo con ruta relativa **a este archivo** (`\i` la tomaría relativa a donde se abrió psql) | `run_all`, `07_datos_*`, `11` |
+| `\if :{?var} ... \endif` | Ejecuta el bloque solo si la variable de psql existe (`-v var=...`) | `dblink/servidores` |
 | `consulta \gset` | Guarda el resultado de la consulta en variables de psql (`:nombre`) | `11` (prueba 12) |
 | `\echo 'texto'` | Imprime un título en la salida | todos |
-
-`\copy` vs `COPY`: `COPY` es SQL y usa archivos **del servidor** (pide superusuario); `\copy` es
-de psql y usa archivos **del cliente**. Por eso usamos `\copy`. La ruta `csv/` es relativa a la
-carpeta desde donde se lanzó psql: de ahí que haya que correr todo desde la carpeta del proyecto.
 
 ---
 
 ## `run_all.sql`
 Corre todo en orden. Lo importante es **el orden**:
-- catálogo va primero, porque los demás usan sus ids y leen sus CSV;
+- catálogo va primero, porque los demás usan sus ids y sus datos de prueba lo leen con `dblink`;
 - ventas va después de inventarios, porque solo vende lo que hay en cada almacén;
-- reportes va después de todos, porque carga los CSV que dejan los demás;
+- reportes va después de todos, porque sus vistas traen los datos de las demás bases;
 - los roles van al final, porque `GRANT ... ON ALL TABLES` solo alcanza a las tablas que ya existen.
 
 `SET client_min_messages = warning` oculta los avisos `NOTICE` del reset ("la base no existe, se
@@ -78,10 +76,8 @@ Crea las 6 bases (`CREATE DATABASE`), una por microservicio.
 
 ## `02_catalogo.sql` a `06_ventas.sql` (tablas)
 Cada uno crea el esquema de su servicio (`CREATE SCHEMA catalogo`) y sus tablas.
-- **Se corren dos veces:** en la base del servicio y en `andina_reportes`, para crear ahí el
-  **staging** del ETL con las mismas columnas y restricciones.
-- **El esquema se llama igual que el servicio** para que las tablas tengan el mismo nombre en su
-  base y en el staging (`ventas.ped_bogota`). Así las vistas y consultas no cambian.
+- **El esquema se llama igual que el servicio** (`ventas.ped_bogota` en `andina_ventas`). En las
+  consultas de reportes, la tabla que llega por `dblink` se llama `ventas_ped_bogota`.
 - **`-- ref: catalogo.sedes`**: un id de otra tabla **sin FK**, porque está en otra base. Es el
   `FK+` del diagrama relacional.
 - **`GENERATED ALWAYS AS IDENTITY`**: la base numera sola. Usa una secuencia por debajo sin tener
@@ -106,44 +102,48 @@ Un script por servicio. Volúmenes y escenarios forzados están en la cabecera d
 | `setseed(0.2026)` | Fija la semilla de `random()`: los "números al azar" salen siempre iguales, así los datos son reproducibles. **Cada script pone la suya**, porque cada `\c` abre una sesión nueva y la semilla no pasa de una sesión a otra |
 | `generate_series(1, 100)` | Genera las filas 1…100 (clientes, pedidos, órdenes) |
 | `CREATE TEMP TABLE` | Tablas que desaparecen al cerrar la sesión. Ahí se arma todo y después se reparte a los fragmentos con `WHERE id_sede = n` |
-| `\copy tmp_x FROM 'csv/...'` | Cuando un servicio necesita datos de otro (ventas necesita los precios de catálogo), los lee del CSV que publicó el dueño. En el sistema real sería una llamada HTTP |
+| `dblink('srv_catalogo', 'SELECT ...') AS t(...)` | Cuando un servicio necesita datos de otro (ventas necesita los precios de catálogo), los trae con `dblink` a una tabla temporal. Al terminar, `\ir dblink/quitar.sql` quita `dblink` de esa base, para que el servicio no quede conectado a otra. En el sistema real sería una llamada HTTP |
 | `ARRAY['a','b'][i]` | Sacar un valor de una lista por posición (nombres, medios de pago) |
 | `ROW_NUMBER() OVER (PARTITION BY id_sede ...)` | Numerar los pedidos de cada sede desde 1, igual que lo hará el IDENTITY de cada fragmento |
 | `md5(...)` | Un hash **de ejemplo** para las contraseñas. MD5 no sirve para contraseñas reales; el backend usará bcrypt |
 | `UPDATE ... FROM (subconsulta)` | Actualizar filas con valores calculados en otra consulta (el total de cada pedido) |
 | `x::int`, `floor()`, `round()`, `lpad()` | Conversión de tipo, redondeos y rellenar con ceros |
 
-## `etl/` (el ETL hacia reportes)
-**ETL = Extract, Transform, Load.** Ninguna base se conecta a otra (por eso no usamos `dblink` ni
-`postgres_fdw`): es psql, un proceso aparte, el que entra a cada base y lleva los datos.
+## `dblink/servidores.sql` y `dblink/quitar.sql`
+**`dblink`** es una extensión de PostgreSQL (viene en el paquete *contrib*) para consultar otra base
+desde la base actual:
 
-| Archivo | Paso | Qué hace |
-|---|---|---|
-| `extraer_<servicio>.sql` | **E** | En la base del servicio: `\copy tabla TO 'csv/esquema.tabla.csv'`. Solo lee. También deja `csv/conteo_<servicio>.csv` con las filas de cada tabla |
-| `staging.sql` | — | Una sola vez, al crear reportes: borra del staging `usuarios` y `auditoria_accesos` (tienen contraseñas), marca los esquemas como staging y crea `etl.cargas` |
-| `cargar.sql` | **L** | En `andina_reportes`, **en una transacción**: vacía el staging (hijas antes que padres, por las FK), carga los CSV (padres antes que hijas) y registra el control en `etl.cargas` |
-| `transformar.sql` | **T** | `REFRESH MATERIALIZED VIEW` de las 13 vistas, en orden y en una transacción |
-| `refrescar_reportes.sql` | E + L + T | Corre todo lo anterior. Es lo que se programa cada X minutos |
+```sql
+SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, nombre FROM catalogo.productos')
+         AS t(id_producto INTEGER, nombre VARCHAR(100));
+```
 
-Lo que destaca:
-- **Carga completa:** cada vez se borra el staging y se llena de nuevo. Simple y suficiente con
-  estos volúmenes (la alternativa, carga incremental, trae solo lo que cambió).
-- **Todo o nada:** `cargar.sql` va entre `BEGIN` y `COMMIT`. Si algo falla, el staging se queda
-  como estaba y los reportes nunca ven datos a medias. Por eso `refrescar_reportes.sql` pone
-  `ON_ERROR_ROLLBACK off`: con eso, un error tumba la carga entera y no solo esa instrucción.
-- **Control de cargas:** `etl.cargas` guarda, por tabla, las filas del origen y las del staging.
-  Tiene `CONSTRAINT carga_cuadra CHECK (filas_origen = filas_staging)`: si no cuadran, el
-  `INSERT` falla y la carga completa se deshace. `reportes.vista_ultima_carga` dice de cuándo
-  son los datos.
-- **`CREATE TEMP VIEW`** (en `extraer_*`): una vista que desaparece al cerrar la conexión. Se usa
-  porque `\copy` tiene que ir en **una sola línea**, y así la consulta del conteo queda aparte.
-- **`\copy FROM` sí guarda el id** que trae el archivo aunque la columna sea
-  `GENERATED ALWAYS AS IDENTITY`. Así el staging queda con los mismos ids que el original.
-- **`now()` en una transacción** da siempre la misma hora (la del `BEGIN`), así todas las filas de
-  una carga quedan con la misma `fecha_carga`.
-- **Programarlo cada X minutos** (no visto en clase): con `cron` en el servidor.
+- **El primer argumento** dice a qué base conectarse; **el segundo** es la consulta, como texto,
+  que se ejecuta **allá**.
+- **`AS t(...)` es obligatorio:** `dblink` no sabe qué columnas trae, hay que decirle el nombre y el
+  tipo de cada una.
+- **`CREATE EXTENSION dblink`** la instala en la base actual. Hay que hacerlo en cada base que la use.
+- **Servidores remotos** (`CREATE SERVER srv_catalogo FOREIGN DATA WRAPPER dblink_fdw ...`): en vez
+  de repetir los datos de conexión en cada llamada (`'dbname=andina_catalogo user=postgres ...'`),
+  cada base se registra una vez con un nombre. **`CREATE USER MAPPING`** guarda con qué usuario (y
+  contraseña, si hace falta) se conecta.
+- **Sin contraseña en el repo:** por defecto se conecta como `postgres` por el socket local. Si la
+  instalación pide contraseña, se pasa al correr: `psql -v dblink_host=localhost -v dblink_password=...`.
+- **`quitar.sql`** hace `DROP EXTENSION dblink CASCADE` (también borra los servidores). Lo usan los
+  datos de prueba: el servicio usa `dblink` solo mientras arma sus datos.
+- **Por qué rompe un poco la arquitectura:** con `dblink` reportes depende de las tablas de los otros
+  servicios. Si catálogo cambia una columna, las vistas de reportes se rompen.
+
+## `refrescar_reportes.sql`
+Hace `REFRESH MATERIALIZED VIEW` de todas las vistas de reportes. Cada refresco vuelve a ejecutar la
+consulta de la vista, o sea, vuelve a traer los datos por `dblink`.
+- **En orden:** primero las consolidadas, después las que leen de ellas, al final
+  `vista_alertas_reabastecimiento` (lee `vista_inventario_por_sede`) y `vista_ultima_actualizacion`.
+- **En una transacción:** o se actualizan todas o ninguna. Si una base no responde, quedan los
+  reportes anteriores.
+- **Cada X minutos** (no visto en clase): con `cron` en el servidor.
   ```
-  */5 * * * * cd /ruta/del/proyecto && psql -U postgres -d postgres -f sql/etl/refrescar_reportes.sql
+  */5 * * * * psql -U postgres -d andina_reportes -f /ruta/del/proyecto/sql/refrescar_reportes.sql
   ```
   `*/5 * * * *` = cada 5 minutos. Cuando exista el backend, lo hará el servicio de reportes.
 
@@ -154,15 +154,19 @@ Corre en `andina_reportes`. El esquema `reportes` **solo tiene vistas**, y casi 
   ejecuta.
 - **Vista materializada** (`CREATE MATERIALIZED VIEW`): ejecuta la consulta y **guarda el
   resultado**, como una tabla. Leerla es rápido, pero no cambia sola: se actualiza con
-  `REFRESH MATERIALIZED VIEW` (lo hace `etl/transformar.sql`). Es "la vista que se va actualizando
-  cada X minutos".
+  `REFRESH MATERIALIZED VIEW` (lo hace `refrescar_reportes.sql`). Es "la vista que se va
+  actualizando cada X minutos". Además, así cada lectura de un reporte no tiene que ir por `dblink`
+  a las otras bases: `dblink` solo trabaja al refrescar.
+- **Cómo se lee cada vista:** arriba, en el `WITH`, hay una CTE por cada tabla de otra base, con su
+  llamada a `dblink` (`catalogo_productos AS (SELECT * FROM dblink('srv_catalogo', ...) AS t(...))`).
+  Después la consulta usa `catalogo_productos` como si fuera la tabla.
 - **`WITH NO DATA`:** la crea vacía, sin ejecutar la consulta. Se llena en el primer `REFRESH`;
   antes, leerla da error ("no ha sido poblada").
 - **El orden de refresco importa:** si una vista lee de otra, la de abajo se refresca primero
   (primero las consolidadas, al final `vista_alertas_reabastecimiento`, que lee
   `vista_inventario_por_sede`).
-- `parametros` y `vista_ultima_carga` son vistas **normales**: una son constantes y la otra tiene que
-  mostrar siempre la última carga.
+- `parametros` es una vista **normal** (son constantes). `vista_ultima_actualizacion` es una vista
+  materializada de una fila con `now()`: como se refresca al final, guarda la hora del último refresco.
 - 🔁 `REFRESH ... CONCURRENTLY` deja leer mientras refresca, pero exige un índice UNIQUE (no
   vimos índices). Con estos datos el bloqueo dura casi nada.
 
@@ -176,8 +180,8 @@ Corre en `andina_reportes`. El esquema `reportes` **solo tiene vistas**, y casi 
   unirlas. Si se uniera todo en un solo JOIN, cada pedido se sumaría una vez por cada línea
   (conteo duplicado; la prueba 10 lo muestra).
 - **Permisos:** una vista materializada ya tiene el resultado guardado, así que leerla solo pide
-  permiso sobre la vista. Por eso gerencia lee los reportes sin permisos sobre el staging. (En
-  una vista normal pasa algo parecido: lee las tablas con los permisos de **su dueño**.)
+  permiso sobre la vista. Por eso gerencia lee los reportes sin poder usar `dblink` ni entrar a las
+  otras bases. El `REFRESH` corre con los permisos del **dueño** de la vista (postgres).
 - **`COALESCE(x, 0)`** (no visto en clase; es `CASE WHEN x IS NULL THEN 0 ELSE x END`):
   después de un `LEFT JOIN`, convierte en 0 lo que no tiene pareja. Sin él, un pedido sin pagos
   quedaría con saldo NULL y desaparecería de los reportes.
@@ -201,11 +205,16 @@ Lo que destaca:
   `REVOKE` (lo pide la sección 8). La prueba 9.6 lo comprueba.
 - **`WITH GRANT OPTION`:** el administrador puede conceder sus permisos a otros.
 - **`MAINTAIN`** (PostgreSQL 17+): el permiso para hacer `REFRESH` de una vista materializada sin ser
-  su dueño. Se le da a `svc_reportes`, que hará el ETL cuando exista el backend. Por esto el
-  proyecto necesita PostgreSQL 17 o superior.
+  su dueño. Se le da a `svc_reportes`, que refrescará los reportes cuando exista el backend. Por esto
+  el proyecto necesita PostgreSQL 17 o superior.
+- **`REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC`** (en `andina_reportes`): por
+  defecto cualquiera puede ejecutar las funciones de `dblink`. Se le quita a todos, así solo
+  postgres va a las otras bases (prueba 9.1b).
 
 ## `10_consultas.sql`
-Las 20 consultas, en `andina_reportes` (el único lugar con los datos de todos los servicios).
+Las 20 consultas, en `andina_reportes`. Igual que las vistas: cada tabla de otra base llega por
+`dblink` en una CTE arriba del `WITH` (`catalogo_productos`, `ventas_pagos`…), y las vistas
+`reportes.*` son las materializadas.
 La tabla de la cabecera dice en qué consulta aparece cada cosa que pide el enunciado (JOIN, CTE,
 ventanas, conjuntos…).
 - `string_agg(DISTINCT x, ', ' ORDER BY x)`: junta varios valores en un solo texto (las sedes que
@@ -225,14 +234,15 @@ Por eso los números no van en orden: la prueba 9 de permisos está repartida en
   permisos. Ojo: `SET ROLE` **no** revisa `CONNECT` (eso se revisa solo al conectarse). Por eso la
   prueba 11.3 usa `has_database_privilege` para mostrar a qué bases entra cada rol.
 - **`RETURNING`:** un `INSERT` o `UPDATE` que además muestra lo que guardó.
+- **Prueba 9.1b:** gerencia intenta usar `dblink` y recibe "permiso denegado para la función dblink".
 - **Prueba 11 (aislamiento):** desde `andina_ventas`, leer `catalogo.productos` da "la relación no
   existe", y nombrar la otra base (`andina_catalogo.catalogo.productos`) da "cross-database
-  references are not implemented". Es la evidencia de que cada base está aislada.
+  references are not implemented". Sin `dblink`, PostgreSQL no puede ir a otra base, y ventas no lo
+  tiene (se le quitó al terminar sus datos de prueba).
 - **Prueba extra (referencias sin FK):** cuenta con `NOT EXISTS` los ids que apuntan a algo que no
-  existe (huérfanos). Corre en reportes, sobre el staging, porque es el único lugar donde se pueden
-  cruzar los datos de varios servicios. Todas deben dar 0.
-- **Prueba 12 (ETL y consistencia eventual):** se guarda un pedido nuevo en `andina_ventas` y el
-  reporte **no lo ve**. Se corre `etl/refrescar_reportes.sql` y **ahora sí**. Esta prueba no va en
-  `ROLLBACK` (el ETL tiene que ver el pedido guardado), así que al final borra el pedido y corre el
-  ETL otra vez. `RETURNING id_pedido AS pedido_prueba \gset` guarda el id en `:pedido_prueba`
-  para poder borrarlo.
+  existe (huérfanos). Corre en reportes, que puede leer las demás bases con `dblink`. Todas deben dar 0.
+- **Prueba 12 (vistas materializadas y consistencia eventual):** se guarda un pedido nuevo en
+  `andina_ventas` y el reporte **no lo ve**. Se corre `refrescar_reportes.sql` y **ahora sí**. Esta
+  prueba no va en `ROLLBACK` (el refresco tiene que ver el pedido guardado), así que al final borra
+  el pedido y refresca otra vez. `RETURNING id_pedido AS pedido_prueba \gset` guarda el id en
+  `:pedido_prueba` para poder borrarlo.

@@ -2,14 +2,13 @@
 -- 03_identidad.sql
 -- microservicio de identidad y accesos: empleados, usuarios y auditoria.
 --
--- se corre en andina_identidad. en andina_reportes tambien (staging del
--- ETL), pero ahi solo se deja empleados: reportes no necesita usuarios
--- ni contrasenas.
+-- se corre en andina_identidad. reportes solo lee empleados (por
+-- dblink): no necesita usuarios ni contrasenas.
 --
 -- "ref:" marca un id que viene de otro servicio: se guarda el id de esa
 -- tabla pero SIN FK, porque esa tabla vive en otra base. que exista se
--- revisa con NOT EXISTS en 11_pruebas.sql (en el staging de reportes,
--- donde esta todo junto).
+-- revisa con NOT EXISTS en 11_pruebas.sql (desde reportes, que puede
+-- leer las otras bases con dblink).
 -- =====================================================================
 
 CREATE SCHEMA identidad;

@@ -4,9 +4,11 @@
 -- ordenes de compra con sus detalles y recepciones.
 --
 -- cuando este servicio necesita datos de otro (ids, precios...) no los
--- puede leer directo, porque estan en otra base. los toma del CSV que
--- ese servicio publico (carpeta csv/, ver sql/etl/extraer_*.sql). en el sistema
--- real eso seria una llamada HTTP al otro servicio.
+-- puede leer directo, porque estan en otra base. los trae con dblink
+-- (ver sql/dblink/servidores.sql) y al terminar se quita dblink de esta
+-- base (dblink/quitar.sql), para que el servicio no quede conectado a
+-- otra base. en el sistema real esto seria una llamada HTTP al otro
+-- servicio.
 -- aqui se necesita que productos vende cada proveedor y a que costo
 -- (catalogo.producto_proveedor). los ids de empleados compradores (16 y
 -- 17) y de almacenes (1 a 5) se escriben a mano.
@@ -15,12 +17,15 @@
 SELECT setseed(0.2026);
 
 -- ---------------------------------------------------------------------
--- datos que vienen de catalogo
+-- datos que vienen de catalogo, por dblink
+-- dblink('srv_catalogo', 'consulta') corre la consulta en
+-- andina_catalogo; AS t(...) dice que columnas trae y de que tipo.
 -- ---------------------------------------------------------------------
-CREATE TEMP TABLE tmp_producto_proveedor (
-    id_producto INTEGER, id_proveedor INTEGER, costo_referencia NUMERIC(14,2), plazo_entrega_dias INTEGER
-);
-\copy tmp_producto_proveedor FROM 'csv/catalogo.producto_proveedor.csv' WITH (FORMAT csv, HEADER)
+\ir dblink/servidores.sql
+
+CREATE TEMP TABLE tmp_producto_proveedor AS
+SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, id_proveedor, costo_referencia FROM catalogo.producto_proveedor')
+         AS t(id_producto INTEGER, id_proveedor INTEGER, costo_referencia NUMERIC(14,2));
 
 -- ---------------------------------------------------------------------
 -- compras: 60 ordenes repartidas en el periodo
@@ -109,3 +114,6 @@ JOIN compras.detalle_orden_compra d ON d.id_orden_compra = r.id_orden_compra;
 
 -- limpieza de las tablas temporales
 DROP TABLE tmp_producto_proveedor, tmp_oc, tmp_rec;
+
+-- ya no hace falta dblink en esta base
+\ir dblink/quitar.sql

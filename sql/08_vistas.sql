@@ -2,23 +2,33 @@
 -- 08_vistas.sql
 -- microservicio de reportes (base andina_reportes).
 --
--- reportes no es dueno de ninguna tabla. el ETL (carpeta etl/) le deja
--- en el staging (esquemas catalogo, identidad, compras, inventarios y
--- ventas) una copia de lo que hay en cada servicio, y aqui, en el
--- esquema reportes, se crean las vistas encima de ese staging.
+-- reportes no es dueno de ninguna tabla. sus vistas traen los datos de
+-- las otras bases con dblink (ver dblink/servidores.sql).
+--
+-- como se lee cada vista: arriba, en el WITH, hay una CTE por cada tabla
+-- de otra base que se necesita. cada una es una llamada a dblink, por
+-- ejemplo:
+--     catalogo_productos AS (
+--         SELECT * FROM dblink('srv_catalogo', 'SELECT ... FROM catalogo.productos')
+--             AS t(id_producto INTEGER, ...)
+--     )
+-- y despues la consulta usa catalogo_productos como si fuera la tabla.
+-- el nombre es esquema_tabla, para que se vea de donde viene.
 --
 -- las vistas son MATERIALIZADAS:
 --   una vista normal es una consulta guardada con nombre: no guarda
 --   datos, cada vez que se lee vuelve a ejecutar su consulta.
 --   una vista materializada ejecuta la consulta y GUARDA el resultado,
 --   como si fuera una tabla. leerla es rapido, pero no cambia sola: se
---   actualiza solo con REFRESH MATERIALIZED VIEW (etl/transformar.sql),
+--   actualiza solo con REFRESH MATERIALIZED VIEW (refrescar_reportes.sql),
 --   que se programa cada X minutos. o sea, es "la vista que se va
 --   actualizando cada X tiempo".
+--   aqui ademas evita que cada lectura de un reporte vaya por dblink a
+--   las otras bases: dblink solo se usa al refrescar.
 --
 -- WITH NO DATA: crea la vista vacia, sin ejecutar la consulta todavia.
--- se llena la primera vez que corre etl/transformar.sql. hasta entonces,
--- leerla da error ("no ha sido poblada").
+-- se llena la primera vez que corre refrescar_reportes.sql. hasta
+-- entonces, leerla da error ("no ha sido poblada").
 --
 -- parte a: vistas que juntan las 4 sedes en una sola (UNION ALL).
 -- parte b: las 10 vistas que pide el enunciado, hechas encima de las
@@ -29,7 +39,7 @@
 -- =====================================================================
 
 CREATE SCHEMA reportes;
-COMMENT ON SCHEMA reportes IS 'Microservicio de Reportes Corporativos: solo vistas de integracion de solo lectura';
+COMMENT ON SCHEMA reportes IS 'Microservicio de Reportes Corporativos: vistas materializadas que traen los datos por dblink';
 
 -- ---------------------------------------------------------------------
 -- a. parametros y unificacion de fragmentos
@@ -50,34 +60,82 @@ SELECT DATE '2026-10-15' AS fecha_corte,
 -- UNION ALL y no UNION: UNION gasta tiempo buscando repetidos, y aqui no
 -- puede haber, porque el CHECK de cada sede ya lo impide.
 CREATE MATERIALIZED VIEW reportes.vista_inventario_consolidado AS
-SELECT 'andina_inventarios.inv_bogota'   AS fragmento, i.* FROM inventarios.inv_bogota   i
+WITH inventarios_inv_bogota AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_bogota')
+        AS t(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER, existencia_actual INTEGER, stock_minimo INTEGER, fecha_actualizacion TIMESTAMP)
+),
+inventarios_inv_medellin AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_medellin')
+        AS t(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER, existencia_actual INTEGER, stock_minimo INTEGER, fecha_actualizacion TIMESTAMP)
+),
+inventarios_inv_cali AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_cali')
+        AS t(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER, existencia_actual INTEGER, stock_minimo INTEGER, fecha_actualizacion TIMESTAMP)
+),
+inventarios_inv_cedi AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_cedi')
+        AS t(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER, existencia_actual INTEGER, stock_minimo INTEGER, fecha_actualizacion TIMESTAMP)
+)
+SELECT 'andina_inventarios.inv_bogota'   AS fragmento, i.* FROM inventarios_inv_bogota   i
 UNION ALL
-SELECT 'andina_inventarios.inv_medellin' AS fragmento, i.* FROM inventarios.inv_medellin i
+SELECT 'andina_inventarios.inv_medellin' AS fragmento, i.* FROM inventarios_inv_medellin i
 UNION ALL
-SELECT 'andina_inventarios.inv_cali'     AS fragmento, i.* FROM inventarios.inv_cali     i
+SELECT 'andina_inventarios.inv_cali'     AS fragmento, i.* FROM inventarios_inv_cali     i
 UNION ALL
-SELECT 'andina_inventarios.inv_cedi'     AS fragmento, i.* FROM inventarios.inv_cedi     i
+SELECT 'andina_inventarios.inv_cedi'     AS fragmento, i.* FROM inventarios_inv_cedi     i
 WITH NO DATA;
 
 -- lo mismo para pedidos y para sus detalles
 CREATE MATERIALIZED VIEW reportes.vista_pedidos_consolidado AS
-SELECT 'andina_ventas.ped_bogota'   AS fragmento, p.* FROM ventas.ped_bogota   p
+WITH ventas_ped_bogota AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_sede, id_pedido, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado FROM ventas.ped_bogota')
+        AS t(id_sede INTEGER, id_pedido INTEGER, id_almacen INTEGER, id_cliente INTEGER, id_empleado INTEGER, fecha_pedido DATE, estado VARCHAR(10), total_registrado NUMERIC(14,2))
+),
+ventas_ped_medellin AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_sede, id_pedido, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado FROM ventas.ped_medellin')
+        AS t(id_sede INTEGER, id_pedido INTEGER, id_almacen INTEGER, id_cliente INTEGER, id_empleado INTEGER, fecha_pedido DATE, estado VARCHAR(10), total_registrado NUMERIC(14,2))
+),
+ventas_ped_cali AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_sede, id_pedido, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado FROM ventas.ped_cali')
+        AS t(id_sede INTEGER, id_pedido INTEGER, id_almacen INTEGER, id_cliente INTEGER, id_empleado INTEGER, fecha_pedido DATE, estado VARCHAR(10), total_registrado NUMERIC(14,2))
+),
+ventas_ped_cedi AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_sede, id_pedido, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado FROM ventas.ped_cedi')
+        AS t(id_sede INTEGER, id_pedido INTEGER, id_almacen INTEGER, id_cliente INTEGER, id_empleado INTEGER, fecha_pedido DATE, estado VARCHAR(10), total_registrado NUMERIC(14,2))
+)
+SELECT 'andina_ventas.ped_bogota'   AS fragmento, p.* FROM ventas_ped_bogota   p
 UNION ALL
-SELECT 'andina_ventas.ped_medellin' AS fragmento, p.* FROM ventas.ped_medellin p
+SELECT 'andina_ventas.ped_medellin' AS fragmento, p.* FROM ventas_ped_medellin p
 UNION ALL
-SELECT 'andina_ventas.ped_cali'     AS fragmento, p.* FROM ventas.ped_cali     p
+SELECT 'andina_ventas.ped_cali'     AS fragmento, p.* FROM ventas_ped_cali     p
 UNION ALL
-SELECT 'andina_ventas.ped_cedi'     AS fragmento, p.* FROM ventas.ped_cedi     p
+SELECT 'andina_ventas.ped_cedi'     AS fragmento, p.* FROM ventas_ped_cedi     p
 WITH NO DATA;
 
 CREATE MATERIALIZED VIEW reportes.vista_detalle_pedido_consolidado AS
-SELECT 'andina_ventas.det_ped_bogota'   AS fragmento, d.* FROM ventas.det_ped_bogota   d
+WITH ventas_det_ped_bogota AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_sede, id_pedido, id_producto, cantidad, precio_unitario FROM ventas.det_ped_bogota')
+        AS t(id_sede INTEGER, id_pedido INTEGER, id_producto INTEGER, cantidad INTEGER, precio_unitario NUMERIC(14,2))
+),
+ventas_det_ped_medellin AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_sede, id_pedido, id_producto, cantidad, precio_unitario FROM ventas.det_ped_medellin')
+        AS t(id_sede INTEGER, id_pedido INTEGER, id_producto INTEGER, cantidad INTEGER, precio_unitario NUMERIC(14,2))
+),
+ventas_det_ped_cali AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_sede, id_pedido, id_producto, cantidad, precio_unitario FROM ventas.det_ped_cali')
+        AS t(id_sede INTEGER, id_pedido INTEGER, id_producto INTEGER, cantidad INTEGER, precio_unitario NUMERIC(14,2))
+),
+ventas_det_ped_cedi AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_sede, id_pedido, id_producto, cantidad, precio_unitario FROM ventas.det_ped_cedi')
+        AS t(id_sede INTEGER, id_pedido INTEGER, id_producto INTEGER, cantidad INTEGER, precio_unitario NUMERIC(14,2))
+)
+SELECT 'andina_ventas.det_ped_bogota'   AS fragmento, d.* FROM ventas_det_ped_bogota   d
 UNION ALL
-SELECT 'andina_ventas.det_ped_medellin' AS fragmento, d.* FROM ventas.det_ped_medellin d
+SELECT 'andina_ventas.det_ped_medellin' AS fragmento, d.* FROM ventas_det_ped_medellin d
 UNION ALL
-SELECT 'andina_ventas.det_ped_cali'     AS fragmento, d.* FROM ventas.det_ped_cali     d
+SELECT 'andina_ventas.det_ped_cali'     AS fragmento, d.* FROM ventas_det_ped_cali     d
 UNION ALL
-SELECT 'andina_ventas.det_ped_cedi'     AS fragmento, d.* FROM ventas.det_ped_cedi     d
+SELECT 'andina_ventas.det_ped_cedi'     AS fragmento, d.* FROM ventas_det_ped_cedi     d
 WITH NO DATA;
 
 -- ---------------------------------------------------------------------
@@ -89,6 +147,22 @@ WITH NO DATA;
 --    (existencia x precio de lista).
 --    fuentes: fragmentos de inventarios + catalogo
 CREATE MATERIALIZED VIEW reportes.vista_inventario_por_sede AS
+WITH catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+),
+catalogo_almacenes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_almacen, id_sede, nombre, tipo_almacen, estado FROM catalogo.almacenes')
+        AS t(id_almacen INTEGER, id_sede INTEGER, nombre VARCHAR(60), tipo_almacen VARCHAR(15), estado VARCHAR(10))
+),
+catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+),
+catalogo_categorias AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_categoria, nombre, descripcion, estado FROM catalogo.categorias')
+        AS t(id_categoria INTEGER, nombre VARCHAR(60), descripcion VARCHAR(200), estado VARCHAR(10))
+)
 SELECT i.id_sede, s.nombre AS sede,
        i.id_almacen, a.nombre AS almacen,
        p.id_producto, p.sku, p.nombre AS producto, c.nombre AS categoria,
@@ -96,10 +170,10 @@ SELECT i.id_sede, s.nombre AS sede,
        i.existencia_actual * p.precio_lista AS valorizacion_estimada,
        i.fragmento
 FROM reportes.vista_inventario_consolidado i
-JOIN catalogo.sedes      s ON s.id_sede      = i.id_sede
-JOIN catalogo.almacenes  a ON a.id_almacen   = i.id_almacen
-JOIN catalogo.productos  p ON p.id_producto  = i.id_producto
-JOIN catalogo.categorias c ON c.id_categoria = p.id_categoria
+JOIN catalogo_sedes      s ON s.id_sede      = i.id_sede
+JOIN catalogo_almacenes  a ON a.id_almacen   = i.id_almacen
+JOIN catalogo_productos  p ON p.id_producto  = i.id_producto
+JOIN catalogo_categorias c ON c.id_categoria = p.id_categoria
 WITH NO DATA;
 
 -- 2. alertas de reabastecimiento: existencia cero o bajo el minimo
@@ -118,10 +192,22 @@ WITH NO DATA;
 --    CROSS JOIN arma todas las parejas producto-sede y NOT EXISTS deja
 --    solo las que no aparecen en ningun fragmento.
 CREATE MATERIALIZED VIEW reportes.vista_productos_sin_inventario AS
+WITH catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+),
+catalogo_categorias AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_categoria, nombre, descripcion, estado FROM catalogo.categorias')
+        AS t(id_categoria INTEGER, nombre VARCHAR(60), descripcion VARCHAR(200), estado VARCHAR(10))
+),
+catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+)
 SELECT s.id_sede, s.nombre AS sede, p.id_producto, p.sku, p.nombre AS producto, c.nombre AS categoria
-FROM catalogo.productos p
-JOIN catalogo.categorias c ON c.id_categoria = p.id_categoria
-CROSS JOIN catalogo.sedes s
+FROM catalogo_productos p
+JOIN catalogo_categorias c ON c.id_categoria = p.id_categoria
+CROSS JOIN catalogo_sedes s
 WHERE p.estado = 'ACTIVO'
   AND NOT EXISTS (SELECT 1
                   FROM reportes.vista_inventario_consolidado i
@@ -133,12 +219,16 @@ WITH NO DATA;
 --    date_trunc('month', fecha) lleva cada fecha al dia 1 de su mes para
 --    agrupar por mes.
 CREATE MATERIALIZED VIEW reportes.vista_ventas_mensuales_por_sede AS
+WITH catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+)
 SELECT p.id_sede, s.nombre AS sede,
        date_trunc('month', p.fecha_pedido)::date AS mes,
        COUNT(*)                                  AS pedidos,
        SUM(p.total_registrado)                   AS total_vendido
 FROM reportes.vista_pedidos_consolidado p
-JOIN catalogo.sedes s ON s.id_sede = p.id_sede
+JOIN catalogo_sedes s ON s.id_sede = p.id_sede
 WHERE p.estado IN ('CONFIRMADO', 'ENTREGADO')
 GROUP BY p.id_sede, s.nombre, date_trunc('month', p.fecha_pedido)
 WITH NO DATA;
@@ -149,6 +239,18 @@ WITH NO DATA;
 --    CROSS JOIN con parametros (una sola fila) pega la fecha de corte a
 --    cada pedido.
 CREATE MATERIALIZED VIEW reportes.vista_pedidos_pendientes AS
+WITH catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+),
+catalogo_clientes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_cliente, tipo_documento, num_documento, nombre_completo, correo, telefono, estado FROM catalogo.clientes')
+        AS t(id_cliente INTEGER, tipo_documento VARCHAR(10), num_documento VARCHAR(20), nombre_completo VARCHAR(120), correo VARCHAR(100), telefono VARCHAR(20), estado VARCHAR(10))
+),
+identidad_empleados AS (
+    SELECT * FROM dblink('srv_identidad', 'SELECT id_empleado, id_sede, num_documento, nombre_completo, cargo, correo, estado FROM identidad.empleados')
+        AS t(id_empleado INTEGER, id_sede INTEGER, num_documento VARCHAR(20), nombre_completo VARCHAR(120), cargo VARCHAR(30), correo VARCHAR(100), estado VARCHAR(10))
+)
 SELECT p.id_sede, s.nombre AS sede, p.id_pedido, p.fecha_pedido,
        pr.fecha_corte - p.fecha_pedido AS dias_antiguedad,
        (pr.fecha_corte - p.fecha_pedido) > pr.dias_pedido_antiguo AS es_antiguo,
@@ -157,9 +259,9 @@ SELECT p.id_sede, s.nombre AS sede, p.id_pedido, p.fecha_pedido,
        p.total_registrado
 FROM reportes.vista_pedidos_consolidado p
 CROSS JOIN reportes.parametros pr
-JOIN catalogo.sedes      s  ON s.id_sede      = p.id_sede
-JOIN catalogo.clientes   cl ON cl.id_cliente  = p.id_cliente
-JOIN identidad.empleados e  ON e.id_empleado  = p.id_empleado
+JOIN catalogo_sedes      s  ON s.id_sede      = p.id_sede
+JOIN catalogo_clientes   cl ON cl.id_cliente  = p.id_cliente
+JOIN identidad_empleados e  ON e.id_empleado  = p.id_empleado
 WHERE p.estado = 'PENDIENTE'
 WITH NO DATA;
 
@@ -169,16 +271,28 @@ WITH NO DATA;
 --    LEFT JOIN conserva los pedidos sin ningun pago; para ellos la suma
 --    sale NULL y COALESCE(pg.pagado, 0) la convierte en 0.
 CREATE MATERIALIZED VIEW reportes.vista_saldos_pendientes AS
+WITH catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+),
+catalogo_clientes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_cliente, tipo_documento, num_documento, nombre_completo, correo, telefono, estado FROM catalogo.clientes')
+        AS t(id_cliente INTEGER, tipo_documento VARCHAR(10), num_documento VARCHAR(20), nombre_completo VARCHAR(120), correo VARCHAR(100), telefono VARCHAR(20), estado VARCHAR(10))
+),
+ventas_pagos AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_pago, id_sede, id_pedido, fecha_pago, valor, medio_pago, estado FROM ventas.pagos')
+        AS t(id_pago INTEGER, id_sede INTEGER, id_pedido INTEGER, fecha_pago DATE, valor NUMERIC(14,2), medio_pago VARCHAR(20), estado VARCHAR(10))
+)
 SELECT p.id_sede, s.nombre AS sede, p.id_pedido, p.fecha_pedido, p.estado,
        p.id_cliente, cl.nombre_completo AS cliente,
        p.total_registrado,
        COALESCE(pg.pagado, 0)                      AS pagos_confirmados,
        p.total_registrado - COALESCE(pg.pagado, 0) AS saldo_pendiente
 FROM reportes.vista_pedidos_consolidado p
-JOIN catalogo.sedes    s  ON s.id_sede     = p.id_sede
-JOIN catalogo.clientes cl ON cl.id_cliente = p.id_cliente
+JOIN catalogo_sedes    s  ON s.id_sede     = p.id_sede
+JOIN catalogo_clientes cl ON cl.id_cliente = p.id_cliente
 LEFT JOIN (SELECT id_sede, id_pedido, SUM(valor) AS pagado
-           FROM ventas.pagos
+           FROM ventas_pagos
            WHERE estado = 'CONFIRMADO'
            GROUP BY id_sede, id_pedido) pg
        ON pg.id_sede = p.id_sede AND pg.id_pedido = p.id_pedido
@@ -190,20 +304,48 @@ WITH NO DATA;
 --    menos lo recibido en todas sus recepciones registradas (RN-11).
 --    mismo patron que la vista 6: sumar primero, LEFT JOIN y COALESCE.
 CREATE MATERIALIZED VIEW reportes.vista_compras_pendientes AS
+WITH compras_ordenes_compra AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_orden_compra, id_proveedor, id_almacen_destino, id_empleado, fecha_orden, fecha_estimada, estado FROM compras.ordenes_compra')
+        AS t(id_orden_compra INTEGER, id_proveedor INTEGER, id_almacen_destino INTEGER, id_empleado INTEGER, fecha_orden DATE, fecha_estimada DATE, estado VARCHAR(10))
+),
+compras_detalle_orden_compra AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_orden_compra, id_producto, cantidad_solicitada, costo_unitario FROM compras.detalle_orden_compra')
+        AS t(id_orden_compra INTEGER, id_producto INTEGER, cantidad_solicitada INTEGER, costo_unitario NUMERIC(14,2))
+),
+catalogo_proveedores AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_proveedor, identificacion, razon_social, ciudad, correo, telefono, estado FROM catalogo.proveedores')
+        AS t(id_proveedor INTEGER, identificacion VARCHAR(20), razon_social VARCHAR(100), ciudad VARCHAR(60), correo VARCHAR(100), telefono VARCHAR(20), estado VARCHAR(10))
+),
+catalogo_almacenes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_almacen, id_sede, nombre, tipo_almacen, estado FROM catalogo.almacenes')
+        AS t(id_almacen INTEGER, id_sede INTEGER, nombre VARCHAR(60), tipo_almacen VARCHAR(15), estado VARCHAR(10))
+),
+catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+),
+compras_recepciones_compra AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_recepcion, id_orden_compra, fecha_recepcion, estado FROM compras.recepciones_compra')
+        AS t(id_recepcion INTEGER, id_orden_compra INTEGER, fecha_recepcion DATE, estado VARCHAR(10))
+),
+compras_detalle_recepcion AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_recepcion, id_producto, cantidad_recibida FROM compras.detalle_recepcion')
+        AS t(id_recepcion INTEGER, id_producto INTEGER, cantidad_recibida INTEGER)
+)
 SELECT oc.id_orden_compra, oc.fecha_orden, oc.fecha_estimada, oc.estado,
        pv.razon_social AS proveedor, a.nombre AS almacen_destino,
        d.id_producto, p.nombre AS producto,
        d.cantidad_solicitada,
        COALESCE(r.recibida, 0)                         AS cantidad_recibida,
        d.cantidad_solicitada - COALESCE(r.recibida, 0) AS cantidad_pendiente
-FROM compras.ordenes_compra oc
-JOIN compras.detalle_orden_compra d ON d.id_orden_compra = oc.id_orden_compra
-JOIN catalogo.proveedores pv ON pv.id_proveedor = oc.id_proveedor
-JOIN catalogo.almacenes   a  ON a.id_almacen    = oc.id_almacen_destino
-JOIN catalogo.productos   p  ON p.id_producto   = d.id_producto
+FROM compras_ordenes_compra oc
+JOIN compras_detalle_orden_compra d ON d.id_orden_compra = oc.id_orden_compra
+JOIN catalogo_proveedores pv ON pv.id_proveedor = oc.id_proveedor
+JOIN catalogo_almacenes   a  ON a.id_almacen    = oc.id_almacen_destino
+JOIN catalogo_productos   p  ON p.id_producto   = d.id_producto
 LEFT JOIN (SELECT rc.id_orden_compra, dr.id_producto, SUM(dr.cantidad_recibida) AS recibida
-           FROM compras.recepciones_compra rc
-           JOIN compras.detalle_recepcion dr ON dr.id_recepcion = rc.id_recepcion
+           FROM compras_recepciones_compra rc
+           JOIN compras_detalle_recepcion dr ON dr.id_recepcion = rc.id_recepcion
            WHERE rc.estado = 'REGISTRADA'
            GROUP BY rc.id_orden_compra, dr.id_producto) r
        ON r.id_orden_compra = d.id_orden_compra AND r.id_producto = d.id_producto
@@ -216,20 +358,40 @@ WITH NO DATA;
 --    para el origen, ad/sd para el destino), porque la transferencia
 --    tiene dos almacenes.
 CREATE MATERIALIZED VIEW reportes.vista_transferencias_en_transito AS
+WITH inventarios_transferencias AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_transferencia, id_almacen_origen, id_almacen_destino, fecha_solicitud, fecha_despacho, fecha_recepcion, estado FROM inventarios.transferencias')
+        AS t(id_transferencia INTEGER, id_almacen_origen INTEGER, id_almacen_destino INTEGER, fecha_solicitud DATE, fecha_despacho DATE, fecha_recepcion DATE, estado VARCHAR(10))
+),
+inventarios_detalle_transferencia AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_transferencia, id_producto, cantidad_enviada, cantidad_recibida FROM inventarios.detalle_transferencia')
+        AS t(id_transferencia INTEGER, id_producto INTEGER, cantidad_enviada INTEGER, cantidad_recibida INTEGER)
+),
+catalogo_almacenes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_almacen, id_sede, nombre, tipo_almacen, estado FROM catalogo.almacenes')
+        AS t(id_almacen INTEGER, id_sede INTEGER, nombre VARCHAR(60), tipo_almacen VARCHAR(15), estado VARCHAR(10))
+),
+catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+),
+catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+)
 SELECT t.id_transferencia,
        ao.nombre AS almacen_origen,  so.nombre AS sede_origen,
        ad.nombre AS almacen_destino, sd.nombre AS sede_destino,
        t.fecha_solicitud, t.fecha_despacho,
        pr.fecha_corte - t.fecha_despacho AS dias_en_transito,
        dt.id_producto, p.nombre AS producto, dt.cantidad_enviada
-FROM inventarios.transferencias t
+FROM inventarios_transferencias t
 CROSS JOIN reportes.parametros pr
-JOIN inventarios.detalle_transferencia dt ON dt.id_transferencia = t.id_transferencia
-JOIN catalogo.almacenes ao ON ao.id_almacen = t.id_almacen_origen
-JOIN catalogo.sedes     so ON so.id_sede    = ao.id_sede
-JOIN catalogo.almacenes ad ON ad.id_almacen = t.id_almacen_destino
-JOIN catalogo.sedes     sd ON sd.id_sede    = ad.id_sede
-JOIN catalogo.productos p  ON p.id_producto = dt.id_producto
+JOIN inventarios_detalle_transferencia dt ON dt.id_transferencia = t.id_transferencia
+JOIN catalogo_almacenes ao ON ao.id_almacen = t.id_almacen_origen
+JOIN catalogo_sedes     so ON so.id_sede    = ao.id_sede
+JOIN catalogo_almacenes ad ON ad.id_almacen = t.id_almacen_destino
+JOIN catalogo_sedes     sd ON sd.id_sede    = ad.id_sede
+JOIN catalogo_productos p  ON p.id_producto = dt.id_producto
 WHERE t.estado = 'DESPACHADA'
   AND t.fecha_recepcion IS NULL
 WITH NO DATA;
@@ -238,7 +400,23 @@ WITH NO DATA;
 --    (RN-34). WITH define dos subconsultas con nombre (CTE): vendidas y
 --    devueltas se calculan por separado y luego se unen por producto.
 CREATE MATERIALIZED VIEW reportes.vista_devoluciones_por_producto AS
-WITH vendidas AS (
+WITH ventas_devoluciones AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_devolucion, id_sede, id_pedido, fecha_solicitud, motivo, estado FROM ventas.devoluciones')
+        AS t(id_devolucion INTEGER, id_sede INTEGER, id_pedido INTEGER, fecha_solicitud DATE, motivo VARCHAR(200), estado VARCHAR(10))
+),
+ventas_detalle_devolucion AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_devolucion, id_producto, cantidad, condicion_producto FROM ventas.detalle_devolucion')
+        AS t(id_devolucion INTEGER, id_producto INTEGER, cantidad INTEGER, condicion_producto VARCHAR(10))
+),
+catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+),
+catalogo_categorias AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_categoria, nombre, descripcion, estado FROM catalogo.categorias')
+        AS t(id_categoria INTEGER, nombre VARCHAR(60), descripcion VARCHAR(200), estado VARCHAR(10))
+),
+vendidas AS (
     SELECT d.id_producto, SUM(d.cantidad) AS unidades_vendidas
     FROM reportes.vista_detalle_pedido_consolidado d
     JOIN reportes.vista_pedidos_consolidado p
@@ -247,8 +425,8 @@ WITH vendidas AS (
     GROUP BY d.id_producto
 ), devueltas AS (
     SELECT dd.id_producto, SUM(dd.cantidad) AS unidades_devueltas
-    FROM ventas.devoluciones dv
-    JOIN ventas.detalle_devolucion dd ON dd.id_devolucion = dv.id_devolucion
+    FROM ventas_devoluciones dv
+    JOIN ventas_detalle_devolucion dd ON dd.id_devolucion = dv.id_devolucion
     WHERE dv.estado = 'APROBADA'
     GROUP BY dd.id_producto
 )
@@ -257,8 +435,8 @@ SELECT p.id_producto, p.sku, p.nombre AS producto, c.nombre AS categoria,
        COALESCE(dv.unidades_devueltas, 0) AS unidades_devueltas,
        round(100.0 * COALESCE(dv.unidades_devueltas, 0) / v.unidades_vendidas, 2) AS porcentaje_devolucion
 FROM vendidas v
-JOIN catalogo.productos  p ON p.id_producto  = v.id_producto
-JOIN catalogo.categorias c ON c.id_categoria = p.id_categoria
+JOIN catalogo_productos  p ON p.id_producto  = v.id_producto
+JOIN catalogo_categorias c ON c.id_categoria = p.id_categoria
 LEFT JOIN devueltas dv ON dv.id_producto = v.id_producto
 WITH NO DATA;
 
@@ -271,7 +449,31 @@ WITH NO DATA;
 --     COUNT(CASE WHEN ... THEN 1 END) cuenta solo las filas que cumplen
 --     la condicion (las demas dan NULL y COUNT no las cuenta).
 CREATE MATERIALIZED VIEW reportes.vista_reporte_corporativo AS
-WITH inv AS (
+WITH catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+),
+compras_ordenes_compra AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_orden_compra, id_proveedor, id_almacen_destino, id_empleado, fecha_orden, fecha_estimada, estado FROM compras.ordenes_compra')
+        AS t(id_orden_compra INTEGER, id_proveedor INTEGER, id_almacen_destino INTEGER, id_empleado INTEGER, fecha_orden DATE, fecha_estimada DATE, estado VARCHAR(10))
+),
+compras_detalle_orden_compra AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_orden_compra, id_producto, cantidad_solicitada, costo_unitario FROM compras.detalle_orden_compra')
+        AS t(id_orden_compra INTEGER, id_producto INTEGER, cantidad_solicitada INTEGER, costo_unitario NUMERIC(14,2))
+),
+catalogo_almacenes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_almacen, id_sede, nombre, tipo_almacen, estado FROM catalogo.almacenes')
+        AS t(id_almacen INTEGER, id_sede INTEGER, nombre VARCHAR(60), tipo_almacen VARCHAR(15), estado VARCHAR(10))
+),
+inventarios_transferencias AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_transferencia, id_almacen_origen, id_almacen_destino, fecha_solicitud, fecha_despacho, fecha_recepcion, estado FROM inventarios.transferencias')
+        AS t(id_transferencia INTEGER, id_almacen_origen INTEGER, id_almacen_destino INTEGER, fecha_solicitud DATE, fecha_despacho DATE, fecha_recepcion DATE, estado VARCHAR(10))
+),
+catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+),
+inv AS (
     SELECT id_sede,
            COUNT(DISTINCT CASE WHEN existencia_actual > 0 THEN id_producto END) AS productos_con_existencia,
            SUM(existencia_actual)                                           AS unidades_inventario
@@ -280,7 +482,7 @@ WITH inv AS (
 ), activos AS (
     SELECT i.id_sede, COUNT(DISTINCT i.id_producto) AS productos_activos
     FROM reportes.vista_inventario_consolidado i
-    JOIN catalogo.productos p ON p.id_producto = i.id_producto
+    JOIN catalogo_productos p ON p.id_producto = i.id_producto
     WHERE p.estado = 'ACTIVO'
     GROUP BY i.id_sede
 ), ven AS (
@@ -294,21 +496,21 @@ WITH inv AS (
     SELECT a.id_sede,
            COUNT(DISTINCT oc.id_orden_compra)                 AS ordenes_compra,
            SUM(d.cantidad_solicitada * d.costo_unitario)      AS valor_compras
-    FROM compras.ordenes_compra oc
-    JOIN compras.detalle_orden_compra d ON d.id_orden_compra = oc.id_orden_compra
-    JOIN catalogo.almacenes a ON a.id_almacen = oc.id_almacen_destino
+    FROM compras_ordenes_compra oc
+    JOIN compras_detalle_orden_compra d ON d.id_orden_compra = oc.id_orden_compra
+    JOIN catalogo_almacenes a ON a.id_almacen = oc.id_almacen_destino
     WHERE oc.estado <> 'CANCELADA'
     GROUP BY a.id_sede
 ), tr_sal AS (
     SELECT a.id_sede, COUNT(*) AS transferencias_enviadas
-    FROM inventarios.transferencias t
-    JOIN catalogo.almacenes a ON a.id_almacen = t.id_almacen_origen
+    FROM inventarios_transferencias t
+    JOIN catalogo_almacenes a ON a.id_almacen = t.id_almacen_origen
     WHERE t.estado <> 'CANCELADA'
     GROUP BY a.id_sede
 ), tr_ent AS (
     SELECT a.id_sede, COUNT(*) AS transferencias_recibidas
-    FROM inventarios.transferencias t
-    JOIN catalogo.almacenes a ON a.id_almacen = t.id_almacen_destino
+    FROM inventarios_transferencias t
+    JOIN catalogo_almacenes a ON a.id_almacen = t.id_almacen_destino
     WHERE t.estado = 'RECIBIDA'
     GROUP BY a.id_sede
 )
@@ -323,7 +525,7 @@ SELECT s.id_sede, s.nombre AS sede, s.tipo_sede,
        COALESCE(com.valor_compras, 0)             AS valor_compras,
        COALESCE(ts.transferencias_enviadas, 0)    AS transferencias_enviadas,
        COALESCE(te.transferencias_recibidas, 0)   AS transferencias_recibidas
-FROM catalogo.sedes s
+FROM catalogo_sedes s
 LEFT JOIN activos ac ON ac.id_sede  = s.id_sede
 LEFT JOIN inv        ON inv.id_sede = s.id_sede
 LEFT JOIN ven        ON ven.id_sede = s.id_sede
@@ -333,7 +535,7 @@ LEFT JOIN tr_ent te  ON te.id_sede  = s.id_sede
 WITH NO DATA;
 
 -- procedencia de cada vista, guardada en la base (seccion 6 del enunciado).
--- todas leen el staging, que el ETL carga desde la base de cada servicio.
+-- todas traen los datos de la base de cada servicio por dblink.
 COMMENT ON MATERIALIZED VIEW reportes.vista_inventario_consolidado      IS 'UNION ALL de los fragmentos de andina_inventarios: inv_bogota, inv_medellin, inv_cali, inv_cedi';
 COMMENT ON MATERIALIZED VIEW reportes.vista_pedidos_consolidado         IS 'UNION ALL de los fragmentos de andina_ventas: ped_bogota, ped_medellin, ped_cali, ped_cedi';
 COMMENT ON MATERIALIZED VIEW reportes.vista_detalle_pedido_consolidado  IS 'UNION ALL de los fragmentos de andina_ventas: det_ped_bogota, det_ped_medellin, det_ped_cali, det_ped_cedi';
@@ -350,17 +552,13 @@ COMMENT ON MATERIALIZED VIEW reportes.vista_reporte_corporativo         IS 'Fuen
 
 -- ---------------------------------------------------------------------
 -- c. de cuando son los datos
--- vista normal sobre el control del ETL (etl.cargas): cuando fue la
--- ultima carga y cuantas filas trajo. asi quien lea un reporte sabe
--- "datos al...". es normal (no materializada) para que siempre muestre
--- la ultima carga.
+-- una vista materializada de una sola fila con la hora del ultimo
+-- refresco. refrescar_reportes.sql la refresca al final, asi quien lea
+-- un reporte sabe "datos al...". now() da la hora en que empezo la
+-- transaccion del refresco.
 -- ---------------------------------------------------------------------
-CREATE VIEW reportes.vista_ultima_carga AS
-SELECT fecha_carga        AS ultima_carga,
-       COUNT(*)           AS tablas_cargadas,
-       SUM(filas_staging) AS filas_cargadas
-FROM etl.cargas
-WHERE fecha_carga = (SELECT MAX(fecha_carga) FROM etl.cargas)
-GROUP BY fecha_carga;
+CREATE MATERIALIZED VIEW reportes.vista_ultima_actualizacion AS
+SELECT now() AS actualizado_en
+WITH NO DATA;
 
-COMMENT ON VIEW reportes.vista_ultima_carga IS 'Fuente: etl.cargas (control del ETL)';
+COMMENT ON MATERIALIZED VIEW reportes.vista_ultima_actualizacion IS 'Hora del ultimo REFRESH de los reportes';

@@ -51,16 +51,6 @@ INSERT 0 80
 INSERT 0 10
 INSERT 0 120
 INSERT 0 100
-COPY 4
-COPY 5
-COPY 5
-COPY 80
-COPY 10
-COPY 120
-COPY 100
-CREATE VIEW
-COPY 7
-DROP VIEW
 >> identidad
 Ahora está conectado a la base de datos «andina_identidad» con el usuario «postgres».
 CREATE SCHEMA
@@ -79,10 +69,6 @@ COMMENT
 INSERT 0 20
 INSERT 0 12
 INSERT 0 60
-COPY 20
-CREATE VIEW
-COPY 1
-DROP VIEW
 >> compras
 Ahora está conectado a la base de datos «andina_compras» con el usuario «postgres».
 CREATE SCHEMA
@@ -100,8 +86,18 @@ COMMENT
  
 (1 fila)
 
-CREATE TABLE
-COPY 120
+CREATE EXTENSION
+CREATE SERVER
+CREATE SERVER
+CREATE SERVER
+CREATE SERVER
+CREATE SERVER
+CREATE USER MAPPING
+CREATE USER MAPPING
+CREATE USER MAPPING
+CREATE USER MAPPING
+CREATE USER MAPPING
+SELECT 120
 SELECT 60
 ALTER TABLE
 UPDATE 60
@@ -111,13 +107,18 @@ SELECT 70
 INSERT 0 70
 INSERT 0 193
 DROP TABLE
-COPY 60
-COPY 180
-COPY 70
-COPY 193
-CREATE VIEW
-COPY 4
-DROP VIEW
+psql:sql/dblink/quitar.sql:12: NOTICE:  drop cascades to 10 other objects
+DETALLE:  drop cascades to server srv_catalogo
+drop cascades to user mapping for postgres on server srv_catalogo
+drop cascades to server srv_identidad
+drop cascades to user mapping for postgres on server srv_identidad
+drop cascades to server srv_compras
+drop cascades to user mapping for postgres on server srv_compras
+drop cascades to server srv_inventarios
+drop cascades to user mapping for postgres on server srv_inventarios
+drop cascades to server srv_ventas
+drop cascades to user mapping for postgres on server srv_ventas
+DROP EXTENSION
 >> inventarios (fragmentos por sede)
 Ahora está conectado a la base de datos «andina_inventarios» con el usuario «postgres».
 CREATE SCHEMA
@@ -139,10 +140,19 @@ COMMENT
  
 (1 fila)
 
-CREATE TABLE
-COPY 5
-CREATE TABLE
-COPY 80
+CREATE EXTENSION
+CREATE SERVER
+CREATE SERVER
+CREATE SERVER
+CREATE SERVER
+CREATE SERVER
+CREATE USER MAPPING
+CREATE USER MAPPING
+CREATE USER MAPPING
+CREATE USER MAPPING
+CREATE USER MAPPING
+SELECT 5
+SELECT 80
 SELECT 304
 UPDATE 2
 INSERT 0 72
@@ -154,15 +164,18 @@ INSERT 0 25
 INSERT 0 75
 UPDATE 4
 DROP TABLE
-COPY 72
-COPY 69
-COPY 64
-COPY 99
-COPY 25
-COPY 75
-CREATE VIEW
-COPY 6
-DROP VIEW
+psql:sql/dblink/quitar.sql:12: NOTICE:  drop cascades to 10 other objects
+DETALLE:  drop cascades to server srv_catalogo
+drop cascades to user mapping for postgres on server srv_catalogo
+drop cascades to server srv_identidad
+drop cascades to user mapping for postgres on server srv_identidad
+drop cascades to server srv_compras
+drop cascades to user mapping for postgres on server srv_compras
+drop cascades to server srv_inventarios
+drop cascades to user mapping for postgres on server srv_inventarios
+drop cascades to server srv_ventas
+drop cascades to user mapping for postgres on server srv_ventas
+DROP EXTENSION
 >> ventas (fragmentos por sede)
 Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
 CREATE SCHEMA
@@ -194,13 +207,19 @@ COMMENT
  
 (1 fila)
 
-CREATE TABLE
-COPY 80
-CREATE TABLE
-COPY 72
-COPY 69
-COPY 64
-COPY 99
+CREATE EXTENSION
+CREATE SERVER
+CREATE SERVER
+CREATE SERVER
+CREATE SERVER
+CREATE SERVER
+CREATE USER MAPPING
+CREATE USER MAPPING
+CREATE USER MAPPING
+CREATE USER MAPPING
+CREATE USER MAPPING
+SELECT 80
+SELECT 304
 SELECT 300
 SELECT 300
 SELECT 876
@@ -221,104 +240,31 @@ SELECT 22
 INSERT 0 22
 INSERT 0 29
 DROP TABLE
-COPY 100
-COPY 80
-COPY 70
-COPY 50
-COPY 281
-COPY 237
-COPY 202
-COPY 156
-COPY 340
-COPY 22
-COPY 29
-CREATE VIEW
-COPY 11
-DROP VIEW
->> reportes: staging
+psql:sql/dblink/quitar.sql:12: NOTICE:  drop cascades to 10 other objects
+DETALLE:  drop cascades to server srv_catalogo
+drop cascades to user mapping for postgres on server srv_catalogo
+drop cascades to server srv_identidad
+drop cascades to user mapping for postgres on server srv_identidad
+drop cascades to server srv_compras
+drop cascades to user mapping for postgres on server srv_compras
+drop cascades to server srv_inventarios
+drop cascades to user mapping for postgres on server srv_inventarios
+drop cascades to server srv_ventas
+drop cascades to user mapping for postgres on server srv_ventas
+DROP EXTENSION
+>> reportes: dblink
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
-CREATE SCHEMA
-COMMENT
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-CREATE SCHEMA
-COMMENT
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-COMMENT
-COMMENT
-COMMENT
-CREATE SCHEMA
-COMMENT
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-CREATE SCHEMA
-COMMENT
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-CREATE SCHEMA
-COMMENT
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-CREATE TABLE
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-DROP TABLE
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-CREATE SCHEMA
-COMMENT
-CREATE TABLE
-COMMENT
+CREATE EXTENSION
+CREATE SERVER
+CREATE SERVER
+CREATE SERVER
+CREATE SERVER
+CREATE SERVER
+CREATE USER MAPPING
+CREATE USER MAPPING
+CREATE USER MAPPING
+CREATE USER MAPPING
+CREATE USER MAPPING
 >> 08 vistas (materializadas, todavia vacias)
 CREATE SCHEMA
 COMMENT
@@ -349,77 +295,9 @@ COMMENT
 COMMENT
 COMMENT
 COMMENT
-CREATE VIEW
+CREATE MATERIALIZED VIEW
 COMMENT
->> ETL: cargar el staging y transformar
-BEGIN
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-DELETE 0
-COPY 4
-COPY 5
-COPY 5
-COPY 80
-COPY 10
-COPY 120
-COPY 100
-COPY 20
-COPY 60
-COPY 180
-COPY 70
-COPY 193
-COPY 72
-COPY 69
-COPY 64
-COPY 99
-COPY 25
-COPY 75
-COPY 100
-COPY 80
-COPY 70
-COPY 50
-COPY 281
-COPY 237
-COPY 202
-COPY 156
-COPY 340
-COPY 22
-COPY 29
-CREATE TABLE
-COPY 7
-COPY 1
-COPY 4
-COPY 6
-COPY 11
-INSERT 0 29
-DROP TABLE
-COMMIT
+>> refrescar reportes (dblink trae los datos)
 BEGIN
 REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
@@ -434,7 +312,13 @@ REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
 COMMIT
+   reportes_actualizados_en   
+------------------------------
+ 2026-11-11 12:23:29.09388-05
+(1 fila)
+
 >> 09 roles y permisos
 CREATE ROLE
 CREATE ROLE
@@ -505,10 +389,7 @@ REVOKE
 GRANT
 GRANT
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
-GRANT
-GRANT
-GRANT
-GRANT
+REVOKE
 GRANT
 GRANT
 GRANT
@@ -845,8 +726,8 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
  Sede Medellín | Almacén Medellín        | LIM-014 | Toallas de cocina x3         |                 1 |           20 |       19 | BAJO MINIMO
  Sede Bogotá   | Almacén Bogotá          | PAP-012 | Colores x24                  |                 7 |           25 |       18 | BAJO MINIMO
  Sede Cali     | Almacén Cali            | ASE-007 | Talco para pies 120 g        |                11 |           29 |       18 | BAJO MINIMO
- Sede Cali     | Almacén Cali            | ALI-001 | Arroz blanco 1 kg            |                 0 |           17 |       17 | SIN EXISTENCIA
  Sede Cali     | Almacén Cali            | ALI-009 | Atún en lata 170 g           |                 9 |           26 |       17 | BAJO MINIMO
+ Sede Cali     | Almacén Cali            | ALI-001 | Arroz blanco 1 kg            |                 0 |           17 |       17 | SIN EXISTENCIA
  Sede Bogotá   | Almacén Bogotá          | LIM-010 | Trapero de algodón           |                 2 |           17 |       15 | BAJO MINIMO
  Sede Cali     | Almacén Cali            | LIM-009 | Escoba plástica              |                 7 |           22 |       15 | BAJO MINIMO
  Sede Cali     | Almacén Cali            | BEB-006 | Té helado limón 500 ml       |                 0 |           15 |       15 | SIN EXISTENCIA
@@ -862,9 +743,9 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
  Sede Bogotá   | Almacén Bogotá          | ASE-014 | Protector solar 120 ml       |                 1 |           10 |        9 | BAJO MINIMO
  Sede Bogotá   | Almacén Bogotá          | ALI-011 | Sal refinada 1 kg            |                 3 |           12 |        9 | BAJO MINIMO
  Sede Bogotá   | Almacén Bogotá          | ALI-006 | Fríjol rojo 500 g            |                 3 |           11 |        8 | BAJO MINIMO
+ Sede Cali     | Almacén Cali            | ASE-009 | Toallas húmedas x50          |                13 |           21 |        8 | BAJO MINIMO
  Sede Cali     | Almacén Cali            | PAP-009 | Cinta adhesiva transparente  |                14 |           22 |        8 | BAJO MINIMO
  Sede Cali     | Almacén Cali            | ASE-002 | Shampoo 400 ml               |                 2 |           10 |        8 | BAJO MINIMO
- Sede Cali     | Almacén Cali            | ASE-009 | Toallas húmedas x50          |                13 |           21 |        8 | BAJO MINIMO
  CEDI Funza    | Bodega de despacho CEDI | ALI-015 | Salsa de tomate 400 g        |                 3 |           10 |        7 | BAJO MINIMO
  Sede Bogotá   | Almacén Bogotá          | ALI-012 | Avena en hojuelas 500 g      |                12 |           19 |        7 | BAJO MINIMO
  Sede Medellín | Almacén Medellín        | BEB-010 | Leche entera 1 L             |                16 |           23 |        7 | BAJO MINIMO
@@ -922,463 +803,458 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
 
 
 === Consulta 4. Top 5 de productos mas vendidos por sede y trimestre (ROW_NUMBER / DENSE_RANK) ===
-     sede      | periodo | puesto | nivel_ventas |           producto           | unidades 
----------------+---------+--------+--------------+------------------------------+----------
- Sede Bogotá   | 2026-T2 |      1 |            1 | Cuaderno cuadriculado 100 h  |       22
- Sede Bogotá   | 2026-T2 |      2 |            2 | Mayonesa 400 g               |       21
- Sede Bogotá   | 2026-T2 |      3 |            3 | Leche entera 1 L             |       17
- Sede Bogotá   | 2026-T2 |      4 |            4 | Cerveza lager six pack       |       16
- Sede Bogotá   | 2026-T2 |      5 |            5 | Arroz blanco 1 kg            |       15
- Sede Bogotá   | 2026-T3 |      1 |            1 | Papel higiénico x12          |       35
- Sede Bogotá   | 2026-T3 |      2 |            2 | Suavizante 1 L               |       29
- Sede Bogotá   | 2026-T3 |      3 |            3 | Jugo de naranja 1 L          |       28
- Sede Bogotá   | 2026-T3 |      4 |            3 | Pañales etapa 3 x30          |       28
- Sede Bogotá   | 2026-T3 |      5 |            4 | Bolsas de basura x10         |       24
- Sede Bogotá   | 2026-T4 |      1 |            1 | Arroz blanco 1 kg            |       15
- Sede Bogotá   | 2026-T4 |      2 |            2 | Aceite vegetal 1 L           |        8
- Sede Bogotá   | 2026-T4 |      3 |            2 | Azúcar refinada 1 kg         |        8
- Sede Bogotá   | 2026-T4 |      4 |            2 | Café molido 500 g            |        8
- Sede Bogotá   | 2026-T4 |      5 |            2 | Harina de maíz 1 kg          |        8
- Sede Medellín | 2026-T2 |      1 |            1 | Disquete 3.5" x10            |       22
- Sede Medellín | 2026-T2 |      2 |            2 | Crema dental 100 ml          |       19
- Sede Medellín | 2026-T2 |      3 |            2 | Malta 330 ml                 |       19
- Sede Medellín | 2026-T2 |      4 |            3 | Atún en lata 170 g           |       14
- Sede Medellín | 2026-T2 |      5 |            4 | Mayonesa 400 g               |       12
- Sede Medellín | 2026-T3 |      1 |            1 | Ambientador en aerosol       |       33
- Sede Medellín | 2026-T3 |      2 |            2 | Cinta adhesiva transparente  |       31
- Sede Medellín | 2026-T3 |      3 |            3 | Chocolate de mesa 500 g      |       21
- Sede Medellín | 2026-T3 |      4 |            3 | Escoba plástica              |       21
- Sede Medellín | 2026-T3 |      5 |            3 | Lápiz grafito x12            |       21
- Sede Medellín | 2026-T4 |      1 |            1 | Cepillo dental               |        8
- Sede Medellín | 2026-T4 |      2 |            1 | Desinfectante multiusos 1 L  |        8
- Sede Medellín | 2026-T4 |      3 |            1 | Pegante en barra 40 g        |        8
- Sede Medellín | 2026-T4 |      4 |            2 | Lavaloza líquido 500 ml      |        7
- Sede Medellín | 2026-T4 |      5 |            2 | Toallas húmedas x50          |        7
- Sede Cali     | 2026-T2 |      1 |            1 | Desinfectante multiusos 1 L  |       16
- Sede Cali     | 2026-T2 |      2 |            2 | Arroz blanco 1 kg            |       15
- Sede Cali     | 2026-T2 |      3 |            2 | Atún en lata 170 g           |       15
- Sede Cali     | 2026-T2 |      4 |            2 | Guantes de caucho            |       15
- Sede Cali     | 2026-T2 |      5 |            3 | Máquina de afeitar x3        |       14
- Sede Cali     | 2026-T3 |      1 |            1 | Crema corporal 400 ml        |       26
- Sede Cali     | 2026-T3 |      2 |            2 | Pasta spaghetti 500 g        |       19
- Sede Cali     | 2026-T3 |      3 |            3 | Protector solar 120 ml       |       18
- Sede Cali     | 2026-T3 |      4 |            4 | Café listo para tomar 250 ml |       17
- Sede Cali     | 2026-T3 |      5 |            5 | Cerveza lager six pack       |       16
- Sede Cali     | 2026-T4 |      1 |            1 | Sal refinada 1 kg            |       16
- Sede Cali     | 2026-T4 |      2 |            2 | Café molido 500 g            |        7
- Sede Cali     | 2026-T4 |      3 |            3 | Cepillo dental               |        6
- Sede Cali     | 2026-T4 |      4 |            3 | Jugo de naranja 1 L          |        6
- Sede Cali     | 2026-T4 |      5 |            3 | Malta 330 ml                 |        6
- CEDI Funza    | 2026-T2 |      1 |            1 | Harina de maíz 1 kg          |       68
- CEDI Funza    | 2026-T2 |      2 |            2 | Esponja de cocina x3         |       58
- CEDI Funza    | 2026-T2 |      3 |            3 | Toallas húmedas x50          |       45
- CEDI Funza    | 2026-T2 |      4 |            4 | Pasta spaghetti 500 g        |       41
- CEDI Funza    | 2026-T2 |      5 |            5 | Kumis 1 L                    |       39
- CEDI Funza    | 2026-T3 |      1 |            1 | Agua con gas 600 ml          |       60
- CEDI Funza    | 2026-T3 |      2 |            2 | Crema dental 100 ml          |       55
- CEDI Funza    | 2026-T3 |      3 |            3 | Bebida hidratante 500 ml     |       49
- CEDI Funza    | 2026-T3 |      4 |            3 | Gel antibacterial 500 ml     |       49
- CEDI Funza    | 2026-T3 |      5 |            4 | Shampoo 400 ml               |       47
- CEDI Funza    | 2026-T4 |      1 |            1 | Café molido 500 g            |       28
- CEDI Funza    | 2026-T4 |      2 |            2 | Vino tinto 750 ml            |       24
- CEDI Funza    | 2026-T4 |      3 |            3 | Gaseosa cola 1.5 L           |       20
- CEDI Funza    | 2026-T4 |      4 |            4 | Aceite vegetal 1 L           |       18
- CEDI Funza    | 2026-T4 |      5 |            5 | Agua con gas 600 ml          |       14
+     sede      | periodo | puesto | nivel_ventas |          producto           | unidades 
+---------------+---------+--------+--------------+-----------------------------+----------
+ Sede Bogotá   | 2026-T2 |      1 |            1 | Disquete 3.5" x10           |       16
+ Sede Bogotá   | 2026-T2 |      2 |            2 | Agua con gas 600 ml         |       13
+ Sede Bogotá   | 2026-T2 |      3 |            2 | Azúcar refinada 1 kg        |       13
+ Sede Bogotá   | 2026-T2 |      4 |            3 | Cuaderno cuadriculado 100 h |       12
+ Sede Bogotá   | 2026-T2 |      5 |            3 | Esponja de cocina x3        |       12
+ Sede Bogotá   | 2026-T3 |      1 |            1 | Protector solar 120 ml      |       27
+ Sede Bogotá   | 2026-T3 |      2 |            2 | Toallas de cocina x3        |       26
+ Sede Bogotá   | 2026-T3 |      3 |            3 | Pañales etapa 3 x30         |       25
+ Sede Bogotá   | 2026-T3 |      4 |            4 | Bebida de soya 1 L          |       23
+ Sede Bogotá   | 2026-T3 |      5 |            4 | Chocolate de mesa 500 g     |       23
+ Sede Bogotá   | 2026-T4 |      1 |            1 | Agua sin gas 600 ml         |        8
+ Sede Bogotá   | 2026-T4 |      2 |            1 | Bolígrafo negro x12         |        8
+ Sede Bogotá   | 2026-T4 |      3 |            1 | Notas adhesivas x5          |        8
+ Sede Bogotá   | 2026-T4 |      4 |            1 | Protector solar 120 ml      |        8
+ Sede Bogotá   | 2026-T4 |      5 |            1 | Salsa de tomate 400 g       |        8
+ Sede Medellín | 2026-T2 |      1 |            1 | Trapero de algodón          |       20
+ Sede Medellín | 2026-T2 |      2 |            2 | Malta 330 ml                |       18
+ Sede Medellín | 2026-T2 |      3 |            3 | Toallas húmedas x50         |       15
+ Sede Medellín | 2026-T2 |      4 |            4 | Blanqueador 1 L             |       13
+ Sede Medellín | 2026-T2 |      5 |            5 | Papel higiénico x12         |       12
+ Sede Medellín | 2026-T3 |      1 |            1 | Jabón en barra para ropa x3 |       31
+ Sede Medellín | 2026-T3 |      2 |            2 | Notas adhesivas x5          |       26
+ Sede Medellín | 2026-T3 |      3 |            3 | Cuaderno cuadriculado 100 h |       24
+ Sede Medellín | 2026-T3 |      4 |            4 | Pegante en barra 40 g       |       21
+ Sede Medellín | 2026-T3 |      5 |            5 | Cerveza lager six pack      |       19
+ Sede Medellín | 2026-T4 |      1 |            1 | Ambientador en aerosol      |       12
+ Sede Medellín | 2026-T4 |      2 |            2 | Agua sin gas 600 ml         |        8
+ Sede Medellín | 2026-T4 |      3 |            2 | Arroz blanco 1 kg           |        8
+ Sede Medellín | 2026-T4 |      4 |            3 | Bolígrafo negro x12         |        7
+ Sede Medellín | 2026-T4 |      5 |            3 | Cerveza lager six pack      |        7
+ Sede Cali     | 2026-T2 |      1 |            1 | Cerveza lager six pack      |       17
+ Sede Cali     | 2026-T2 |      2 |            1 | Jabón en barra para ropa x3 |       17
+ Sede Cali     | 2026-T2 |      3 |            2 | Jabón de tocador x3         |       16
+ Sede Cali     | 2026-T2 |      4 |            2 | Lápiz grafito x12           |       16
+ Sede Cali     | 2026-T2 |      5 |            3 | Crema corporal 400 ml       |       13
+ Sede Cali     | 2026-T3 |      1 |            1 | Colores x24                 |       24
+ Sede Cali     | 2026-T3 |      2 |            1 | Enjuague bucal 500 ml       |       24
+ Sede Cali     | 2026-T3 |      3 |            2 | Crema corporal 400 ml       |       21
+ Sede Cali     | 2026-T3 |      4 |            2 | Sal refinada 1 kg           |       21
+ Sede Cali     | 2026-T3 |      5 |            3 | Fríjol rojo 500 g           |       20
+ Sede Cali     | 2026-T4 |      1 |            1 | Agua sin gas 600 ml         |       11
+ Sede Cali     | 2026-T4 |      2 |            2 | Cerveza lager six pack      |        8
+ Sede Cali     | 2026-T4 |      3 |            3 | Chocolate de mesa 500 g     |        7
+ Sede Cali     | 2026-T4 |      4 |            4 | Detergente en polvo 1 kg    |        6
+ Sede Cali     | 2026-T4 |      5 |            4 | Sal refinada 1 kg           |        6
+ CEDI Funza    | 2026-T2 |      1 |            1 | Toallas húmedas x50         |       60
+ CEDI Funza    | 2026-T2 |      2 |            2 | Bebida energizante 250 ml   |       56
+ CEDI Funza    | 2026-T2 |      3 |            3 | Chocolate de mesa 500 g     |       54
+ CEDI Funza    | 2026-T2 |      4 |            4 | Crema corporal 400 ml       |       52
+ CEDI Funza    | 2026-T2 |      5 |            5 | Trapero de algodón          |       41
+ CEDI Funza    | 2026-T3 |      1 |            1 | Cinta adhesiva transparente |       53
+ CEDI Funza    | 2026-T3 |      2 |            2 | Agua sin gas 600 ml         |       50
+ CEDI Funza    | 2026-T3 |      3 |            2 | Suavizante 1 L              |       50
+ CEDI Funza    | 2026-T3 |      4 |            3 | Pasta spaghetti 500 g       |       49
+ CEDI Funza    | 2026-T3 |      5 |            4 | Calculadora básica          |       48
+ CEDI Funza    | 2026-T4 |      1 |            1 | Té helado limón 500 ml      |       28
+ CEDI Funza    | 2026-T4 |      2 |            2 | Toallas higiénicas x10      |       24
+ CEDI Funza    | 2026-T4 |      3 |            3 | Chocolate de mesa 500 g     |       18
+ CEDI Funza    | 2026-T4 |      4 |            4 | Jugo de mango 1 L           |       14
+ CEDI Funza    | 2026-T4 |      5 |            5 | Vino tinto 750 ml           |       13
 (60 filas)
 
 
 === Consulta 5. Ventas mensuales por sede y variacion frente al mes anterior (LAG) ===
      sede      |   mes   | total_vendido | mes_anterior |  variacion  | variacion_pct 
 ---------------+---------+---------------+--------------+-------------+---------------
- Sede Bogotá   | 2026-05 |    1035025.00 |              |             |              
- Sede Bogotá   | 2026-06 |    1887650.00 |   1035025.00 |   852625.00 |         82.38
- Sede Bogotá   | 2026-07 |    3577605.00 |   1887650.00 |  1689955.00 |         89.53
- Sede Bogotá   | 2026-08 |    2882100.00 |   3577605.00 |  -695505.00 |        -19.44
- Sede Bogotá   | 2026-09 |    1504500.00 |   2882100.00 | -1377600.00 |        -47.80
- Sede Bogotá   | 2026-10 |     633900.00 |   1504500.00 |  -870600.00 |        -57.87
- Sede Medellín | 2026-05 |    1593625.00 |              |             |              
- Sede Medellín | 2026-06 |    1172585.00 |   1593625.00 |  -421040.00 |        -26.42
- Sede Medellín | 2026-07 |    2291875.00 |   1172585.00 |  1119290.00 |         95.45
- Sede Medellín | 2026-08 |    1898600.00 |   2291875.00 |  -393275.00 |        -17.16
- Sede Medellín | 2026-09 |    1490300.00 |   1898600.00 |  -408300.00 |        -21.51
- Sede Medellín | 2026-10 |     381600.00 |   1490300.00 | -1108700.00 |        -74.39
- Sede Cali     | 2026-05 |     921975.00 |              |             |              
- Sede Cali     | 2026-06 |    1407520.00 |    921975.00 |   485545.00 |         52.66
- Sede Cali     | 2026-07 |    1427090.00 |   1407520.00 |    19570.00 |          1.39
- Sede Cali     | 2026-08 |    2239200.00 |   1427090.00 |   812110.00 |         56.91
- Sede Cali     | 2026-09 |    1266900.00 |   2239200.00 |  -972300.00 |        -43.42
- Sede Cali     | 2026-10 |     464500.00 |   1266900.00 |  -802400.00 |        -63.34
- CEDI Funza    | 2026-05 |    5190040.00 |              |             |              
- CEDI Funza    | 2026-06 |    5505250.00 |   5190040.00 |   315210.00 |          6.07
- CEDI Funza    | 2026-07 |    2126100.00 |   5505250.00 | -3379150.00 |        -61.38
- CEDI Funza    | 2026-08 |    3712700.00 |   2126100.00 |  1586600.00 |         74.62
- CEDI Funza    | 2026-09 |    1593300.00 |   3712700.00 | -2119400.00 |        -57.09
- CEDI Funza    | 2026-10 |    2171200.00 |   1593300.00 |   577900.00 |         36.27
+ Sede Bogotá   | 2026-05 |     689320.00 |              |             |              
+ Sede Bogotá   | 2026-06 |    2241715.00 |    689320.00 |  1552395.00 |        225.21
+ Sede Bogotá   | 2026-07 |    3891770.00 |   2241715.00 |  1650055.00 |         73.61
+ Sede Bogotá   | 2026-08 |    2662400.00 |   3891770.00 | -1229370.00 |        -31.59
+ Sede Bogotá   | 2026-09 |    1525200.00 |   2662400.00 | -1137200.00 |        -42.71
+ Sede Bogotá   | 2026-10 |    1180200.00 |   1525200.00 |  -345000.00 |        -22.62
+ Sede Medellín | 2026-05 |    1489220.00 |              |             |              
+ Sede Medellín | 2026-06 |    1864565.00 |   1489220.00 |   375345.00 |         25.20
+ Sede Medellín | 2026-07 |    2229840.00 |   1864565.00 |   365275.00 |         19.59
+ Sede Medellín | 2026-08 |    1928200.00 |   2229840.00 |  -301640.00 |        -13.53
+ Sede Medellín | 2026-09 |    1294600.00 |   1928200.00 |  -633600.00 |        -32.86
+ Sede Medellín | 2026-10 |     486900.00 |   1294600.00 |  -807700.00 |        -62.39
+ Sede Cali     | 2026-05 |    1094590.00 |              |             |              
+ Sede Cali     | 2026-06 |    1546600.00 |   1094590.00 |   452010.00 |         41.29
+ Sede Cali     | 2026-07 |    1174675.00 |   1546600.00 |  -371925.00 |        -24.05
+ Sede Cali     | 2026-08 |    2524500.00 |   1174675.00 |  1349825.00 |        114.91
+ Sede Cali     | 2026-09 |    1075600.00 |   2524500.00 | -1448900.00 |        -57.39
+ Sede Cali     | 2026-10 |     620700.00 |   1075600.00 |  -454900.00 |        -42.29
+ CEDI Funza    | 2026-05 |    4567885.00 |              |             |              
+ CEDI Funza    | 2026-06 |    5865490.00 |   4567885.00 |  1297605.00 |         28.41
+ CEDI Funza    | 2026-07 |    1652810.00 |   5865490.00 | -4212680.00 |        -71.82
+ CEDI Funza    | 2026-08 |    3273800.00 |   1652810.00 |  1620990.00 |         98.07
+ CEDI Funza    | 2026-09 |    2270400.00 |   3273800.00 | -1003400.00 |        -30.65
+ CEDI Funza    | 2026-10 |    1717700.00 |   2270400.00 |  -552700.00 |        -24.34
 (24 filas)
 
 
 === Consulta 6. Clientes con compras en al menos dos sedes ===
  id_cliente |          nombre_completo          | sedes_visitadas |                       sedes                       | total_comprado 
 ------------+-----------------------------------+-----------------+---------------------------------------------------+----------------
-         94 | Daniela Sánchez Rojas             |               4 | CEDI Funza, Sede Bogotá, Sede Cali, Sede Medellín |     2211390.00
-         98 | Natalia Ortiz Gómez               |               4 | CEDI Funza, Sede Bogotá, Sede Cali, Sede Medellín |     1106885.00
-         84 | María Ruiz Gómez                  |               4 | CEDI Funza, Sede Bogotá, Sede Cali, Sede Medellín |      623420.00
-         80 | Minimercado La 80 S.A.S.          |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |     1700920.00
-         43 | Andrés Rojas Ramírez              |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |     1247160.00
-         31 | Juan Herrera Rodríguez            |               3 | CEDI Funza, Sede Bogotá, Sede Cali                |     1208530.00
-         40 | Droguería Los Andes S.A.S.        |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |     1162105.00
-          6 | Paula Ortiz Martínez              |               3 | CEDI Funza, Sede Bogotá, Sede Cali                |      945485.00
-         48 | Laura Sánchez Martínez            |               3 | Sede Bogotá, Sede Cali, Sede Medellín             |      936080.00
-         46 | Paula Gómez Torres                |               3 | CEDI Funza, Sede Bogotá, Sede Cali                |      930230.00
-         92 | Valentina Gómez Mendoza           |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |      884870.00
-         12 | Valentina Ruiz Pérez              |               3 | Sede Bogotá, Sede Cali, Sede Medellín             |      807080.00
-         14 | Daniela Martínez Gómez            |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |      805410.00
-          3 | Andrés Díaz Rodríguez             |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |      746130.00
-         81 | Carlos Ramírez Ortiz              |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |      726940.00
-         51 | Juan Jiménez García               |               3 | Sede Bogotá, Sede Cali, Sede Medellín             |      594785.00
-         57 | Sebastián Castro Ramírez          |               3 | CEDI Funza, Sede Bogotá, Sede Cali                |      540550.00
-         76 | Sofía Rojas Martínez              |               3 | CEDI Funza, Sede Bogotá, Sede Cali                |      536140.00
-         38 | Natalia Jiménez Rojas             |               3 | CEDI Funza, Sede Cali, Sede Medellín              |      393810.00
-         74 | Daniela Pérez Torres              |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |      309700.00
-         71 | Juan Ruiz Ramírez                 |               3 | CEDI Funza, Sede Bogotá, Sede Cali                |      291935.00
-         70 | Tienda Santa Fe S.A.S.            |               3 | Sede Bogotá, Sede Cali, Sede Medellín             |      280180.00
-         99 | David Rodríguez Ramírez           |               3 | Sede Bogotá, Sede Cali, Sede Medellín             |      252900.00
-         78 | Natalia Mendoza Mendoza           |               3 | Sede Bogotá, Sede Cali, Sede Medellín             |      232170.00
-         87 | Felipe Pérez Rodríguez            |               3 | Sede Bogotá, Sede Cali, Sede Medellín             |      168990.00
-         44 | María Herrera Herrera             |               2 | CEDI Funza, Sede Bogotá                           |     1747015.00
-         34 | Daniela López Martínez            |               2 | CEDI Funza, Sede Medellín                         |     1391810.00
-         42 | Luisa Torres Gómez                |               2 | CEDI Funza, Sede Bogotá                           |     1284785.00
-         41 | Carlos Pérez Moreno               |               2 | CEDI Funza, Sede Medellín                         |      983115.00
-         27 | Felipe Martínez Moreno            |               2 | CEDI Funza, Sede Bogotá                           |      934000.00
-         67 | Felipe García Ortiz               |               2 | Sede Cali, Sede Medellín                          |      902230.00
-         22 | Luisa Ramírez Mendoza             |               2 | CEDI Funza, Sede Bogotá                           |      839200.00
-         62 | Luisa Díaz Martínez               |               2 | CEDI Funza, Sede Medellín                         |      827160.00
-         10 | Supermercado El Progreso S.A.S.   |               2 | Sede Bogotá, Sede Medellín                        |      780870.00
-         16 | Sofía Torres Herrera              |               2 | CEDI Funza, Sede Cali                             |      719960.00
-         79 | David Gómez García                |               2 | Sede Bogotá, Sede Medellín                        |      620635.00
-          7 | Felipe Rodríguez Vargas           |               2 | Sede Bogotá, Sede Medellín                        |      619020.00
-         23 | Andrés Vargas García              |               2 | CEDI Funza, Sede Bogotá                           |      591185.00
-         19 | David Mendoza Jiménez             |               2 | CEDI Funza, Sede Cali                             |      534805.00
-         26 | Paula Silva Pérez                 |               2 | Sede Bogotá, Sede Cali                            |      517335.00
-         50 | Distribuidora La Esperanza S.A.S. |               2 | CEDI Funza, Sede Cali                             |      503450.00
-         89 | Diego Rojas Jiménez               |               2 | CEDI Funza, Sede Cali                             |      502120.00
-        100 | Distribuidora Mi Barrio S.A.S.    |               2 | Sede Bogotá, Sede Medellín                        |      475095.00
-         83 | Andrés Castro Moreno              |               2 | Sede Cali, Sede Medellín                          |      367000.00
-         56 | Sofía Vargas Gómez                |               2 | Sede Cali, Sede Medellín                          |      351700.00
-         13 | Santiago Silva Moreno             |               2 | Sede Cali, Sede Medellín                          |      351595.00
-         96 | Sofía Moreno Pérez                |               2 | Sede Cali, Sede Medellín                          |      347510.00
-         82 | Luisa Vargas Pérez                |               2 | Sede Bogotá, Sede Medellín                        |      342700.00
-         53 | Santiago Rodríguez Ortiz          |               2 | Sede Bogotá, Sede Medellín                        |      312820.00
-         73 | Santiago Martínez Rodríguez       |               2 | CEDI Funza, Sede Bogotá                           |      312010.00
-         75 | Mateo Torres Jiménez              |               2 | Sede Bogotá, Sede Medellín                        |      309945.00
-         39 | David Ortiz Ortiz                 |               2 | Sede Bogotá, Sede Cali                            |      275510.00
-         60 | Supermercado El Ahorro S.A.S.     |               2 | Sede Bogotá, Sede Medellín                        |      257955.00
-         36 | Sofía Díaz Mendoza                |               2 | Sede Bogotá, Sede Cali                            |      249280.00
-         30 | Minimercado San Jorge S.A.S.      |               2 | Sede Bogotá, Sede Cali                            |      239475.00
-         33 | Santiago Gómez Jiménez            |               2 | CEDI Funza, Sede Bogotá                           |      226600.00
-          8 | Laura García Mendoza              |               2 | Sede Bogotá, Sede Medellín                        |      222010.00
-          4 | María Moreno Torres               |               2 | Sede Cali, Sede Medellín                          |      215175.00
-         11 | Juan Castro Ortiz                 |               2 | Sede Bogotá, Sede Cali                            |      190950.00
-         32 | Valentina Mendoza Torres          |               2 | Sede Bogotá, Sede Cali                            |      188840.00
-          5 | Jorge Jiménez Jiménez             |               2 | CEDI Funza, Sede Cali                             |      144305.00
-         97 | Sebastián Jiménez Moreno          |               2 | Sede Cali, Sede Medellín                          |       92820.00
-         69 | Diego Vargas Moreno               |               2 | Sede Bogotá, Sede Cali                            |       41050.00
+         94 | Daniela Sánchez Rojas             |               4 | CEDI Funza, Sede Bogotá, Sede Cali, Sede Medellín |     2097165.00
+         98 | Natalia Ortiz Gómez               |               4 | CEDI Funza, Sede Bogotá, Sede Cali, Sede Medellín |     1572840.00
+         84 | María Ruiz Gómez                  |               4 | CEDI Funza, Sede Bogotá, Sede Cali, Sede Medellín |     1286400.00
+         80 | Minimercado La 80 S.A.S.          |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |     1792370.00
+         40 | Droguería Los Andes S.A.S.        |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |     1677750.00
+         92 | Valentina Gómez Mendoza           |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |     1449560.00
+         46 | Paula Gómez Torres                |               3 | CEDI Funza, Sede Bogotá, Sede Cali                |     1355015.00
+         31 | Juan Herrera Rodríguez            |               3 | CEDI Funza, Sede Bogotá, Sede Cali                |     1301450.00
+          6 | Paula Ortiz Martínez              |               3 | CEDI Funza, Sede Bogotá, Sede Cali                |     1106225.00
+         14 | Daniela Martínez Gómez            |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |      974605.00
+         81 | Carlos Ramírez Ortiz              |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |      900030.00
+         43 | Andrés Rojas Ramírez              |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |      900030.00
+         48 | Laura Sánchez Martínez            |               3 | Sede Bogotá, Sede Cali, Sede Medellín             |      847910.00
+         38 | Natalia Jiménez Rojas             |               3 | CEDI Funza, Sede Cali, Sede Medellín              |      838770.00
+         51 | Juan Jiménez García               |               3 | Sede Bogotá, Sede Cali, Sede Medellín             |      726440.00
+         76 | Sofía Rojas Martínez              |               3 | CEDI Funza, Sede Bogotá, Sede Cali                |      647000.00
+          3 | Andrés Díaz Rodríguez             |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |      595270.00
+         12 | Valentina Ruiz Pérez              |               3 | Sede Bogotá, Sede Cali, Sede Medellín             |      489230.00
+         71 | Juan Ruiz Ramírez                 |               3 | CEDI Funza, Sede Bogotá, Sede Cali                |      456000.00
+         57 | Sebastián Castro Ramírez          |               3 | CEDI Funza, Sede Bogotá, Sede Cali                |      435480.00
+         78 | Natalia Mendoza Mendoza           |               3 | Sede Bogotá, Sede Cali, Sede Medellín             |      291650.00
+         87 | Felipe Pérez Rodríguez            |               3 | Sede Bogotá, Sede Cali, Sede Medellín             |      248485.00
+         99 | David Rodríguez Ramírez           |               3 | Sede Bogotá, Sede Cali, Sede Medellín             |      223800.00
+         70 | Tienda Santa Fe S.A.S.            |               3 | Sede Bogotá, Sede Cali, Sede Medellín             |      198385.00
+         74 | Daniela Pérez Torres              |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |      195900.00
+         42 | Luisa Torres Gómez                |               2 | CEDI Funza, Sede Bogotá                           |     1273340.00
+         41 | Carlos Pérez Moreno               |               2 | CEDI Funza, Sede Medellín                         |     1146265.00
+         67 | Felipe García Ortiz               |               2 | Sede Cali, Sede Medellín                          |      972040.00
+         50 | Distribuidora La Esperanza S.A.S. |               2 | CEDI Funza, Sede Cali                             |      954640.00
+         34 | Daniela López Martínez            |               2 | CEDI Funza, Sede Medellín                         |      911950.00
+         83 | Andrés Castro Moreno              |               2 | Sede Cali, Sede Medellín                          |      888280.00
+         79 | David Gómez García                |               2 | Sede Bogotá, Sede Medellín                        |      845880.00
+         62 | Luisa Díaz Martínez               |               2 | CEDI Funza, Sede Medellín                         |      789930.00
+         27 | Felipe Martínez Moreno            |               2 | CEDI Funza, Sede Bogotá                           |      782000.00
+         23 | Andrés Vargas García              |               2 | CEDI Funza, Sede Bogotá                           |      745465.00
+         10 | Supermercado El Progreso S.A.S.   |               2 | Sede Bogotá, Sede Medellín                        |      695985.00
+         73 | Santiago Martínez Rodríguez       |               2 | CEDI Funza, Sede Bogotá                           |      631410.00
+         26 | Paula Silva Pérez                 |               2 | Sede Bogotá, Sede Cali                            |      467060.00
+         33 | Santiago Gómez Jiménez            |               2 | CEDI Funza, Sede Bogotá                           |      460700.00
+          7 | Felipe Rodríguez Vargas           |               2 | Sede Bogotá, Sede Medellín                        |      456995.00
+         53 | Santiago Rodríguez Ortiz          |               2 | Sede Bogotá, Sede Medellín                        |      448080.00
+         96 | Sofía Moreno Pérez                |               2 | Sede Cali, Sede Medellín                          |      431775.00
+         44 | María Herrera Herrera             |               2 | CEDI Funza, Sede Bogotá                           |      372750.00
+         19 | David Mendoza Jiménez             |               2 | CEDI Funza, Sede Cali                             |      361960.00
+          5 | Jorge Jiménez Jiménez             |               2 | CEDI Funza, Sede Cali                             |      361285.00
+         22 | Luisa Ramírez Mendoza             |               2 | CEDI Funza, Sede Bogotá                           |      359600.00
+         56 | Sofía Vargas Gómez                |               2 | Sede Cali, Sede Medellín                          |      353500.00
+          4 | María Moreno Torres               |               2 | Sede Cali, Sede Medellín                          |      323190.00
+         36 | Sofía Díaz Mendoza                |               2 | Sede Bogotá, Sede Cali                            |      312075.00
+         39 | David Ortiz Ortiz                 |               2 | Sede Bogotá, Sede Cali                            |      285805.00
+         60 | Supermercado El Ahorro S.A.S.     |               2 | Sede Bogotá, Sede Medellín                        |      275630.00
+         89 | Diego Rojas Jiménez               |               2 | CEDI Funza, Sede Cali                             |      275350.00
+         11 | Juan Castro Ortiz                 |               2 | Sede Bogotá, Sede Cali                            |      262200.00
+        100 | Distribuidora Mi Barrio S.A.S.    |               2 | Sede Bogotá, Sede Medellín                        |      247475.00
+          8 | Laura García Mendoza              |               2 | Sede Bogotá, Sede Medellín                        |      235825.00
+         13 | Santiago Silva Moreno             |               2 | Sede Cali, Sede Medellín                          |      229235.00
+         75 | Mateo Torres Jiménez              |               2 | Sede Bogotá, Sede Medellín                        |      228485.00
+         32 | Valentina Mendoza Torres          |               2 | Sede Bogotá, Sede Cali                            |      193600.00
+         82 | Luisa Vargas Pérez                |               2 | Sede Bogotá, Sede Medellín                        |      178100.00
+         16 | Sofía Torres Herrera              |               2 | CEDI Funza, Sede Cali                             |      139190.00
+         97 | Sebastián Jiménez Moreno          |               2 | Sede Cali, Sede Medellín                          |      133475.00
+         30 | Minimercado San Jorge S.A.S.      |               2 | Sede Bogotá, Sede Cali                            |       92095.00
+         69 | Diego Vargas Moreno               |               2 | Sede Bogotá, Sede Cali                            |       25040.00
 (63 filas)
 
 
 === Consulta 7. Pedidos con pagos pendientes ===
      sede      | id_pedido |   estado   |              cliente              | valor_total | pagos_confirmados | saldo_por_pagar 
 ---------------+-----------+------------+-----------------------------------+-------------+-------------------+-----------------
- CEDI Funza    |        43 | PENDIENTE  | Andrés Rojas Ramírez              |  1210200.00 |         363060.00 |       847140.00
- CEDI Funza    |        46 | CONFIRMADO | Daniela López Martínez            |  1244000.00 |         622000.00 |       622000.00
- Sede Cali     |        70 | PENDIENTE  | Tienda Santa Fe S.A.S.            |   518100.00 |                 0 |       518100.00
- Sede Bogotá   |        67 | PENDIENTE  | Luisa Vargas Pérez                |   483100.00 |                 0 |       483100.00
- CEDI Funza    |        28 | PENDIENTE  | Valentina Ruiz Pérez              |   655785.00 |         196735.50 |       459049.50
- Sede Medellín |        80 | PENDIENTE  | Carlos Sánchez Jiménez            |   439600.00 |                 0 |       439600.00
- Sede Bogotá   |        63 | PENDIENTE  | Sofía Torres Herrera              |   357900.00 |                 0 |       357900.00
- CEDI Funza    |        44 | PENDIENTE  | Felipe García Ortiz               |   347000.00 |                 0 |       347000.00
- CEDI Funza    |        30 | PENDIENTE  | Jorge Ortiz García                |   475095.00 |         142528.50 |       332566.50
- Sede Medellín |        33 | PENDIENTE  | David Rodríguez Ramírez           |   328415.00 |                 0 |       328415.00
- CEDI Funza    |        45 | CONFIRMADO | Daniela Sánchez Rojas             |   590200.00 |         295100.00 |       295100.00
- Sede Medellín |        77 | PENDIENTE  | Natalia Ortiz Gómez               |   280100.00 |                 0 |       280100.00
- CEDI Funza    |         6 | PENDIENTE  | Valentina Ortiz Rojas             |   273600.00 |                 0 |       273600.00
- Sede Bogotá   |        47 | CONFIRMADO | María Herrera Herrera             |   538650.00 |         269325.00 |       269325.00
- CEDI Funza    |        23 | PENDIENTE  | Daniela López Martínez            |   375155.00 |         112546.50 |       262608.50
- Sede Medellín |        19 | PENDIENTE  | Paula Gómez Torres                |   230755.00 |                 0 |       230755.00
- Sede Medellín |        31 | CONFIRMADO | Carlos Sánchez Jiménez            |   426360.00 |         213180.00 |       213180.00
- Sede Bogotá   |        73 | PENDIENTE  | Natalia Jiménez Rojas             |   212500.00 |                 0 |       212500.00
- Sede Medellín |        15 | PENDIENTE  | Jorge Jiménez Jiménez             |   262200.00 |          78660.00 |       183540.00
- Sede Medellín |        73 | PENDIENTE  | Sebastián Herrera Vargas          |   178800.00 |                 0 |       178800.00
- CEDI Funza    |        33 | CONFIRMADO | Minimercado La 80 S.A.S.          |   349600.00 |         174800.00 |       174800.00
- Sede Bogotá   |        96 | PENDIENTE  | Droguería El Vecino S.A.S.        |   168100.00 |                 0 |       168100.00
- Sede Bogotá   |        48 | CONFIRMADO | Luisa Torres Gómez                |   323855.00 |         161927.50 |       161927.50
- CEDI Funza    |         8 | PENDIENTE  | María Castro Rojas                |   231040.00 |          69312.00 |       161728.00
- Sede Medellín |         2 | CONFIRMADO | Luisa Sánchez Herrera             |   306280.00 |         153140.00 |       153140.00
- CEDI Funza    |        41 | CONFIRMADO | Sofía Rojas Martínez              |   306000.00 |         153000.00 |       153000.00
- CEDI Funza    |        47 | CONFIRMADO | Minimercado La 80 S.A.S.          |   276600.00 |         138300.00 |       138300.00
- Sede Bogotá   |        66 | CONFIRMADO | Luisa Ramírez Mendoza             |   275400.00 |         137700.00 |       137700.00
- Sede Cali     |        62 | CONFIRMADO | Daniela Sánchez Rojas             |   274600.00 |         137300.00 |       137300.00
- Sede Bogotá   |        95 | CONFIRMADO | Juan Jiménez García               |   274200.00 |         137100.00 |       137100.00
- Sede Bogotá   |        72 | PENDIENTE  | Minimercado La 80 S.A.S.          |   183600.00 |          55080.00 |       128520.00
- Sede Bogotá   |        97 | CONFIRMADO | Laura Sánchez Martínez            |   243000.00 |         121500.00 |       121500.00
- Sede Medellín |        57 | CONFIRMADO | Valentina Gómez Mendoza           |   230700.00 |         115350.00 |       115350.00
- Sede Cali     |        60 | PENDIENTE  | Carlos García Vargas              |   164500.00 |          49350.00 |       115150.00
- Sede Cali     |        68 | CONFIRMADO | Distribuidora La Esperanza S.A.S. |   221300.00 |         110650.00 |       110650.00
- Sede Cali     |         6 | PENDIENTE  | Minimercado San Jorge S.A.S.      |   156940.00 |          47082.00 |       109858.00
- Sede Cali     |        61 | CONFIRMADO | Juan Herrera Rodríguez            |   215400.00 |         107700.00 |       107700.00
- Sede Bogotá   |        77 | PENDIENTE  | Natalia Ruiz Herrera              |   103500.00 |                 0 |       103500.00
- Sede Medellín |        79 | PENDIENTE  | Daniela García Pérez              |   102800.00 |                 0 |       102800.00
- Sede Bogotá   |        94 | CONFIRMADO | Natalia Ortiz Gómez               |   204100.00 |         102050.00 |       102050.00
- Sede Cali     |        66 | PENDIENTE  | Sebastián Rojas Rodríguez         |   145400.00 |          43620.00 |       101780.00
- Sede Bogotá   |        92 | PENDIENTE  | Felipe López Jiménez              |    99600.00 |                 0 |        99600.00
- Sede Cali     |        69 | CONFIRMADO | Paula Ortiz Martínez              |   192400.00 |          96200.00 |        96200.00
- Sede Cali     |        12 | PENDIENTE  | Paula Rodríguez Rojas             |   117515.00 |          35254.50 |        82260.50
- Sede Cali     |         7 | CONFIRMADO | Sebastián Castro Ramírez          |   133190.00 |          66595.00 |        66595.00
- CEDI Funza    |        26 | CONFIRMADO | Andrés Rojas Ramírez              |   109440.00 |          54720.00 |        54720.00
- Sede Cali     |        65 | PENDIENTE  | Daniela Sánchez Rojas             |    54300.00 |                 0 |        54300.00
- Sede Medellín |        62 | CONFIRMADO | Sebastián Moreno García           |   104900.00 |          52450.00 |        52450.00
- Sede Cali     |         2 | CONFIRMADO | Natalia Jiménez Rojas             |    81130.00 |          40565.00 |        40565.00
- Sede Medellín |        20 | CONFIRMADO | Natalia Mendoza Mendoza           |    71250.00 |          35625.00 |        35625.00
- Sede Bogotá   |        26 | CONFIRMADO | Sofía Díaz Mendoza                |    70680.00 |          35340.00 |        35340.00
- Sede Bogotá   |        80 | PENDIENTE  | Sofía Vargas Gómez                |    49600.00 |          14880.00 |        34720.00
- Sede Cali     |        55 | CONFIRMADO | Juan Jiménez García               |    47900.00 |          23950.00 |        23950.00
- Sede Medellín |        45 | CONFIRMADO | Jorge Mendoza Rodríguez           |    47025.00 |          23512.50 |        23512.50
- Sede Medellín |        72 | PENDIENTE  | Carlos López Ramírez              |    21800.00 |                 0 |        21800.00
- Sede Medellín |        78 | CONFIRMADO | David Rodríguez Ramírez           |    41600.00 |          20800.00 |        20800.00
- Sede Bogotá   |        32 | CONFIRMADO | Daniela García Pérez              |    37430.00 |          18715.00 |        18715.00
- Sede Cali     |        57 | PENDIENTE  | Luisa Torres Gómez                |    24700.00 |           7410.00 |        17290.00
- Sede Medellín |        13 | CONFIRMADO | Andrés Rojas Ramírez              |    29450.00 |          14725.00 |        14725.00
- Sede Cali     |        67 | PENDIENTE  | Andrés Rojas Ramírez              |    13500.00 |                 0 |        13500.00
- Sede Bogotá   |        76 | PENDIENTE  | David Ortiz Ortiz                 |     9600.00 |                 0 |         9600.00
+ CEDI Funza    |        43 | PENDIENTE  | Andrés Rojas Ramírez              |   830200.00 |         249060.00 |       581140.00
+ CEDI Funza    |        44 | PENDIENTE  | Felipe García Ortiz               |   483700.00 |                 0 |       483700.00
+ Sede Medellín |        80 | PENDIENTE  | Carlos Sánchez Jiménez            |   424400.00 |                 0 |       424400.00
+ CEDI Funza    |        28 | PENDIENTE  | Valentina Ruiz Pérez              |   603725.00 |         181117.50 |       422607.50
+ CEDI Funza    |        45 | CONFIRMADO | Daniela Sánchez Rojas             |   803300.00 |         401650.00 |       401650.00
+ CEDI Funza    |        46 | CONFIRMADO | Daniela López Martínez            |   693000.00 |         346500.00 |       346500.00
+ CEDI Funza    |        47 | CONFIRMADO | Minimercado La 80 S.A.S.          |   666300.00 |         333150.00 |       333150.00
+ Sede Bogotá   |        96 | PENDIENTE  | Droguería El Vecino S.A.S.        |   330300.00 |                 0 |       330300.00
+ Sede Medellín |        57 | CONFIRMADO | Valentina Gómez Mendoza           |   605200.00 |         302600.00 |       302600.00
+ Sede Cali     |        66 | PENDIENTE  | Sebastián Rojas Rodríguez         |   432000.00 |         129600.00 |       302400.00
+ Sede Bogotá   |        48 | CONFIRMADO | Luisa Torres Gómez                |   561355.00 |         280677.50 |       280677.50
+ CEDI Funza    |         8 | PENDIENTE  | María Castro Rojas                |   376960.00 |         113088.00 |       263872.00
+ Sede Bogotá   |        95 | CONFIRMADO | Juan Jiménez García               |   516000.00 |         258000.00 |       258000.00
+ Sede Medellín |        15 | PENDIENTE  | Jorge Jiménez Jiménez             |   360715.00 |         108214.50 |       252500.50
+ Sede Medellín |        73 | PENDIENTE  | Sebastián Herrera Vargas          |   237100.00 |                 0 |       237100.00
+ Sede Medellín |        77 | PENDIENTE  | Natalia Ortiz Gómez               |   222500.00 |                 0 |       222500.00
+ Sede Bogotá   |        63 | PENDIENTE  | Sofía Torres Herrera              |   205700.00 |                 0 |       205700.00
+ Sede Cali     |        70 | PENDIENTE  | Tienda Santa Fe S.A.S.            |   200800.00 |                 0 |       200800.00
+ Sede Cali     |        68 | CONFIRMADO | Distribuidora La Esperanza S.A.S. |   396800.00 |         198400.00 |       198400.00
+ Sede Bogotá   |        97 | CONFIRMADO | Laura Sánchez Martínez            |   372600.00 |         186300.00 |       186300.00
+ Sede Medellín |        33 | PENDIENTE  | David Rodríguez Ramírez           |   180120.00 |                 0 |       180120.00
+ Sede Medellín |        79 | PENDIENTE  | Daniela García Pérez              |   163000.00 |                 0 |       163000.00
+ Sede Bogotá   |        67 | PENDIENTE  | Luisa Vargas Pérez                |   163000.00 |                 0 |       163000.00
+ Sede Medellín |         2 | CONFIRMADO | Luisa Sánchez Herrera             |   322335.00 |         161167.50 |       161167.50
+ Sede Cali     |        12 | PENDIENTE  | Paula Rodríguez Rojas             |   208430.00 |          62529.00 |       145901.00
+ Sede Medellín |        31 | CONFIRMADO | Carlos Sánchez Jiménez            |   277115.00 |         138557.50 |       138557.50
+ Sede Bogotá   |        94 | CONFIRMADO | Natalia Ortiz Gómez               |   264500.00 |         132250.00 |       132250.00
+ Sede Medellín |        19 | PENDIENTE  | Paula Gómez Torres                |   131385.00 |                 0 |       131385.00
+ Sede Cali     |         6 | PENDIENTE  | Minimercado San Jorge S.A.S.      |   186960.00 |          56088.00 |       130872.00
+ CEDI Funza    |        30 | PENDIENTE  | Jorge Ortiz García                |   178790.00 |          53637.00 |       125153.00
+ Sede Bogotá   |        73 | PENDIENTE  | Natalia Jiménez Rojas             |   119500.00 |                 0 |       119500.00
+ Sede Cali     |        65 | PENDIENTE  | Daniela Sánchez Rojas             |   118600.00 |                 0 |       118600.00
+ CEDI Funza    |         6 | PENDIENTE  | Valentina Ortiz Rojas             |   102600.00 |                 0 |       102600.00
+ Sede Cali     |        62 | CONFIRMADO | Daniela Sánchez Rojas             |   197100.00 |          98550.00 |        98550.00
+ CEDI Funza    |        41 | CONFIRMADO | Sofía Rojas Martínez              |   193400.00 |          96700.00 |        96700.00
+ Sede Bogotá   |        92 | PENDIENTE  | Felipe López Jiménez              |    87600.00 |                 0 |        87600.00
+ CEDI Funza    |        23 | PENDIENTE  | Daniela López Martínez            |   123880.00 |          37164.00 |        86716.00
+ Sede Cali     |        61 | CONFIRMADO | Juan Herrera Rodríguez            |   166200.00 |          83100.00 |        83100.00
+ Sede Bogotá   |        77 | PENDIENTE  | Natalia Ruiz Herrera              |    78600.00 |                 0 |        78600.00
+ Sede Cali     |         2 | CONFIRMADO | Natalia Jiménez Rojas             |   153805.00 |          76902.50 |        76902.50
+ Sede Bogotá   |        47 | CONFIRMADO | María Herrera Herrera             |   140220.00 |          70110.00 |        70110.00
+ Sede Bogotá   |        80 | PENDIENTE  | Sofía Vargas Gómez                |    83600.00 |          25080.00 |        58520.00
+ Sede Cali     |         7 | CONFIRMADO | Sebastián Castro Ramírez          |   114475.00 |          57237.50 |        57237.50
+ Sede Cali     |        69 | CONFIRMADO | Paula Ortiz Martínez              |   106300.00 |          53150.00 |        53150.00
+ CEDI Funza    |        33 | CONFIRMADO | Minimercado La 80 S.A.S.          |   105200.00 |          52600.00 |        52600.00
+ Sede Medellín |        62 | CONFIRMADO | Sebastián Moreno García           |    99700.00 |          49850.00 |        49850.00
+ Sede Cali     |        60 | PENDIENTE  | Carlos García Vargas              |    43500.00 |          13050.00 |        30450.00
+ Sede Medellín |        13 | CONFIRMADO | Andrés Rojas Ramírez              |    58900.00 |          29450.00 |        29450.00
+ Sede Bogotá   |        26 | CONFIRMADO | Sofía Díaz Mendoza                |    55860.00 |          27930.00 |        27930.00
+ Sede Cali     |        55 | CONFIRMADO | Juan Jiménez García               |    53800.00 |          26900.00 |        26900.00
+ Sede Cali     |        57 | PENDIENTE  | Luisa Torres Gómez                |    36500.00 |          10950.00 |        25550.00
+ Sede Bogotá   |        32 | CONFIRMADO | Daniela García Pérez              |    47405.00 |          23702.50 |        23702.50
+ Sede Medellín |        20 | CONFIRMADO | Natalia Mendoza Mendoza           |    46550.00 |          23275.00 |        23275.00
+ CEDI Funza    |        26 | CONFIRMADO | Andrés Rojas Ramírez              |    41040.00 |          20520.00 |        20520.00
+ Sede Medellín |        78 | CONFIRMADO | David Rodríguez Ramírez           |    38400.00 |          19200.00 |        19200.00
+ Sede Medellín |        45 | CONFIRMADO | Jorge Mendoza Rodríguez           |    32775.00 |          16387.50 |        16387.50
+ Sede Bogotá   |        76 | PENDIENTE  | David Ortiz Ortiz                 |    15900.00 |                 0 |        15900.00
+ Sede Bogotá   |        66 | CONFIRMADO | Luisa Ramírez Mendoza             |    31800.00 |          15900.00 |        15900.00
+ Sede Bogotá   |        72 | PENDIENTE  | Minimercado La 80 S.A.S.          |    18000.00 |           5400.00 |        12600.00
+ Sede Medellín |        72 | PENDIENTE  | Carlos López Ramírez              |    12400.00 |                 0 |        12400.00
+ Sede Cali     |        67 | PENDIENTE  | Andrés Rojas Ramírez              |     5400.00 |                 0 |         5400.00
 (61 filas)
 
 
 === Consulta 8. Pedidos con tres o mas productos distintos ===
      sede      | id_pedido | productos_distintos | unidades | importe_detalle | total_registrado 
 ---------------+-----------+---------------------+----------+-----------------+------------------
- CEDI Funza    |        46 |                   5 |       76 |      1244000.00 |       1244000.00
- CEDI Funza    |        43 |                   5 |      116 |      1210200.00 |       1210200.00
- CEDI Funza    |        20 |                   5 |       64 |      1022485.00 |       1022485.00
- CEDI Funza    |        18 |                   5 |       87 |       874475.00 |        874475.00
- CEDI Funza    |         4 |                   5 |       85 |       820515.00 |        820515.00
- CEDI Funza    |        28 |                   5 |       77 |       655785.00 |        655785.00
- CEDI Funza    |        17 |                   5 |       95 |       616740.00 |        616740.00
- CEDI Funza    |        45 |                   5 |      101 |       590200.00 |        590200.00
- CEDI Funza    |        42 |                   5 |      101 |       581900.00 |        581900.00
- CEDI Funza    |        21 |                   5 |      100 |       580070.00 |        580070.00
- Sede Cali     |        70 |                   5 |       23 |       518100.00 |        518100.00
- CEDI Funza    |         5 |                   5 |       61 |       516420.00 |        516420.00
- Sede Medellín |        80 |                   5 |       35 |       439600.00 |        439600.00
- CEDI Funza    |        16 |                   5 |       87 |       357960.00 |        357960.00
- Sede Medellín |        53 |                   5 |       31 |       349000.00 |        349000.00
- Sede Cali     |        14 |                   5 |       24 |       342190.00 |        342190.00
- Sede Medellín |         2 |                   5 |       23 |       306280.00 |        306280.00
- Sede Medellín |        37 |                   5 |       18 |       298205.00 |        298205.00
- Sede Medellín |        66 |                   5 |       20 |       283100.00 |        283100.00
- Sede Medellín |        77 |                   5 |       30 |       280100.00 |        280100.00
- Sede Cali     |        26 |                   5 |       25 |       277400.00 |        277400.00
- CEDI Funza    |         9 |                   5 |       50 |       275500.00 |        275500.00
- Sede Bogotá   |        95 |                   5 |       30 |       274200.00 |        274200.00
- Sede Medellín |        10 |                   5 |       28 |       267710.00 |        267710.00
- Sede Bogotá   |        70 |                   5 |       27 |       265900.00 |        265900.00
- Sede Medellín |        15 |                   5 |       20 |       262200.00 |        262200.00
- Sede Cali     |        40 |                   5 |       28 |       258900.00 |        258900.00
- Sede Cali     |        42 |                   5 |       26 |       258600.00 |        258600.00
- Sede Medellín |        41 |                   5 |       24 |       250420.00 |        250420.00
- Sede Bogotá   |        44 |                   5 |       15 |       246430.00 |        246430.00
- Sede Bogotá   |        97 |                   5 |       30 |       243000.00 |        243000.00
- Sede Medellín |        63 |                   5 |       28 |       240400.00 |        240400.00
- Sede Medellín |        19 |                   5 |       21 |       230755.00 |        230755.00
- Sede Medellín |        57 |                   5 |       31 |       230700.00 |        230700.00
- Sede Cali     |        68 |                   5 |       23 |       221300.00 |        221300.00
- Sede Bogotá   |        40 |                   5 |       21 |       210330.00 |        210330.00
- Sede Medellín |        76 |                   5 |       32 |       208500.00 |        208500.00
- Sede Bogotá   |        94 |                   5 |       18 |       204100.00 |        204100.00
- Sede Bogotá   |        18 |                   5 |       24 |       183730.00 |        183730.00
- Sede Medellín |        73 |                   5 |       27 |       178800.00 |        178800.00
- Sede Bogotá   |        15 |                   5 |       17 |       176890.00 |        176890.00
- Sede Bogotá   |        57 |                   5 |       19 |       166400.00 |        166400.00
- Sede Bogotá   |        79 |                   5 |       21 |       164200.00 |        164200.00
- Sede Medellín |        65 |                   5 |       18 |       162600.00 |        162600.00
- Sede Cali     |        18 |                   5 |       21 |       161595.00 |        161595.00
- Sede Cali     |        30 |                   5 |       15 |       153520.00 |        153520.00
- Sede Bogotá   |        86 |                   5 |       23 |       129200.00 |        129200.00
- Sede Medellín |        30 |                   5 |       22 |       128535.00 |        128535.00
- Sede Bogotá   |        16 |                   5 |       14 |       128250.00 |        128250.00
- Sede Cali     |        50 |                   5 |       17 |       128200.00 |        128200.00
- Sede Bogotá   |        22 |                   5 |       21 |       118655.00 |        118655.00
- Sede Cali     |        12 |                   5 |       21 |       117515.00 |        117515.00
- Sede Cali     |        45 |                   5 |       26 |       116700.00 |        116700.00
- Sede Medellín |         7 |                   5 |       21 |       115995.00 |        115995.00
- Sede Bogotá   |        49 |                   5 |       17 |       114475.00 |        114475.00
- Sede Bogotá   |        64 |                   5 |       23 |       102700.00 |        102700.00
- CEDI Funza    |        29 |                   4 |       96 |      1475065.00 |       1475065.00
- CEDI Funza    |        19 |                   4 |       51 |       913330.00 |        913330.00
- CEDI Funza    |        39 |                   4 |       97 |       668100.00 |        668100.00
- Sede Bogotá   |        47 |                   4 |       26 |       538650.00 |        538650.00
- Sede Bogotá   |        67 |                   4 |       27 |       483100.00 |        483100.00
- CEDI Funza    |        37 |                   4 |       70 |       454600.00 |        454600.00
- Sede Cali     |        47 |                   4 |       20 |       370800.00 |        370800.00
- Sede Bogotá   |        63 |                   4 |       18 |       357900.00 |        357900.00
- Sede Medellín |        33 |                   4 |       18 |       328415.00 |        328415.00
- Sede Bogotá   |        37 |                   4 |       23 |       325565.00 |        325565.00
- Sede Bogotá   |        48 |                   4 |       27 |       323855.00 |        323855.00
- CEDI Funza    |        41 |                   4 |       36 |       306000.00 |        306000.00
- CEDI Funza    |        47 |                   4 |       31 |       276600.00 |        276600.00
- Sede Medellín |        40 |                   4 |       20 |       255265.00 |        255265.00
- CEDI Funza    |         7 |                   4 |       45 |       244150.00 |        244150.00
- Sede Cali     |        35 |                   4 |       18 |       213100.00 |        213100.00
- Sede Medellín |         1 |                   4 |       20 |       209855.00 |        209855.00
- Sede Bogotá   |        50 |                   4 |       19 |       208715.00 |        208715.00
- Sede Cali     |        36 |                   4 |       16 |       205400.00 |        205400.00
- Sede Medellín |        47 |                   4 |        9 |       196500.00 |        196500.00
- Sede Bogotá   |        31 |                   4 |       22 |       194940.00 |        194940.00
- Sede Cali     |        69 |                   4 |       17 |       192400.00 |        192400.00
- Sede Bogotá   |        55 |                   4 |       24 |       190400.00 |        190400.00
- Sede Medellín |         3 |                   4 |       20 |       188290.00 |        188290.00
- Sede Bogotá   |        91 |                   4 |       17 |       184300.00 |        184300.00
- Sede Bogotá   |        43 |                   4 |       16 |       179835.00 |        179835.00
- Sede Cali     |        10 |                   4 |       24 |       178600.00 |        178600.00
- Sede Medellín |        38 |                   4 |       16 |       174610.00 |        174610.00
- Sede Medellín |        16 |                   4 |       24 |       170335.00 |        170335.00
- Sede Bogotá   |        52 |                   4 |       24 |       165300.00 |        165300.00
- Sede Medellín |        25 |                   4 |       22 |       159600.00 |        159600.00
- Sede Cali     |         6 |                   4 |       22 |       156940.00 |        156940.00
- Sede Cali     |        27 |                   4 |       19 |       153900.00 |        153900.00
- Sede Bogotá   |        90 |                   4 |       20 |       150900.00 |        150900.00
- Sede Cali     |        16 |                   4 |       14 |       149245.00 |        149245.00
- Sede Medellín |        11 |                   4 |       15 |       146015.00 |        146015.00
- Sede Cali     |        66 |                   4 |       18 |       145400.00 |        145400.00
- Sede Bogotá   |        27 |                   4 |       17 |       144210.00 |        144210.00
- Sede Bogotá   |        99 |                   4 |       17 |       143500.00 |        143500.00
- Sede Bogotá   |        13 |                   4 |       20 |       139650.00 |        139650.00
- Sede Cali     |        11 |                   4 |       23 |       136325.00 |        136325.00
- CEDI Funza    |         3 |                   4 |       25 |       135185.00 |        135185.00
- Sede Bogotá   |        11 |                   4 |       15 |       134805.00 |        134805.00
- Sede Cali     |         7 |                   4 |       13 |       133190.00 |        133190.00
- Sede Medellín |        39 |                   4 |       22 |       131860.00 |        131860.00
- Sede Bogotá   |        12 |                   4 |       16 |       130720.00 |        130720.00
- Sede Cali     |         4 |                   4 |       20 |       129580.00 |        129580.00
- Sede Bogotá   |        88 |                   4 |       19 |       110300.00 |        110300.00
- Sede Medellín |        79 |                   4 |       18 |       102800.00 |        102800.00
- Sede Bogotá   |        20 |                   4 |       14 |        96235.00 |         96235.00
- Sede Cali     |        22 |                   4 |       14 |        87780.00 |         87780.00
- Sede Bogotá   |        14 |                   4 |       16 |        85215.00 |         85215.00
- Sede Bogotá   |         1 |                   4 |       16 |        82175.00 |         82175.00
- Sede Bogotá   |        84 |                   4 |       12 |        77900.00 |         77900.00
- Sede Cali     |        19 |                   4 |       16 |        75905.00 |         75905.00
- Sede Medellín |        27 |                   4 |       13 |        74955.00 |         74955.00
- Sede Cali     |        49 |                   4 |        9 |        68700.00 |         68700.00
- Sede Medellín |        36 |                   4 |       14 |        64790.00 |         64790.00
- CEDI Funza    |        22 |                   3 |       36 |       742235.00 |        742235.00
- CEDI Funza    |        14 |                   3 |       56 |       690460.00 |        690460.00
- CEDI Funza    |        35 |                   3 |       58 |       639000.00 |        639000.00
- CEDI Funza    |        34 |                   3 |       34 |       563800.00 |        563800.00
- CEDI Funza    |         1 |                   3 |       35 |       526585.00 |        526585.00
- CEDI Funza    |        30 |                   3 |       43 |       475095.00 |        475095.00
- Sede Medellín |        31 |                   3 |       21 |       426360.00 |        426360.00
- CEDI Funza    |        11 |                   3 |       44 |       421420.00 |        421420.00
- Sede Bogotá   |         5 |                   3 |       21 |       389215.00 |        389215.00
- CEDI Funza    |        33 |                   3 |       24 |       349600.00 |        349600.00
- CEDI Funza    |        44 |                   3 |       41 |       347000.00 |        347000.00
- Sede Cali     |        44 |                   3 |       17 |       314300.00 |        314300.00
- Sede Cali     |        25 |                   3 |       13 |       281485.00 |        281485.00
- CEDI Funza    |        25 |                   3 |       51 |       275880.00 |        275880.00
- Sede Cali     |        62 |                   3 |       12 |       274600.00 |        274600.00
- Sede Cali     |        31 |                   3 |       15 |       249755.00 |        249755.00
- Sede Cali     |        13 |                   3 |       21 |       240255.00 |        240255.00
- CEDI Funza    |         8 |                   3 |       34 |       231040.00 |        231040.00
- CEDI Funza    |        38 |                   3 |       55 |       230100.00 |        230100.00
- Sede Bogotá   |        56 |                   3 |        8 |       221900.00 |        221900.00
- Sede Bogotá   |        28 |                   3 |       23 |       208145.00 |        208145.00
- Sede Bogotá   |        75 |                   3 |       16 |       190600.00 |        190600.00
- Sede Bogotá   |        21 |                   3 |       13 |       179930.00 |        179930.00
- Sede Medellín |        18 |                   3 |       11 |       179835.00 |        179835.00
- Sede Cali     |        34 |                   3 |       16 |       178980.00 |        178980.00
- Sede Medellín |        64 |                   3 |       18 |       170200.00 |        170200.00
- Sede Bogotá   |        65 |                   3 |       17 |       160500.00 |        160500.00
- Sede Medellín |        22 |                   3 |       17 |       157890.00 |        157890.00
- Sede Bogotá   |        58 |                   3 |       12 |       143300.00 |        143300.00
- Sede Medellín |        23 |                   3 |       17 |       141360.00 |        141360.00
- Sede Cali     |        24 |                   3 |       13 |       131480.00 |        131480.00
- Sede Medellín |        24 |                   3 |       17 |       131195.00 |        131195.00
- Sede Bogotá   |        39 |                   3 |       11 |       128915.00 |        128915.00
- Sede Medellín |        56 |                   3 |       16 |       124400.00 |        124400.00
- Sede Bogotá   |        59 |                   3 |       10 |       124200.00 |        124200.00
- Sede Medellín |        70 |                   3 |       16 |       120800.00 |        120800.00
- Sede Bogotá   |        36 |                   3 |       14 |       117610.00 |        117610.00
- Sede Medellín |        62 |                   3 |       11 |       104900.00 |        104900.00
- Sede Bogotá   |        82 |                   3 |       10 |       103800.00 |        103800.00
- Sede Bogotá   |        78 |                   3 |       16 |       102100.00 |        102100.00
- Sede Cali     |        43 |                   3 |       10 |        98400.00 |         98400.00
- Sede Bogotá   |        71 |                   3 |       13 |        97300.00 |         97300.00
- Sede Medellín |        54 |                   3 |       14 |        91900.00 |         91900.00
- Sede Cali     |         5 |                   3 |       11 |        91675.00 |         91675.00
- Sede Medellín |        60 |                   3 |       15 |        90400.00 |         90400.00
- Sede Cali     |        23 |                   3 |       14 |        88065.00 |         88065.00
- Sede Medellín |        34 |                   3 |       18 |        85500.00 |         85500.00
- Sede Cali     |        48 |                   3 |       13 |        84600.00 |         84600.00
- Sede Medellín |        49 |                   3 |       11 |        84400.00 |         84400.00
- Sede Cali     |         2 |                   3 |       12 |        81130.00 |         81130.00
- Sede Bogotá   |        98 |                   3 |       14 |        78300.00 |         78300.00
- Sede Cali     |        63 |                   3 |        9 |        77000.00 |         77000.00
- Sede Medellín |         6 |                   3 |       15 |        76950.00 |         76950.00
- Sede Bogotá   |        81 |                   3 |       12 |        75300.00 |         75300.00
- Sede Medellín |        75 |                   3 |       11 |        70600.00 |         70600.00
- Sede Cali     |        41 |                   3 |        8 |        65800.00 |         65800.00
- Sede Medellín |        50 |                   3 |       11 |        64500.00 |         64500.00
- Sede Medellín |         8 |                   3 |        7 |        55765.00 |         55765.00
- Sede Medellín |        12 |                   3 |        8 |        50920.00 |         50920.00
- Sede Cali     |        64 |                   3 |       19 |        50800.00 |         50800.00
- Sede Medellín |        59 |                   3 |       13 |        47600.00 |         47600.00
- Sede Bogotá   |        53 |                   3 |       11 |        47400.00 |         47400.00
- Sede Medellín |        17 |                   3 |        9 |        39615.00 |         39615.00
+ CEDI Funza    |        42 |                   5 |      101 |      1124300.00 |       1124300.00
+ CEDI Funza    |        21 |                   5 |      100 |      1050130.00 |       1050130.00
+ CEDI Funza    |         4 |                   5 |       85 |      1036165.00 |       1036165.00
+ CEDI Funza    |        18 |                   5 |       87 |       836095.00 |        836095.00
+ CEDI Funza    |        43 |                   5 |      116 |       830200.00 |        830200.00
+ CEDI Funza    |        45 |                   5 |      101 |       803300.00 |        803300.00
+ CEDI Funza    |        20 |                   5 |       64 |       747555.00 |        747555.00
+ CEDI Funza    |        46 |                   5 |       76 |       693000.00 |        693000.00
+ Sede Medellín |        57 |                   5 |       31 |       605200.00 |        605200.00
+ CEDI Funza    |        28 |                   5 |       77 |       603725.00 |        603725.00
+ CEDI Funza    |        16 |                   5 |       87 |       571520.00 |        571520.00
+ CEDI Funza    |        17 |                   5 |       95 |       570760.00 |        570760.00
+ CEDI Funza    |         9 |                   5 |       50 |       520505.00 |        520505.00
+ Sede Bogotá   |        95 |                   5 |       30 |       516000.00 |        516000.00
+ Sede Medellín |        80 |                   5 |       35 |       424400.00 |        424400.00
+ Sede Cali     |        68 |                   5 |       23 |       396800.00 |        396800.00
+ Sede Bogotá   |        97 |                   5 |       30 |       372600.00 |        372600.00
+ Sede Bogotá   |        40 |                   5 |       21 |       368410.00 |        368410.00
+ Sede Medellín |        15 |                   5 |       20 |       360715.00 |        360715.00
+ CEDI Funza    |         5 |                   5 |       61 |       327750.00 |        327750.00
+ Sede Medellín |         2 |                   5 |       23 |       322335.00 |        322335.00
+ Sede Medellín |        66 |                   5 |       20 |       312800.00 |        312800.00
+ Sede Bogotá   |        22 |                   5 |       21 |       299155.00 |        299155.00
+ Sede Medellín |        41 |                   5 |       24 |       279015.00 |        279015.00
+ Sede Bogotá   |        94 |                   5 |       18 |       264500.00 |        264500.00
+ Sede Medellín |        76 |                   5 |       32 |       257700.00 |        257700.00
+ Sede Cali     |        45 |                   5 |       26 |       254500.00 |        254500.00
+ Sede Bogotá   |        64 |                   5 |       23 |       251400.00 |        251400.00
+ Sede Medellín |        73 |                   5 |       27 |       237100.00 |        237100.00
+ Sede Bogotá   |        79 |                   5 |       21 |       233900.00 |        233900.00
+ Sede Medellín |        77 |                   5 |       30 |       222500.00 |        222500.00
+ Sede Cali     |        42 |                   5 |       26 |       220100.00 |        220100.00
+ Sede Bogotá   |        18 |                   5 |       24 |       219640.00 |        219640.00
+ Sede Bogotá   |        49 |                   5 |       17 |       218690.00 |        218690.00
+ Sede Cali     |        26 |                   5 |       25 |       215365.00 |        215365.00
+ Sede Cali     |        12 |                   5 |       21 |       208430.00 |        208430.00
+ Sede Cali     |        18 |                   5 |       21 |       205770.00 |        205770.00
+ Sede Medellín |        63 |                   5 |       28 |       205600.00 |        205600.00
+ Sede Cali     |        70 |                   5 |       23 |       200800.00 |        200800.00
+ Sede Cali     |        14 |                   5 |       24 |       188575.00 |        188575.00
+ Sede Cali     |        30 |                   5 |       15 |       187150.00 |        187150.00
+ Sede Cali     |        50 |                   5 |       17 |       181800.00 |        181800.00
+ Sede Medellín |         7 |                   5 |       21 |       173375.00 |        173375.00
+ Sede Medellín |        37 |                   5 |       18 |       168815.00 |        168815.00
+ Sede Bogotá   |        70 |                   5 |       27 |       164700.00 |        164700.00
+ Sede Bogotá   |        86 |                   5 |       23 |       163300.00 |        163300.00
+ Sede Cali     |        40 |                   5 |       28 |       163200.00 |        163200.00
+ Sede Medellín |        53 |                   5 |       31 |       159900.00 |        159900.00
+ Sede Medellín |        10 |                   5 |       28 |       159885.00 |        159885.00
+ Sede Medellín |        30 |                   5 |       22 |       158745.00 |        158745.00
+ Sede Bogotá   |        57 |                   5 |       19 |       150100.00 |        150100.00
+ Sede Bogotá   |        44 |                   5 |       15 |       144590.00 |        144590.00
+ Sede Bogotá   |        16 |                   5 |       14 |       134330.00 |        134330.00
+ Sede Medellín |        19 |                   5 |       21 |       131385.00 |        131385.00
+ Sede Medellín |        65 |                   5 |       18 |       110100.00 |        110100.00
+ Sede Bogotá   |        15 |                   5 |       17 |        78660.00 |         78660.00
+ CEDI Funza    |        37 |                   4 |       70 |      1262600.00 |       1262600.00
+ CEDI Funza    |        29 |                   4 |       96 |       950475.00 |        950475.00
+ CEDI Funza    |        19 |                   4 |       51 |       667185.00 |        667185.00
+ CEDI Funza    |        47 |                   4 |       31 |       666300.00 |        666300.00
+ CEDI Funza    |        39 |                   4 |       97 |       617300.00 |        617300.00
+ Sede Bogotá   |        48 |                   4 |       27 |       561355.00 |        561355.00
+ Sede Cali     |        66 |                   4 |       18 |       432000.00 |        432000.00
+ Sede Bogotá   |        37 |                   4 |       23 |       414200.00 |        414200.00
+ Sede Medellín |        25 |                   4 |       22 |       392920.00 |        392920.00
+ CEDI Funza    |         7 |                   4 |       45 |       328035.00 |        328035.00
+ Sede Medellín |        16 |                   4 |       24 |       321860.00 |        321860.00
+ Sede Cali     |         4 |                   4 |       20 |       287280.00 |        287280.00
+ Sede Cali     |        22 |                   4 |       14 |       285380.00 |        285380.00
+ Sede Bogotá   |        91 |                   4 |       17 |       284000.00 |        284000.00
+ Sede Medellín |        39 |                   4 |       22 |       281580.00 |        281580.00
+ Sede Cali     |        10 |                   4 |       24 |       256215.00 |        256215.00
+ Sede Bogotá   |        55 |                   4 |       24 |       248900.00 |        248900.00
+ Sede Bogotá   |        88 |                   4 |       19 |       236000.00 |        236000.00
+ Sede Cali     |        27 |                   4 |       19 |       226290.00 |        226290.00
+ Sede Bogotá   |        50 |                   4 |       19 |       218975.00 |        218975.00
+ Sede Medellín |        38 |                   4 |       16 |       208525.00 |        208525.00
+ Sede Cali     |        35 |                   4 |       18 |       207900.00 |        207900.00
+ Sede Cali     |        19 |                   4 |       16 |       205960.00 |        205960.00
+ Sede Bogotá   |        63 |                   4 |       18 |       205700.00 |        205700.00
+ Sede Cali     |        11 |                   4 |       23 |       202255.00 |        202255.00
+ Sede Bogotá   |        31 |                   4 |       22 |       200450.00 |        200450.00
+ Sede Bogotá   |        12 |                   4 |       16 |       200260.00 |        200260.00
+ CEDI Funza    |        41 |                   4 |       36 |       193400.00 |        193400.00
+ Sede Cali     |         6 |                   4 |       22 |       186960.00 |        186960.00
+ Sede Cali     |        49 |                   4 |        9 |       186800.00 |        186800.00
+ Sede Bogotá   |        99 |                   4 |       17 |       186100.00 |        186100.00
+ Sede Bogotá   |        27 |                   4 |       17 |       184870.00 |        184870.00
+ Sede Medellín |        33 |                   4 |       18 |       180120.00 |        180120.00
+ Sede Bogotá   |        13 |                   4 |       20 |       177840.00 |        177840.00
+ CEDI Funza    |         3 |                   4 |       25 |       173090.00 |        173090.00
+ Sede Bogotá   |        14 |                   4 |       16 |       166725.00 |        166725.00
+ Sede Cali     |        36 |                   4 |       16 |       163400.00 |        163400.00
+ Sede Bogotá   |        67 |                   4 |       27 |       163000.00 |        163000.00
+ Sede Medellín |        79 |                   4 |       18 |       163000.00 |        163000.00
+ Sede Medellín |        11 |                   4 |       15 |       161975.00 |        161975.00
+ Sede Cali     |        47 |                   4 |       20 |       152800.00 |        152800.00
+ Sede Bogotá   |        20 |                   4 |       14 |       146395.00 |        146395.00
+ Sede Medellín |         1 |                   4 |       20 |       144305.00 |        144305.00
+ Sede Bogotá   |        43 |                   4 |       16 |       141360.00 |        141360.00
+ Sede Medellín |        36 |                   4 |       14 |       140885.00 |        140885.00
+ Sede Bogotá   |        47 |                   4 |       26 |       140220.00 |        140220.00
+ Sede Bogotá   |        52 |                   4 |       24 |       118465.00 |        118465.00
+ Sede Bogotá   |        90 |                   4 |       20 |       115900.00 |        115900.00
+ Sede Cali     |         7 |                   4 |       13 |       114475.00 |        114475.00
+ Sede Cali     |        69 |                   4 |       17 |       106300.00 |        106300.00
+ Sede Medellín |        27 |                   4 |       13 |       102030.00 |        102030.00
+ Sede Medellín |        40 |                   4 |       20 |       101745.00 |        101745.00
+ Sede Medellín |        47 |                   4 |        9 |       101600.00 |        101600.00
+ Sede Medellín |         3 |                   4 |       20 |        87020.00 |         87020.00
+ Sede Bogotá   |         1 |                   4 |       16 |        84930.00 |         84930.00
+ Sede Bogotá   |        84 |                   4 |       12 |        77600.00 |         77600.00
+ Sede Bogotá   |        11 |                   4 |       15 |        75715.00 |         75715.00
+ Sede Cali     |        16 |                   4 |       14 |        70585.00 |         70585.00
+ CEDI Funza    |        22 |                   3 |       36 |       679155.00 |        679155.00
+ CEDI Funza    |        25 |                   3 |       51 |       640965.00 |        640965.00
+ CEDI Funza    |        44 |                   3 |       41 |       483700.00 |        483700.00
+ CEDI Funza    |        35 |                   3 |       58 |       467400.00 |        467400.00
+ CEDI Funza    |        11 |                   3 |       44 |       402420.00 |        402420.00
+ CEDI Funza    |        14 |                   3 |       56 |       395770.00 |        395770.00
+ Sede Cali     |        44 |                   3 |       17 |       383300.00 |        383300.00
+ CEDI Funza    |         8 |                   3 |       34 |       376960.00 |        376960.00
+ Sede Bogotá   |        78 |                   3 |       16 |       374500.00 |        374500.00
+ CEDI Funza    |        34 |                   3 |       34 |       327800.00 |        327800.00
+ Sede Medellín |        24 |                   3 |       17 |       324045.00 |        324045.00
+ Sede Medellín |        23 |                   3 |       17 |       321100.00 |        321100.00
+ Sede Bogotá   |        36 |                   3 |       14 |       313500.00 |        313500.00
+ CEDI Funza    |         1 |                   3 |       35 |       290130.00 |        290130.00
+ Sede Medellín |        31 |                   3 |       21 |       277115.00 |        277115.00
+ CEDI Funza    |        38 |                   3 |       55 |       249300.00 |        249300.00
+ Sede Cali     |        48 |                   3 |       13 |       244600.00 |        244600.00
+ Sede Cali     |        23 |                   3 |       14 |       235600.00 |        235600.00
+ Sede Bogotá   |        98 |                   3 |       14 |       224400.00 |        224400.00
+ Sede Bogotá   |        81 |                   3 |       12 |       216700.00 |        216700.00
+ Sede Cali     |        13 |                   3 |       21 |       199025.00 |        199025.00
+ Sede Medellín |        22 |                   3 |       17 |       197695.00 |        197695.00
+ Sede Cali     |        62 |                   3 |       12 |       197100.00 |        197100.00
+ Sede Medellín |        49 |                   3 |       11 |       183500.00 |        183500.00
+ CEDI Funza    |        30 |                   3 |       43 |       178790.00 |        178790.00
+ Sede Bogotá   |        75 |                   3 |       16 |       165500.00 |        165500.00
+ Sede Cali     |         2 |                   3 |       12 |       153805.00 |        153805.00
+ Sede Bogotá   |        53 |                   3 |       11 |       152400.00 |        152400.00
+ Sede Cali     |        25 |                   3 |       13 |       141075.00 |        141075.00
+ Sede Cali     |        34 |                   3 |       16 |       134995.00 |        134995.00
+ Sede Bogotá   |         5 |                   3 |       21 |       131860.00 |        131860.00
+ Sede Bogotá   |        28 |                   3 |       23 |       131385.00 |        131385.00
+ Sede Medellín |        54 |                   3 |       14 |       118900.00 |        118900.00
+ Sede Cali     |        64 |                   3 |       19 |       117600.00 |        117600.00
+ Sede Medellín |         6 |                   3 |       15 |       117420.00 |        117420.00
+ Sede Bogotá   |        59 |                   3 |       10 |       115600.00 |        115600.00
+ Sede Bogotá   |        21 |                   3 |       13 |       112385.00 |        112385.00
+ CEDI Funza    |        33 |                   3 |       24 |       105200.00 |        105200.00
+ Sede Medellín |        70 |                   3 |       16 |       102100.00 |        102100.00
+ Sede Medellín |        62 |                   3 |       11 |        99700.00 |         99700.00
+ Sede Medellín |        64 |                   3 |       18 |        92100.00 |         92100.00
+ Sede Medellín |        56 |                   3 |       16 |        85700.00 |         85700.00
+ Sede Medellín |        18 |                   3 |       11 |        85405.00 |         85405.00
+ Sede Bogotá   |        39 |                   3 |       11 |        85310.00 |         85310.00
+ Sede Medellín |        59 |                   3 |       13 |        83600.00 |         83600.00
+ Sede Medellín |        34 |                   3 |       18 |        82650.00 |         82650.00
+ Sede Medellín |        50 |                   3 |       11 |        79900.00 |         79900.00
+ Sede Bogotá   |        56 |                   3 |        8 |        76000.00 |         76000.00
+ Sede Medellín |        75 |                   3 |       11 |        75300.00 |         75300.00
+ Sede Cali     |        24 |                   3 |       13 |        71155.00 |         71155.00
+ Sede Medellín |        12 |                   3 |        8 |        70490.00 |         70490.00
+ Sede Bogotá   |        82 |                   3 |       10 |        69500.00 |         69500.00
+ Sede Medellín |        60 |                   3 |       15 |        69200.00 |         69200.00
+ Sede Bogotá   |        58 |                   3 |       12 |        69000.00 |         69000.00
+ Sede Bogotá   |        65 |                   3 |       17 |        67800.00 |         67800.00
+ Sede Cali     |        43 |                   3 |       10 |        66300.00 |         66300.00
+ Sede Bogotá   |        71 |                   3 |       13 |        65500.00 |         65500.00
+ Sede Cali     |         5 |                   3 |       11 |        64220.00 |         64220.00
+ Sede Cali     |        41 |                   3 |        8 |        63800.00 |         63800.00
+ Sede Cali     |        31 |                   3 |       15 |        63555.00 |         63555.00
+ Sede Medellín |        17 |                   3 |        9 |        60420.00 |         60420.00
+ Sede Medellín |         8 |                   3 |        7 |        59660.00 |         59660.00
+ Sede Cali     |        63 |                   3 |        9 |        44600.00 |         44600.00
 (177 filas)
 
 
 === Consulta 9. Pedidos pendientes con mas de 15 dias de antiguedad ===
      sede      | id_pedido | fecha_pedido | dias_antiguedad |           cliente            |        vendedor        | total_registrado 
 ---------------+-----------+--------------+-----------------+------------------------------+------------------------+------------------
- CEDI Funza    |         6 | 2026-05-10   |             158 | Valentina Ortiz Rojas        | Gloria Barrera Pinzón  |        273600.00
- CEDI Funza    |         8 | 2026-05-15   |             153 | María Castro Rojas           | Gloria Barrera Pinzón  |        231040.00
- Sede Cali     |         6 | 2026-05-22   |             146 | Minimercado San Jorge S.A.S. | Yolanda Ibarra Paz     |        156940.00
- Sede Medellín |        15 | 2026-05-30   |             138 | Jorge Jiménez Jiménez        | Esteban Zapata Arango  |        262200.00
- Sede Cali     |        12 | 2026-05-31   |             137 | Paula Rodríguez Rojas        | Gustavo Valencia Cuero |        117515.00
- Sede Medellín |        19 | 2026-06-16   |             121 | Paula Gómez Torres           | Esteban Zapata Arango  |        230755.00
- CEDI Funza    |        23 | 2026-06-16   |             121 | Daniela López Martínez       | Gloria Barrera Pinzón  |        375155.00
- Sede Medellín |        33 | 2026-07-07   |             100 | David Rodríguez Ramírez      | Esteban Zapata Arango  |        328415.00
- CEDI Funza    |        28 | 2026-07-20   |              87 | Valentina Ruiz Pérez         | Pedro Galindo Rey      |        655785.00
- CEDI Funza    |        30 | 2026-07-29   |              78 | Jorge Ortiz García           | Pedro Galindo Rey      |        475095.00
- Sede Bogotá   |        63 | 2026-08-13   |              63 | Sofía Torres Herrera         | Óscar Beltrán Niño     |        357900.00
- Sede Bogotá   |        67 | 2026-08-17   |              59 | Luisa Vargas Pérez           | Diana Patiño Leal      |        483100.00
- Sede Bogotá   |        72 | 2026-08-22   |              54 | Minimercado La 80 S.A.S.     | Diana Patiño Leal      |        183600.00
- Sede Bogotá   |        73 | 2026-08-23   |              53 | Natalia Jiménez Rojas        | Julián Cárdenas Mora   |        212500.00
- Sede Bogotá   |        77 | 2026-08-27   |              49 | Natalia Ruiz Herrera         | Óscar Beltrán Niño     |        103500.00
- Sede Bogotá   |        76 | 2026-08-27   |              49 | David Ortiz Ortiz            | Óscar Beltrán Niño     |          9600.00
- Sede Bogotá   |        80 | 2026-08-28   |              48 | Sofía Vargas Gómez           | Óscar Beltrán Niño     |         49600.00
- Sede Cali     |        57 | 2026-09-19   |              26 | Luisa Torres Gómez           | Yolanda Ibarra Paz     |         24700.00
- Sede Cali     |        60 | 2026-09-21   |              24 | Carlos García Vargas         | Yolanda Ibarra Paz     |        164500.00
- CEDI Funza    |        44 | 2026-09-24   |              21 | Felipe García Ortiz          | Gloria Barrera Pinzón  |        347000.00
- CEDI Funza    |        43 | 2026-09-24   |              21 | Andrés Rojas Ramírez         | Gloria Barrera Pinzón  |       1210200.00
- Sede Bogotá   |        92 | 2026-09-25   |              20 | Felipe López Jiménez         | Julián Cárdenas Mora   |         99600.00
+ CEDI Funza    |         6 | 2026-05-10   |             158 | Valentina Ortiz Rojas        | Gloria Barrera Pinzón  |        102600.00
+ CEDI Funza    |         8 | 2026-05-15   |             153 | María Castro Rojas           | Gloria Barrera Pinzón  |        376960.00
+ Sede Cali     |         6 | 2026-05-22   |             146 | Minimercado San Jorge S.A.S. | Yolanda Ibarra Paz     |        186960.00
+ Sede Medellín |        15 | 2026-05-30   |             138 | Jorge Jiménez Jiménez        | Esteban Zapata Arango  |        360715.00
+ Sede Cali     |        12 | 2026-05-31   |             137 | Paula Rodríguez Rojas        | Gustavo Valencia Cuero |        208430.00
+ Sede Medellín |        19 | 2026-06-16   |             121 | Paula Gómez Torres           | Esteban Zapata Arango  |        131385.00
+ CEDI Funza    |        23 | 2026-06-16   |             121 | Daniela López Martínez       | Gloria Barrera Pinzón  |        123880.00
+ Sede Medellín |        33 | 2026-07-07   |             100 | David Rodríguez Ramírez      | Esteban Zapata Arango  |        180120.00
+ CEDI Funza    |        28 | 2026-07-20   |              87 | Valentina Ruiz Pérez         | Pedro Galindo Rey      |        603725.00
+ CEDI Funza    |        30 | 2026-07-29   |              78 | Jorge Ortiz García           | Pedro Galindo Rey      |        178790.00
+ Sede Bogotá   |        63 | 2026-08-13   |              63 | Sofía Torres Herrera         | Óscar Beltrán Niño     |        205700.00
+ Sede Bogotá   |        67 | 2026-08-17   |              59 | Luisa Vargas Pérez           | Diana Patiño Leal      |        163000.00
+ Sede Bogotá   |        72 | 2026-08-22   |              54 | Minimercado La 80 S.A.S.     | Diana Patiño Leal      |         18000.00
+ Sede Bogotá   |        73 | 2026-08-23   |              53 | Natalia Jiménez Rojas        | Julián Cárdenas Mora   |        119500.00
+ Sede Bogotá   |        77 | 2026-08-27   |              49 | Natalia Ruiz Herrera         | Óscar Beltrán Niño     |         78600.00
+ Sede Bogotá   |        76 | 2026-08-27   |              49 | David Ortiz Ortiz            | Óscar Beltrán Niño     |         15900.00
+ Sede Bogotá   |        80 | 2026-08-28   |              48 | Sofía Vargas Gómez           | Óscar Beltrán Niño     |         83600.00
+ Sede Cali     |        57 | 2026-09-19   |              26 | Luisa Torres Gómez           | Yolanda Ibarra Paz     |         36500.00
+ Sede Cali     |        60 | 2026-09-21   |              24 | Carlos García Vargas         | Yolanda Ibarra Paz     |         43500.00
+ CEDI Funza    |        44 | 2026-09-24   |              21 | Felipe García Ortiz          | Gloria Barrera Pinzón  |        483700.00
+ CEDI Funza    |        43 | 2026-09-24   |              21 | Andrés Rojas Ramírez         | Gloria Barrera Pinzón  |        830200.00
+ Sede Bogotá   |        92 | 2026-09-25   |              20 | Felipe López Jiménez         | Julián Cárdenas Mora   |         87600.00
 (22 filas)
 
 
 === Consulta 10. Detalles de pedidos pendientes cuya cantidad supera la existencia ===
-     sede      | id_pedido | fecha_pedido |           producto           | cantidad_pedida | existencia_almacen 
----------------+-----------+--------------+------------------------------+-----------------+--------------------
- Sede Bogotá   |        63 | 2026-08-13   | Protector solar 120 ml       |               8 |                  1
- Sede Bogotá   |        77 | 2026-08-27   | Protector solar 120 ml       |               3 |                  1
- Sede Cali     |         6 | 2026-05-22   | Bebida de soya 1 L           |               5 |                  4
- Sede Medellín |        15 | 2026-05-30   | Cerveza lager six pack       |               1 |                  0
- Sede Medellín |        15 | 2026-05-30   | Cuaderno cuadriculado 100 h  |               6 |                  1
- Sede Medellín |        19 | 2026-06-16   | Café listo para tomar 250 ml |               6 |                  0
- Sede Medellín |        19 | 2026-06-16   | Toallas de cocina x3         |               6 |                  1
- Sede Medellín |        73 | 2026-10-02   | Marcador permanente x4       |               6 |                  0
- Sede Medellín |        79 | 2026-10-11   | Toallas de cocina x3         |               4 |                  1
- Sede Medellín |        79 | 2026-10-11   | Harina de maíz 1 kg          |               7 |                  0
- Sede Medellín |        80 | 2026-10-12   | Marcador permanente x4       |               7 |                  0
-(11 filas)
+     sede      | id_pedido | fecha_pedido |          producto           | cantidad_pedida | existencia_almacen 
+---------------+-----------+--------------+-----------------------------+-----------------+--------------------
+ Sede Medellín |        15 | 2026-05-30   | Cuaderno cuadriculado 100 h |               6 |                  1
+ Sede Medellín |        33 | 2026-07-07   | Harina de maíz 1 kg         |               1 |                  0
+ Sede Medellín |        79 | 2026-10-11   | Toallas de cocina x3        |               4 |                  1
+ Sede Medellín |        79 | 2026-10-11   | Marcador permanente x4      |               6 |                  0
+ Sede Medellín |        80 | 2026-10-12   | Toallas de cocina x3        |               8 |                  1
+ Sede Medellín |        80 | 2026-10-12   | Marcador permanente x4      |               7 |                  0
+(6 filas)
 
 
 === Consulta 11. Cumplimiento de proveedores ===
@@ -1391,9 +1267,9 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
  Distribuidora La Sabana Ltda.    |             6 |                 5 |                  2 |                  0.60
  Higiene Total S.A.S.             |             6 |                 4 |                  2 |                  0.50
  Papelera Nacional S.A.S.         |             6 |                 4 |                  3 |                  0.25
- Lácteos de la Montaña S.A.S.     |             6 |                 4 |                  4 |                  0.00
  Químicos del Caribe S.A.         |             6 |                 5 |                  5 |                  0.00
  Alimentos del Valle S.A.S.       |             6 |                 4 |                  4 |                  0.00
+ Lácteos de la Montaña S.A.S.     |             6 |                 4 |                  4 |                  0.00
 (10 filas)
 
 
@@ -1455,19 +1331,19 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
 === Consulta 13. Transferencias en transito ===
  id_transferencia |              origen              |             destino              |          producto           | cantidad_enviada | fecha_despacho | dias_transcurridos 
 ------------------+----------------------------------+----------------------------------+-----------------------------+------------------+----------------+--------------------
+               20 | CEDI Funza / Bodega general CEDI | Sede Cali / Almacén Cali         | Colores x24                 |               48 | 2026-09-06     |                 39
+               20 | CEDI Funza / Bodega general CEDI | Sede Cali / Almacén Cali         | Borrador de nata x5         |               22 | 2026-09-06     |                 39
                20 | CEDI Funza / Bodega general CEDI | Sede Cali / Almacén Cali         | Carpeta legajadora          |               15 | 2026-09-06     |                 39
                20 | CEDI Funza / Bodega general CEDI | Sede Cali / Almacén Cali         | Agua sin gas 600 ml         |               14 | 2026-09-06     |                 39
-               20 | CEDI Funza / Bodega general CEDI | Sede Cali / Almacén Cali         | Borrador de nata x5         |               22 | 2026-09-06     |                 39
-               20 | CEDI Funza / Bodega general CEDI | Sede Cali / Almacén Cali         | Colores x24                 |               48 | 2026-09-06     |                 39
                22 | CEDI Funza / Bodega general CEDI | Sede Medellín / Almacén Medellín | Avena en hojuelas 500 g     |               32 | 2026-09-19     |                 26
-               22 | CEDI Funza / Bodega general CEDI | Sede Medellín / Almacén Medellín | Trapero de algodón          |               39 | 2026-09-19     |                 26
                22 | CEDI Funza / Bodega general CEDI | Sede Medellín / Almacén Medellín | Máquina de afeitar x3       |               34 | 2026-09-19     |                 26
-               23 | CEDI Funza / Bodega general CEDI | Sede Cali / Almacén Cali         | Cinta adhesiva transparente |               38 | 2026-09-27     |                 18
+               22 | CEDI Funza / Bodega general CEDI | Sede Medellín / Almacén Medellín | Trapero de algodón          |               39 | 2026-09-19     |                 26
+               23 | CEDI Funza / Bodega general CEDI | Sede Cali / Almacén Cali         | Chocolate de mesa 500 g     |               19 | 2026-09-27     |                 18
                23 | CEDI Funza / Bodega general CEDI | Sede Cali / Almacén Cali         | Gaseosa cola 1.5 L          |               17 | 2026-09-27     |                 18
                23 | CEDI Funza / Bodega general CEDI | Sede Cali / Almacén Cali         | Insecticida en aerosol      |               18 | 2026-09-27     |                 18
-               23 | CEDI Funza / Bodega general CEDI | Sede Cali / Almacén Cali         | Chocolate de mesa 500 g     |               19 | 2026-09-27     |                 18
-               24 | Sede Bogotá / Almacén Bogotá     | Sede Medellín / Almacén Medellín | Colores x24                 |               21 | 2026-10-02     |                 13
+               23 | CEDI Funza / Bodega general CEDI | Sede Cali / Almacén Cali         | Cinta adhesiva transparente |               38 | 2026-09-27     |                 18
                24 | Sede Bogotá / Almacén Bogotá     | Sede Medellín / Almacén Medellín | Leche entera 1 L            |               36 | 2026-10-02     |                 13
+               24 | Sede Bogotá / Almacén Bogotá     | Sede Medellín / Almacén Medellín | Colores x24                 |               21 | 2026-10-02     |                 13
 (13 filas)
 
 
@@ -1612,87 +1488,88 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
  LIM-005 | Limpiavidrios 500 ml    | ACTIVO        |              490 | 
  PAP-006 | Carpeta legajadora      | ACTIVO        |              201 | 
  PAP-014 | Grapadora metálica      | ACTIVO        |              568 | 
- LIM-016 | Cera para pisos 1 L     | INACTIVO      |              376 | 2026-05-01
- ASE-007 | Talco para pies 120 g   | DESCONTINUADO |              436 | 2026-05-11
- BEB-011 | Kumis 1 L               | ACTIVO        |              374 | 2026-06-03
- LIM-010 | Trapero de algodón      | ACTIVO        |              648 | 2026-06-10
- PAP-011 | Tijeras escolares       | ACTIVO        |              266 | 2026-06-10
- PAP-016 | Disquete 3.5" x10       | DESCONTINUADO |              178 | 2026-06-21
- ALI-012 | Avena en hojuelas 500 g | ACTIVO        |              292 | 2026-06-28
- ASE-012 | Máquina de afeitar x3   | ACTIVO        |              513 | 2026-06-28
-(13 filas)
+ LIM-010 | Trapero de algodón      | ACTIVO        |              648 | 2026-06-06
+ PAP-011 | Tijeras escolares       | ACTIVO        |              266 | 2026-06-06
+ ASE-007 | Talco para pies 120 g   | DESCONTINUADO |              436 | 2026-06-26
+ ASE-012 | Máquina de afeitar x3   | ACTIVO        |              513 | 2026-06-26
+ LIM-016 | Cera para pisos 1 L     | INACTIVO      |              376 | 2026-06-26
+ BEB-011 | Kumis 1 L               | ACTIVO        |              374 | 2026-06-29
+ ALI-012 | Avena en hojuelas 500 g | ACTIVO        |              292 | 2026-06-30
+ PAP-016 | Disquete 3.5" x10       | DESCONTINUADO |              178 | 2026-06-30
+ ALI-005 | Lenteja 500 g           | ACTIVO        |              301 | 2026-07-10
+(14 filas)
 
 
 === Consulta 17. Devoluciones por producto y categoria (periodo jul-oct 2026) ===
       categoria      |           producto           | vendidas | devueltas | pct_devolucion | pct_devolucion_categoria 
 ---------------------+------------------------------+----------+-----------+----------------+--------------------------
- Alimentos           | Pasta spaghetti 500 g        |       52 |         3 |           5.77 |                     0.62
- Alimentos           | Café molido 500 g            |       53 |         1 |           1.89 |                     0.62
- Alimentos           | Aceite vegetal 1 L           |       78 |         0 |           0.00 |                     0.62
- Alimentos           | Panela 1 kg                  |       70 |         0 |           0.00 |                     0.62
- Alimentos           | Lenteja 500 g                |       62 |         0 |           0.00 |                     0.62
- Alimentos           | Mayonesa 400 g               |       61 |         0 |           0.00 |                     0.62
- Alimentos           | Harina de maíz 1 kg          |       55 |         0 |           0.00 |                     0.62
- Alimentos           | Arroz blanco 1 kg            |       45 |         0 |           0.00 |                     0.62
- Alimentos           | Sal refinada 1 kg            |       40 |         0 |           0.00 |                     0.62
- Alimentos           | Chocolate de mesa 500 g      |       39 |         0 |           0.00 |                     0.62
- Alimentos           | Galletas de soda x6          |       24 |         0 |           0.00 |                     0.62
- Alimentos           | Atún en lata 170 g           |       20 |         0 |           0.00 |                     0.62
- Alimentos           | Salsa de tomate 400 g        |       19 |         0 |           0.00 |                     0.62
- Alimentos           | Azúcar refinada 1 kg         |       16 |         0 |           0.00 |                     0.62
- Alimentos           | Fríjol rojo 500 g            |       15 |         0 |           0.00 |                     0.62
- Aseo personal       | Enjuague bucal 500 ml        |       25 |         4 |          16.00 |                     1.56
- Aseo personal       | Protector solar 120 ml       |       31 |         3 |           9.68 |                     1.56
- Aseo personal       | Gel antibacterial 500 ml     |       65 |         3 |           4.62 |                     1.56
- Aseo personal       | Crema dental 100 ml          |       76 |         0 |           0.00 |                     1.56
- Aseo personal       | Desodorante roll-on          |       73 |         0 |           0.00 |                     1.56
- Aseo personal       | Shampoo 400 ml               |       69 |         0 |           0.00 |                     1.56
- Aseo personal       | Pañales etapa 3 x30          |       52 |         0 |           0.00 |                     1.56
- Aseo personal       | Cepillo dental               |       52 |         0 |           0.00 |                     1.56
- Aseo personal       | Jabón de tocador x3          |       47 |         0 |           0.00 |                     1.56
- Aseo personal       | Papel higiénico x12          |       47 |         0 |           0.00 |                     1.56
- Aseo personal       | Crema corporal 400 ml        |       43 |         0 |           0.00 |                     1.56
- Aseo personal       | Toallas húmedas x50          |       37 |         0 |           0.00 |                     1.56
- Aseo personal       | Toallas higiénicas x10       |       24 |         0 |           0.00 |                     1.56
- Bebidas             | Jugo de naranja 1 L          |       79 |         3 |           3.80 |                     0.45
- Bebidas             | Agua con gas 600 ml          |      106 |         0 |           0.00 |                     0.45
- Bebidas             | Vino tinto 750 ml            |       80 |         0 |           0.00 |                     0.45
- Bebidas             | Bebida hidratante 500 ml     |       73 |         0 |           0.00 |                     0.45
- Bebidas             | Cerveza lager six pack       |       58 |         0 |           0.00 |                     0.45
- Bebidas             | Gaseosa cola 1.5 L           |       53 |         0 |           0.00 |                     0.45
- Bebidas             | Malta 330 ml                 |       44 |         0 |           0.00 |                     0.45
- Bebidas             | Café listo para tomar 250 ml |       41 |         0 |           0.00 |                     0.45
- Bebidas             | Bebida energizante 250 ml    |       38 |         0 |           0.00 |                     0.45
- Bebidas             | Bebida de soya 1 L           |       32 |         0 |           0.00 |                     0.45
- Bebidas             | Té helado limón 500 ml       |       25 |         0 |           0.00 |                     0.45
- Bebidas             | Leche entera 1 L             |       19 |         0 |           0.00 |                     0.45
- Bebidas             | Agua sin gas 600 ml          |       12 |         0 |           0.00 |                     0.45
- Bebidas             | Jugo de mango 1 L            |       11 |         0 |           0.00 |                     0.45
- Limpieza del hogar  | Toallas de cocina x3         |       48 |         2 |           4.17 |                     0.96
- Limpieza del hogar  | Ambientador en aerosol       |       52 |         2 |           3.85 |                     0.96
- Limpieza del hogar  | Bolsas de basura x10         |       60 |         0 |           0.00 |                     0.96
- Limpieza del hogar  | Guantes de caucho            |       48 |         0 |           0.00 |                     0.96
- Limpieza del hogar  | Suavizante 1 L               |       37 |         0 |           0.00 |                     0.96
- Limpieza del hogar  | Blanqueador 1 L              |       34 |         0 |           0.00 |                     0.96
- Limpieza del hogar  | Lavaloza líquido 500 ml      |       33 |         0 |           0.00 |                     0.96
- Limpieza del hogar  | Escoba plástica              |       33 |         0 |           0.00 |                     0.96
- Limpieza del hogar  | Detergente en polvo 1 kg     |       19 |         0 |           0.00 |                     0.96
- Limpieza del hogar  | Desinfectante multiusos 1 L  |       18 |         0 |           0.00 |                     0.96
- Limpieza del hogar  | Jabón en barra para ropa x3  |       16 |         0 |           0.00 |                     0.96
- Limpieza del hogar  | Esponja de cocina x3         |       16 |         0 |           0.00 |                     0.96
- Limpieza del hogar  | Insecticida en aerosol       |        3 |         0 |           0.00 |                     0.96
- Papelería y oficina | Bolígrafo negro x12          |       47 |        10 |          21.28 |                     3.90
- Papelería y oficina | Borrador de nata x5          |       41 |         4 |           9.76 |                     3.90
- Papelería y oficina | Cuaderno cuadriculado 100 h  |       24 |         2 |           8.33 |                     3.90
- Papelería y oficina | Pegante en barra 40 g        |       62 |         4 |           6.45 |                     3.90
- Papelería y oficina | Notas adhesivas x5           |       63 |         0 |           0.00 |                     3.90
- Papelería y oficina | Cinta adhesiva transparente  |       61 |         0 |           0.00 |                     3.90
- Papelería y oficina | Marcador permanente x4       |       48 |         0 |           0.00 |                     3.90
- Papelería y oficina | Calculadora básica           |       42 |         0 |           0.00 |                     3.90
- Papelería y oficina | Lápiz grafito x12            |       40 |         0 |           0.00 |                     3.90
- Papelería y oficina | Colores x24                  |       37 |         0 |           0.00 |                     3.90
- Papelería y oficina | Resma papel carta            |       32 |         0 |           0.00 |                     3.90
- Papelería y oficina | Resaltador x4                |       16 |         0 |           0.00 |                     3.90
+ Alimentos           | Harina de maíz 1 kg          |       26 |         4 |          15.38 |                     2.62
+ Alimentos           | Pasta spaghetti 500 g        |       86 |        10 |          11.63 |                     2.62
+ Alimentos           | Panela 1 kg                  |       66 |         3 |           4.55 |                     2.62
+ Alimentos           | Sal refinada 1 kg            |       60 |         0 |           0.00 |                     2.62
+ Alimentos           | Chocolate de mesa 500 g      |       56 |         0 |           0.00 |                     2.62
+ Alimentos           | Mayonesa 400 g               |       50 |         0 |           0.00 |                     2.62
+ Alimentos           | Azúcar refinada 1 kg         |       48 |         0 |           0.00 |                     2.62
+ Alimentos           | Atún en lata 170 g           |       47 |         0 |           0.00 |                     2.62
+ Alimentos           | Arroz blanco 1 kg            |       46 |         0 |           0.00 |                     2.62
+ Alimentos           | Fríjol rojo 500 g            |       45 |         0 |           0.00 |                     2.62
+ Alimentos           | Galletas de soda x6          |       44 |         0 |           0.00 |                     2.62
+ Alimentos           | Café molido 500 g            |       34 |         0 |           0.00 |                     2.62
+ Alimentos           | Salsa de tomate 400 g        |       20 |         0 |           0.00 |                     2.62
+ Alimentos           | Aceite vegetal 1 L           |       20 |         0 |           0.00 |                     2.62
+ Alimentos           | Lenteja 500 g                |        1 |         0 |           0.00 |                     2.62
+ Aseo personal       | Toallas húmedas x50          |       18 |         3 |          16.67 |                     1.46
+ Aseo personal       | Protector solar 120 ml       |       45 |         2 |           4.44 |                     1.46
+ Aseo personal       | Shampoo 400 ml               |       49 |         2 |           4.08 |                     1.46
+ Aseo personal       | Toallas higiénicas x10       |       65 |         0 |           0.00 |                     1.46
+ Aseo personal       | Crema corporal 400 ml        |       51 |         0 |           0.00 |                     1.46
+ Aseo personal       | Pañales etapa 3 x30          |       49 |         0 |           0.00 |                     1.46
+ Aseo personal       | Enjuague bucal 500 ml        |       47 |         0 |           0.00 |                     1.46
+ Aseo personal       | Desodorante roll-on          |       37 |         0 |           0.00 |                     1.46
+ Aseo personal       | Jabón de tocador x3          |       34 |         0 |           0.00 |                     1.46
+ Aseo personal       | Papel higiénico x12          |       34 |         0 |           0.00 |                     1.46
+ Aseo personal       | Cepillo dental               |       28 |         0 |           0.00 |                     1.46
+ Aseo personal       | Crema dental 100 ml          |       14 |         0 |           0.00 |                     1.46
+ Aseo personal       | Gel antibacterial 500 ml     |        7 |         0 |           0.00 |                     1.46
+ Bebidas             | Bebida hidratante 500 ml     |       39 |         4 |          10.26 |                     1.77
+ Bebidas             | Vino tinto 750 ml            |       73 |         3 |           4.11 |                     1.77
+ Bebidas             | Agua sin gas 600 ml          |       87 |         3 |           3.45 |                     1.77
+ Bebidas             | Jugo de mango 1 L            |       32 |         1 |           3.13 |                     1.77
+ Bebidas             | Gaseosa cola 1.5 L           |       58 |         1 |           1.72 |                     1.77
+ Bebidas             | Té helado limón 500 ml       |       86 |         0 |           0.00 |                     1.77
+ Bebidas             | Bebida de soya 1 L           |       59 |         0 |           0.00 |                     1.77
+ Bebidas             | Cerveza lager six pack       |       51 |         0 |           0.00 |                     1.77
+ Bebidas             | Agua con gas 600 ml          |       49 |         0 |           0.00 |                     1.77
+ Bebidas             | Leche entera 1 L             |       43 |         0 |           0.00 |                     1.77
+ Bebidas             | Malta 330 ml                 |       31 |         0 |           0.00 |                     1.77
+ Bebidas             | Bebida energizante 250 ml    |       31 |         0 |           0.00 |                     1.77
+ Bebidas             | Jugo de naranja 1 L          |       23 |         0 |           0.00 |                     1.77
+ Bebidas             | Café listo para tomar 250 ml |       15 |         0 |           0.00 |                     1.77
+ Limpieza del hogar  | Ambientador en aerosol       |       65 |         4 |           6.15 |                     1.03
+ Limpieza del hogar  | Escoba plástica              |       29 |         1 |           3.45 |                     1.03
+ Limpieza del hogar  | Suavizante 1 L               |       66 |         0 |           0.00 |                     1.03
+ Limpieza del hogar  | Toallas de cocina x3         |       53 |         0 |           0.00 |                     1.03
+ Limpieza del hogar  | Bolsas de basura x10         |       51 |         0 |           0.00 |                     1.03
+ Limpieza del hogar  | Jabón en barra para ropa x3  |       49 |         0 |           0.00 |                     1.03
+ Limpieza del hogar  | Lavaloza líquido 500 ml      |       43 |         0 |           0.00 |                     1.03
+ Limpieza del hogar  | Guantes de caucho            |       38 |         0 |           0.00 |                     1.03
+ Limpieza del hogar  | Blanqueador 1 L              |       23 |         0 |           0.00 |                     1.03
+ Limpieza del hogar  | Insecticida en aerosol       |       22 |         0 |           0.00 |                     1.03
+ Limpieza del hogar  | Esponja de cocina x3         |       19 |         0 |           0.00 |                     1.03
+ Limpieza del hogar  | Detergente en polvo 1 kg     |       17 |         0 |           0.00 |                     1.03
+ Limpieza del hogar  | Desinfectante multiusos 1 L  |       10 |         0 |           0.00 |                     1.03
+ Papelería y oficina | Bolígrafo negro x12          |       72 |         0 |           0.00 |                     0.00
+ Papelería y oficina | Cinta adhesiva transparente  |       70 |         0 |           0.00 |                     0.00
+ Papelería y oficina | Calculadora básica           |       65 |         0 |           0.00 |                     0.00
+ Papelería y oficina | Borrador de nata x5          |       65 |         0 |           0.00 |                     0.00
+ Papelería y oficina | Cuaderno cuadriculado 100 h  |       52 |         0 |           0.00 |                     0.00
+ Papelería y oficina | Notas adhesivas x5           |       50 |         0 |           0.00 |                     0.00
+ Papelería y oficina | Lápiz grafito x12            |       45 |         0 |           0.00 |                     0.00
+ Papelería y oficina | Pegante en barra 40 g        |       44 |         0 |           0.00 |                     0.00
+ Papelería y oficina | Colores x24                  |       44 |         0 |           0.00 |                     0.00
+ Papelería y oficina | Marcador permanente x4       |       41 |         0 |           0.00 |                     0.00
+ Papelería y oficina | Resma papel carta            |       37 |         0 |           0.00 |                     0.00
+ Papelería y oficina | Resaltador x4                |       17 |         0 |           0.00 |                     0.00
 (67 filas)
 
 
@@ -1781,27 +1658,27 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
 === Consulta 19. Clasificacion de vendedores por sede (RANK) ===
      sede      |        vendedor        | pedidos | total_vendido | puesto 
 ---------------+------------------------+---------+---------------+--------
- Sede Bogotá   | Julián Cárdenas Mora   |      33 |    4495305.00 |      1
- Sede Bogotá   | Óscar Beltrán Niño     |      22 |    3904060.00 |      2
- Sede Bogotá   | Diana Patiño Leal      |      31 |    3121415.00 |      3
- Sede Medellín | Catalina Ochoa Mejía   |      25 |    3464740.00 |      1
- Sede Medellín | Esteban Zapata Arango  |      27 |    3162415.00 |      2
- Sede Medellín | Marcela Henao Vélez    |      18 |    2201430.00 |      3
- Sede Cali     | Gustavo Valencia Cuero |      23 |    3219515.00 |      1
- Sede Cali     | Yolanda Ibarra Paz     |      18 |    2446185.00 |      2
- Sede Cali     | Liliana Mosquera Rivas |      18 |    2061485.00 |      3
- CEDI Funza    | Gloria Barrera Pinzón  |      26 |   12685620.00 |      1
- CEDI Funza    | Pedro Galindo Rey      |      17 |    7612970.00 |      2
+ Sede Bogotá   | Julián Cárdenas Mora   |      33 |    5573385.00 |      1
+ Sede Bogotá   | Diana Patiño Leal      |      31 |    3449175.00 |      2
+ Sede Bogotá   | Óscar Beltrán Niño     |      22 |    3168045.00 |      3
+ Sede Medellín | Catalina Ochoa Mejía   |      25 |    3819190.00 |      1
+ Sede Medellín | Esteban Zapata Arango  |      27 |    3220465.00 |      2
+ Sede Medellín | Marcela Henao Vélez    |      18 |    2253670.00 |      3
+ Sede Cali     | Gustavo Valencia Cuero |      23 |    2881635.00 |      1
+ Sede Cali     | Yolanda Ibarra Paz     |      18 |    2732260.00 |      2
+ Sede Cali     | Liliana Mosquera Rivas |      18 |    2422770.00 |      3
+ CEDI Funza    | Gloria Barrera Pinzón  |      26 |   10781830.00 |      1
+ CEDI Funza    | Pedro Galindo Rey      |      17 |    8566255.00 |      2
 (11 filas)
 
 
 === Consulta 20. Consolidado corporativo por sede ===
      sede      | productos_activos | unidades_inventario | valor_ventas | pedidos_pendientes | ordenes_compra | valor_compras | transferencias 
 ---------------+-------------------+---------------------+--------------+--------------------+----------------+---------------+----------------
- Sede Bogotá   |                69 |                3879 |  11520780.00 |                  9 |              4 |    4231320.00 |              8
- Sede Medellín |                66 |                4108 |   8828585.00 |                  8 |              4 |    7785240.00 |             13
- Sede Cali     |                62 |                3774 |   7727185.00 |                  8 |              4 |    7274130.00 |              7
- CEDI Funza    |                77 |               21152 |  20298590.00 |                  7 |             46 |   67821310.00 |             20
+ Sede Bogotá   |                69 |                3879 |  12190605.00 |                  9 |              4 |    4231320.00 |              8
+ Sede Medellín |                66 |                4108 |   9293325.00 |                  8 |              4 |    7785240.00 |             13
+ Sede Cali     |                62 |                3774 |   8036665.00 |                  8 |              4 |    7274130.00 |              7
+ CEDI Funza    |                77 |               21152 |  19348085.00 |                  7 |             46 |   67821310.00 |             20
 (4 filas)
 
 >> 11 pruebas
@@ -1850,7 +1727,7 @@ DETALLE:  Failing row contains (1, 1, 1, -1, 13, 2026-10-15 18:00:00).
 
 --- 4b. Una fila de otra sede no entra en el fragmento de Bogota -> esperado: ERROR viola la restriccion check ---
 psql:sql/11_pruebas.sql:105: ERROR:  new row for relation "inv_bogota" violates check constraint "inv_bogota_id_sede_check"
-DETALLE:  Failing row contains (2, 2, 1, 10, 5, 2026-11-10 10:19:59.007705).
+DETALLE:  Failing row contains (2, 2, 1, 10, 5, 2026-11-11 12:23:30.065655).
 
 === Prueba 5. Los fragmentos de dos sedes contienen registros distintos ===
  fragmento  | filas | sede_min | sede_max 
@@ -1953,20 +1830,20 @@ BEGIN
 === Prueba 7a. Consulta con CTE: ventas confirmadas por sede ===
     nombre     |    total    
 ---------------+-------------
- CEDI Funza    | 20298590.00
- Sede Bogotá   | 11520780.00
- Sede Medellín |  8828585.00
- Sede Cali     |  7727185.00
+ CEDI Funza    | 19348085.00
+ Sede Bogotá   | 12190605.00
+ Sede Medellín |  9293325.00
+ Sede Cali     |  8036665.00
 (4 filas)
 
 
 === Prueba 7b. Funcion de ventana: participacion de cada sede en las ventas ===
      sede      |    total    | participacion_pct | puesto 
 ---------------+-------------+-------------------+--------
- CEDI Funza    | 20298590.00 |             41.96 |      1
- Sede Bogotá   | 11520780.00 |             23.82 |      2
- Sede Medellín |  8828585.00 |             18.25 |      3
- Sede Cali     |  7727185.00 |             15.97 |      4
+ CEDI Funza    | 19348085.00 |             39.59 |      1
+ Sede Bogotá   | 12190605.00 |             24.95 |      2
+ Sede Medellín |  9293325.00 |             19.02 |      3
+ Sede Cali     |  8036665.00 |             16.45 |      4
 (4 filas)
 
 
@@ -1974,22 +1851,20 @@ BEGIN
 SET
      sede      | valor_ventas | pedidos_pendientes 
 ---------------+--------------+--------------------
- Sede Bogotá   |  11520780.00 |                  9
- Sede Medellín |   8828585.00 |                  8
- Sede Cali     |   7727185.00 |                  8
- CEDI Funza    |  20298590.00 |                  7
+ Sede Bogotá   |  12190605.00 |                  9
+ Sede Medellín |   9293325.00 |                  8
+ Sede Cali     |   8036665.00 |                  8
+ CEDI Funza    |  19348085.00 |                  7
 (4 filas)
 
---- 9.1b gerente_general: leer el staging de ventas en reportes (DENEGADO) -> esperado: ERROR permiso denegado ---
-psql:sql/11_pruebas.sql:260: ERROR:  permission denied for schema ventas
-LÍNEA 1: SELECT COUNT(*) FROM ventas.ped_bogota;
-                              ^
+--- 9.1b gerente_general: usar dblink para leer ventas (DENEGADO) -> esperado: ERROR permiso denegado para la funcion dblink ---
+psql:sql/11_pruebas.sql:282: ERROR:  permission denied for function dblink
 RESET
 
 === Prueba 10. El reporte corporativo no duplica ventas ni cantidades ===
        medida        |   reporte   |   fuente    
 ---------------------+-------------+-------------
- valor_ventas        | 48375140.00 | 48375140.00
+ valor_ventas        | 48868680.00 | 48868680.00
  unidades_inventario |       32913 |       32913
  ordenes_compra      |          58 |          58
  pedidos_pendientes  |          32 |          32
@@ -1998,7 +1873,7 @@ RESET
 --- Contraejemplo: unir todo en un solo JOIN SI duplica el valor de ventas ---
  ventas_duplicadas_por_join 
 ----------------------------
-               171029045.00
+               179923155.00
 (1 fila)
 
 
@@ -2025,11 +1900,11 @@ ROLLBACK
 === Prueba 11. Cada servicio solo ve su propia base ===
 Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
 --- 11.1 desde andina_ventas: leer catalogo.productos -> esperado: ERROR la relacion no existe ---
-psql:sql/11_pruebas.sql:365: ERROR:  relation "catalogo.productos" does not exist
+psql:sql/11_pruebas.sql:440: ERROR:  relation "catalogo.productos" does not exist
 LÍNEA 1: SELECT COUNT(*) FROM catalogo.productos;
                               ^
 --- 11.2 nombrando la otra base (base.esquema.tabla) -> esperado: ERROR no estan implementadas las referencias entre bases ---
-psql:sql/11_pruebas.sql:368: ERROR:  cross-database references are not implemented: "andina_catalogo.catalogo.productos"
+psql:sql/11_pruebas.sql:445: ERROR:  cross-database references are not implemented: "andina_catalogo.catalogo.productos"
 LÍNEA 1: SELECT COUNT(*) FROM andina_catalogo.catalogo.productos;
                               ^
 --- 11.3 a que base puede entrar cada rol (has_database_privilege) ---
@@ -2045,7 +1920,7 @@ LÍNEA 1: SELECT COUNT(*) FROM andina_catalogo.catalogo.productos;
 (7 filas)
 
 
-=== Prueba 12. ETL: los reportes van atrasados hasta que corre el ETL (consistencia eventual) ===
+=== Prueba 12. Vistas materializadas: el reporte no cambia hasta el REFRESH ===
 --- 12.1 antes: pedidos de Bogota que ve el reporte ---
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
  pedidos_bogota_en_reporte 
@@ -2061,135 +1936,14 @@ INSERT 0 1
                       101
 (1 fila)
 
---- 12.3 el reporte todavia NO lo ve: sigue con la ultima carga ---
+--- 12.3 el reporte todavia NO lo ve: sigue con el ultimo REFRESH ---
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
  pedidos_bogota_en_reporte 
 ---------------------------
                        100
 (1 fila)
 
---- 12.4 se corre el ETL completo ---
->> ETL: extraer de cada servicio
-Ahora está conectado a la base de datos «andina_catalogo» con el usuario «postgres».
-COPY 4
-COPY 5
-COPY 5
-COPY 80
-COPY 10
-COPY 120
-COPY 100
-CREATE VIEW
-COPY 7
-DROP VIEW
-Ahora está conectado a la base de datos «andina_identidad» con el usuario «postgres».
-COPY 20
-CREATE VIEW
-COPY 1
-DROP VIEW
-Ahora está conectado a la base de datos «andina_compras» con el usuario «postgres».
-COPY 60
-COPY 180
-COPY 70
-COPY 193
-CREATE VIEW
-COPY 4
-DROP VIEW
-Ahora está conectado a la base de datos «andina_inventarios» con el usuario «postgres».
-COPY 72
-COPY 69
-COPY 64
-COPY 99
-COPY 25
-COPY 75
-CREATE VIEW
-COPY 6
-DROP VIEW
-Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
-COPY 101
-COPY 80
-COPY 70
-COPY 50
-COPY 281
-COPY 237
-COPY 202
-COPY 156
-COPY 340
-COPY 22
-COPY 29
-CREATE VIEW
-COPY 11
-DROP VIEW
->> ETL: cargar el staging de reportes
-Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
-BEGIN
-DELETE 120
-DELETE 5
-DELETE 80
-DELETE 4
-DELETE 5
-DELETE 10
-DELETE 100
-DELETE 20
-DELETE 193
-DELETE 70
-DELETE 180
-DELETE 60
-DELETE 75
-DELETE 25
-DELETE 72
-DELETE 69
-DELETE 64
-DELETE 99
-DELETE 281
-DELETE 237
-DELETE 202
-DELETE 156
-DELETE 100
-DELETE 80
-DELETE 70
-DELETE 50
-DELETE 29
-DELETE 22
-DELETE 340
-COPY 4
-COPY 5
-COPY 5
-COPY 80
-COPY 10
-COPY 120
-COPY 100
-COPY 20
-COPY 60
-COPY 180
-COPY 70
-COPY 193
-COPY 72
-COPY 69
-COPY 64
-COPY 99
-COPY 25
-COPY 75
-COPY 101
-COPY 80
-COPY 70
-COPY 50
-COPY 281
-COPY 237
-COPY 202
-COPY 156
-COPY 340
-COPY 22
-COPY 29
-CREATE TABLE
-COPY 7
-COPY 1
-COPY 4
-COPY 6
-COPY 11
-INSERT 0 29
-DROP TABLE
-COMMIT
->> ETL: transformar (refrescar las vistas materializadas)
+--- 12.4 se refrescan los reportes ---
 BEGIN
 REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
@@ -2204,11 +1958,11 @@ REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
+REFRESH MATERIALIZED VIEW
 COMMIT
->> ETL: ultima carga
-        ultima_carga        | tablas_cargadas | filas_cargadas 
-----------------------------+-----------------+----------------
- 2026-11-10 10:19:59.148125 |              29 |           2819
+   reportes_actualizados_en    
+-------------------------------
+ 2026-11-11 12:23:30.258797-05
 (1 fila)
 
 --- 12.5 ahora el reporte si lo ve (uno mas que en 12.1) ---
@@ -2217,137 +1971,12 @@ COMMIT
                        101
 (1 fila)
 
---- 12.6 control de la carga: tablas donde no cuadran las filas de origen y de staging (debe dar 0) ---
- tablas_que_no_cuadran 
------------------------
-                     0
-(1 fila)
-
---- 12.7 limpieza: se borra el pedido de prueba y se corre el ETL otra vez ---
+--- 12.6 limpieza: se borra el pedido de prueba y se refrescan los reportes otra vez ---
 Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
 DELETE 1
->> ETL: extraer de cada servicio
-Ahora está conectado a la base de datos «andina_catalogo» con el usuario «postgres».
-COPY 4
-COPY 5
-COPY 5
-COPY 80
-COPY 10
-COPY 120
-COPY 100
-CREATE VIEW
-COPY 7
-DROP VIEW
-Ahora está conectado a la base de datos «andina_identidad» con el usuario «postgres».
-COPY 20
-CREATE VIEW
-COPY 1
-DROP VIEW
-Ahora está conectado a la base de datos «andina_compras» con el usuario «postgres».
-COPY 60
-COPY 180
-COPY 70
-COPY 193
-CREATE VIEW
-COPY 4
-DROP VIEW
-Ahora está conectado a la base de datos «andina_inventarios» con el usuario «postgres».
-COPY 72
-COPY 69
-COPY 64
-COPY 99
-COPY 25
-COPY 75
-CREATE VIEW
-COPY 6
-DROP VIEW
-Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
-COPY 100
-COPY 80
-COPY 70
-COPY 50
-COPY 281
-COPY 237
-COPY 202
-COPY 156
-COPY 340
-COPY 22
-COPY 29
-CREATE VIEW
-COPY 11
-DROP VIEW
->> ETL: cargar el staging de reportes
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
 BEGIN
-DELETE 120
-DELETE 5
-DELETE 80
-DELETE 4
-DELETE 5
-DELETE 10
-DELETE 100
-DELETE 20
-DELETE 193
-DELETE 70
-DELETE 180
-DELETE 60
-DELETE 75
-DELETE 25
-DELETE 72
-DELETE 69
-DELETE 64
-DELETE 99
-DELETE 281
-DELETE 237
-DELETE 202
-DELETE 156
-DELETE 101
-DELETE 80
-DELETE 70
-DELETE 50
-DELETE 29
-DELETE 22
-DELETE 340
-COPY 4
-COPY 5
-COPY 5
-COPY 80
-COPY 10
-COPY 120
-COPY 100
-COPY 20
-COPY 60
-COPY 180
-COPY 70
-COPY 193
-COPY 72
-COPY 69
-COPY 64
-COPY 99
-COPY 25
-COPY 75
-COPY 100
-COPY 80
-COPY 70
-COPY 50
-COPY 281
-COPY 237
-COPY 202
-COPY 156
-COPY 340
-COPY 22
-COPY 29
-CREATE TABLE
-COPY 7
-COPY 1
-COPY 4
-COPY 6
-COPY 11
-INSERT 0 29
-DROP TABLE
-COMMIT
->> ETL: transformar (refrescar las vistas materializadas)
-BEGIN
+REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
@@ -2362,15 +1991,14 @@ REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
 COMMIT
->> ETL: ultima carga
-        ultima_carga        | tablas_cargadas | filas_cargadas 
-----------------------------+-----------------+----------------
- 2026-11-10 10:19:59.325105 |              29 |           2818
+   reportes_actualizados_en    
+-------------------------------
+ 2026-11-11 12:23:30.648871-05
 (1 fila)
 
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
 
---- Volumen de datos de prueba (en el staging de reportes, sin las filas de las pruebas) ---
+--- Volumen de datos de prueba (leido por dblink desde cada base, sin las filas de las pruebas) ---
        tabla        | count 
 --------------------+-------
  sedes              |     4

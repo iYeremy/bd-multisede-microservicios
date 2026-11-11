@@ -3,5 +3,3 @@ logs/
 
 tests/
 
-# archivos que genera run_all.sql para pasar datos entre bases
-csv/*.csv

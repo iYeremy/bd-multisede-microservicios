@@ -1,7 +1,7 @@
 -- =====================================================================
 -- 05_inventarios.sql
 -- microservicio de inventarios y transferencias. se corre en
--- andina_inventarios (y en andina_reportes para el staging del ETL).
+-- andina_inventarios (reportes la lee con dblink).
 --
 -- la idea principal: el inventario no va en una sola tabla, va partido
 -- por sede (fragmentacion horizontal). cada sede tiene su propia tabla:

@@ -1,11 +1,15 @@
 -- =====================================================================
 -- run_all.sql
 -- ejecuta todo el proyecto en orden: borra, crea las 6 bases, crea las
--- tablas y los datos de cada servicio, corre el ETL hacia reportes y
--- crea sus vistas, da los permisos, corre las 20 consultas y las pruebas.
+-- tablas y los datos de cada servicio, crea los reportes (que traen los
+-- datos por dblink), da los permisos, corre las 20 consultas y las
+-- pruebas.
 --
--- uso (DESDE LA CARPETA DEL PROYECTO, porque los CSV se guardan en csv/):
+-- uso:
 --     psql -U postgres -f run_all.sql
+-- si dblink no puede conectarse por el socket local sin contrasena (ver
+-- sql/dblink/servidores.sql), se le pasan host y contrasena:
+--     psql -U postgres -v dblink_host=localhost -v dblink_password=... -f run_all.sql
 --
 -- se puede correr las veces que se quiera: 00_reset.sql borra todo y los
 -- datos usan una semilla fija, asi el resultado siempre es el mismo.
@@ -16,16 +20,17 @@
 --
 -- como funciona, en corto:
 --   1. cada microservicio tiene su base (andina_catalogo, andina_ventas...)
---      con sus tablas y sus datos. ninguna base se conecta a otra.
---   2. ETL hacia reportes (carpeta sql/etl/):
---        E  extraer: cada base deja sus tablas en CSV (extraer_*.sql)
---        L  cargar: andina_reportes las mete en su staging (cargar.sql)
---        T  transformar: se refrescan las vistas materializadas
---           (transformar.sql)
---   3. las consultas corren en andina_reportes, donde esta todo junto.
+--      con sus tablas y sus datos.
+--   2. andina_reportes trae los datos de las otras bases con dblink, en
+--      vistas materializadas (guardan el resultado).
+--   3. las consultas corren en andina_reportes.
 --
--- despues, para poner los reportes al dia, solo se corre el ETL:
---     psql -U postgres -d postgres -f sql/etl/refrescar_reportes.sql
+-- despues, para poner los reportes al dia, solo se refrescan las vistas:
+--     psql -U postgres -d andina_reportes -f sql/refrescar_reportes.sql
+--
+-- (version con dblink, mas simple de explicar. la version sin dblink,
+-- donde ninguna base se conecta a otra y reportes se llena con un ETL por
+-- CSV, esta en la rama feat/microservicios-reales.)
 -- =====================================================================
 
 -- si una instruccion falla, psql se detiene en vez de seguir con todo a
@@ -56,9 +61,9 @@ SET client_min_messages = warning;
 \ir sql/01_bases.sql
 
 -- ---------------------------------------------------------------------
--- un servicio a la vez: tablas, datos y extraer a CSV (paso E del ETL;
--- se hace aqui de una vez porque los datos de prueba de otros servicios
--- leen esos CSV).
+-- un servicio a la vez: tablas y datos.
+-- los datos de prueba de compras, inventarios y ventas leen cosas de
+-- catalogo (e inventarios) con dblink, y lo quitan al terminar.
 -- el orden importa: catalogo va primero porque los demas usan sus ids
 -- y sus CSV; ventas va despues de inventarios porque solo vende lo que
 -- hay en cada almacen.
@@ -67,49 +72,38 @@ SET client_min_messages = warning;
 \c andina_catalogo
 \ir sql/02_catalogo.sql
 \ir sql/07_datos_catalogo.sql
-\ir sql/etl/extraer_catalogo.sql
 
 \echo '>> identidad'
 \c andina_identidad
 \ir sql/03_identidad.sql
 \ir sql/07_datos_identidad.sql
-\ir sql/etl/extraer_identidad.sql
 
 \echo '>> compras'
 \c andina_compras
 \ir sql/04_compras.sql
 \ir sql/07_datos_compras.sql
-\ir sql/etl/extraer_compras.sql
 
 \echo '>> inventarios (fragmentos por sede)'
 \c andina_inventarios
 \ir sql/05_inventarios.sql
 \ir sql/07_datos_inventarios.sql
-\ir sql/etl/extraer_inventarios.sql
 
 \echo '>> ventas (fragmentos por sede)'
 \c andina_ventas
 \ir sql/06_ventas.sql
 \ir sql/07_datos_ventas.sql
-\ir sql/etl/extraer_ventas.sql
 
 -- ---------------------------------------------------------------------
--- reportes: el staging (las mismas tablas 02 a 06), las vistas
--- materializadas (vacias) y la primera corrida de L y T
+-- reportes: dblink, las vistas materializadas (vacias) y el primer
+-- refresco, que es cuando dblink trae los datos de las otras bases
 -- ---------------------------------------------------------------------
-\echo '>> reportes: staging'
+\echo '>> reportes: dblink'
 \c andina_reportes
-\ir sql/02_catalogo.sql
-\ir sql/03_identidad.sql
-\ir sql/04_compras.sql
-\ir sql/05_inventarios.sql
-\ir sql/06_ventas.sql
-\ir sql/etl/staging.sql
+\ir sql/dblink/servidores.sql
 \echo '>> 08 vistas (materializadas, todavia vacias)'
 \ir sql/08_vistas.sql
-\echo '>> ETL: cargar el staging y transformar'
-\ir sql/etl/cargar.sql
-\ir sql/etl/transformar.sql
+\echo '>> refrescar reportes (dblink trae los datos)'
+\ir sql/refrescar_reportes.sql
 
 -- los roles van al final porque los GRANT ... ON ALL TABLES solo
 -- alcanzan a las tablas que ya existen. 09 se conecta a cada base.

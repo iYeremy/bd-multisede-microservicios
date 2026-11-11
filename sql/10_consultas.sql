@@ -4,11 +4,14 @@
 -- la "fecha de hoy" es siempre 2026-10-15 (sale de reportes.parametros),
 -- asi los resultados no cambian segun el dia en que se corran.
 --
--- se corren en la base andina_reportes, el unico lugar donde estan los
--- datos de todos los servicios juntos (el staging que carga el ETL). por
--- eso pueden cruzar ventas con productos, compras con proveedores, etc.
--- los datos estan tan al dia como la ultima corrida del ETL
--- (reportes.vista_ultima_carga).
+-- se corren en la base andina_reportes. cuando una consulta necesita una
+-- tabla de otra base, la trae con dblink: arriba, en el WITH, hay una CTE
+-- por cada tabla de otra base (por ejemplo catalogo_productos), y el
+-- resto de la consulta la usa como si fuera la tabla. ver
+-- dblink/servidores.sql.
+-- las vistas reportes.* son materializadas: estan tan al dia como el
+-- ultimo REFRESH (reportes.vista_ultima_actualizacion). lo que se trae
+-- por dblink aqui, en cambio, es lo que hay en este momento.
 --
 -- casi todas leen las vistas consolidadas (vista_*_consolidado, que son
 -- materializadas), que ya juntan las 4 sedes. por eso sirven para toda
@@ -27,6 +30,22 @@
 -- \echo solo imprime el titulo de cada consulta en la salida.
 -- =====================================================================
 
+WITH catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+),
+catalogo_categorias AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_categoria, nombre, descripcion, estado FROM catalogo.categorias')
+        AS t(id_categoria INTEGER, nombre VARCHAR(60), descripcion VARCHAR(200), estado VARCHAR(10))
+),
+catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+),
+catalogo_almacenes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_almacen, id_sede, nombre, tipo_almacen, estado FROM catalogo.almacenes')
+        AS t(id_almacen INTEGER, id_sede INTEGER, nombre VARCHAR(60), tipo_almacen VARCHAR(15), estado VARCHAR(10))
+)
 \echo
 \echo '=== Consulta 1. Inventario por producto y sede ==='
 -- cuanto hay de cada producto en cada almacen y cuanto vale.
@@ -42,23 +61,35 @@ SELECT p.nombre                              AS producto,
        round(100.0 * i.existencia_actual * p.precio_lista
              / SUM(i.existencia_actual * p.precio_lista) OVER (PARTITION BY i.id_sede), 2) AS pct_valor_sede
 FROM reportes.vista_inventario_consolidado i
-JOIN catalogo.productos  p ON p.id_producto  = i.id_producto
-JOIN catalogo.categorias c ON c.id_categoria = p.id_categoria
-JOIN catalogo.sedes      s ON s.id_sede      = i.id_sede
-JOIN catalogo.almacenes  a ON a.id_almacen   = i.id_almacen
+JOIN catalogo_productos  p ON p.id_producto  = i.id_producto
+JOIN catalogo_categorias c ON c.id_categoria = p.id_categoria
+JOIN catalogo_sedes      s ON s.id_sede      = i.id_sede
+JOIN catalogo_almacenes  a ON a.id_almacen   = i.id_almacen
 ORDER BY s.id_sede, a.nombre, c.nombre, p.nombre;
 
 \echo
 \echo '=== Consulta 2. Alertas de reabastecimiento ==='
 -- productos en cero o por debajo del minimo, los que mas faltan primero
+WITH catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+),
+catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+),
+catalogo_almacenes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_almacen, id_sede, nombre, tipo_almacen, estado FROM catalogo.almacenes')
+        AS t(id_almacen INTEGER, id_sede INTEGER, nombre VARCHAR(60), tipo_almacen VARCHAR(15), estado VARCHAR(10))
+)
 SELECT s.nombre AS sede, a.nombre AS almacen, p.sku, p.nombre AS producto,
        i.existencia_actual, i.stock_minimo,
        i.stock_minimo - i.existencia_actual AS faltante,
        CASE WHEN i.existencia_actual = 0 THEN 'SIN EXISTENCIA' ELSE 'BAJO MINIMO' END AS nivel
 FROM reportes.vista_inventario_consolidado i
-JOIN catalogo.productos p ON p.id_producto = i.id_producto
-JOIN catalogo.sedes     s ON s.id_sede     = i.id_sede
-JOIN catalogo.almacenes a ON a.id_almacen  = i.id_almacen
+JOIN catalogo_productos p ON p.id_producto = i.id_producto
+JOIN catalogo_sedes     s ON s.id_sede     = i.id_sede
+JOIN catalogo_almacenes a ON a.id_almacen  = i.id_almacen
 WHERE i.existencia_actual = 0
    OR i.existencia_actual < i.stock_minimo
 ORDER BY faltante DESC, s.nombre;
@@ -67,9 +98,17 @@ ORDER BY faltante DESC, s.nombre;
 \echo '=== Consulta 3. Productos activos ausentes por sede ==='
 -- se arman todas las parejas producto-sede (CROSS JOIN) y NOT EXISTS
 -- deja las que no tienen ninguna fila de inventario
+WITH catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+),
+catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+)
 SELECT s.nombre AS sede, p.sku, p.nombre AS producto
-FROM catalogo.productos p
-CROSS JOIN catalogo.sedes s
+FROM catalogo_productos p
+CROSS JOIN catalogo_sedes s
 WHERE p.estado = 'ACTIVO'
   AND NOT EXISTS (SELECT 1
                   FROM reportes.vista_inventario_consolidado i
@@ -84,7 +123,15 @@ ORDER BY s.id_sede, p.id_producto;
 --   ROW_NUMBER da 1, 2, 3... sin repetir, asi se cortan exactamente 5
 --   (si empatan, gana el nombre). DENSE_RANK repite el numero cuando
 --   empatan, asi se ve quienes estan igualados.
-WITH ventas_producto AS (
+WITH catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+),
+catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+),
+ventas_producto AS (
     SELECT pv.id_sede,
            to_char(pv.fecha_pedido, 'YYYY-"T"Q') AS periodo,
            d.id_producto,
@@ -99,11 +146,11 @@ WITH ventas_producto AS (
            ROW_NUMBER() OVER (PARTITION BY vp.id_sede, vp.periodo ORDER BY vp.unidades DESC, p.nombre) AS puesto,
            DENSE_RANK() OVER (PARTITION BY vp.id_sede, vp.periodo ORDER BY vp.unidades DESC)           AS nivel_ventas
     FROM ventas_producto vp
-    JOIN catalogo.productos p ON p.id_producto = vp.id_producto
+    JOIN catalogo_productos p ON p.id_producto = vp.id_producto
 )
 SELECT s.nombre AS sede, r.periodo, r.puesto, r.nivel_ventas, r.producto, r.unidades
 FROM ranking r
-JOIN catalogo.sedes s ON s.id_sede = r.id_sede
+JOIN catalogo_sedes s ON s.id_sede = r.id_sede
 WHERE r.puesto <= 5
 ORDER BY s.id_sede, r.periodo, r.puesto;
 
@@ -130,13 +177,21 @@ ORDER BY id_sede, mes;
 \echo '=== Consulta 6. Clientes con compras en al menos dos sedes ==='
 -- se agrupa por cliente y HAVING deja solo los que compraron en 2 o mas
 -- sedes distintas. string_agg junta los nombres de las sedes en un texto.
+WITH catalogo_clientes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_cliente, tipo_documento, num_documento, nombre_completo, correo, telefono, estado FROM catalogo.clientes')
+        AS t(id_cliente INTEGER, tipo_documento VARCHAR(10), num_documento VARCHAR(20), nombre_completo VARCHAR(120), correo VARCHAR(100), telefono VARCHAR(20), estado VARCHAR(10))
+),
+catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+)
 SELECT c.id_cliente, c.nombre_completo,
        COUNT(DISTINCT p.id_sede)                                 AS sedes_visitadas,
        string_agg(DISTINCT s.nombre, ', ' ORDER BY s.nombre)     AS sedes,
        SUM(p.total_registrado)                                   AS total_comprado
 FROM reportes.vista_pedidos_consolidado p
-JOIN catalogo.clientes c ON c.id_cliente = p.id_cliente
-JOIN catalogo.sedes    s ON s.id_sede    = p.id_sede
+JOIN catalogo_clientes c ON c.id_cliente = p.id_cliente
+JOIN catalogo_sedes    s ON s.id_sede    = p.id_sede
 WHERE p.estado IN ('CONFIRMADO', 'ENTREGADO')
 GROUP BY c.id_cliente, c.nombre_completo
 HAVING COUNT(DISTINCT p.id_sede) >= 2
@@ -148,15 +203,27 @@ ORDER BY sedes_visitadas DESC, total_comprado DESC;
 -- los pagos se suman primero (subconsulta pg) para que un pedido con
 -- varios pagos no salga repetido. LEFT JOIN deja tambien los pedidos sin
 -- pagos, y COALESCE cambia su NULL por 0.
+WITH catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+),
+catalogo_clientes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_cliente, tipo_documento, num_documento, nombre_completo, correo, telefono, estado FROM catalogo.clientes')
+        AS t(id_cliente INTEGER, tipo_documento VARCHAR(10), num_documento VARCHAR(20), nombre_completo VARCHAR(120), correo VARCHAR(100), telefono VARCHAR(20), estado VARCHAR(10))
+),
+ventas_pagos AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_pago, id_sede, id_pedido, fecha_pago, valor, medio_pago, estado FROM ventas.pagos')
+        AS t(id_pago INTEGER, id_sede INTEGER, id_pedido INTEGER, fecha_pago DATE, valor NUMERIC(14,2), medio_pago VARCHAR(20), estado VARCHAR(10))
+)
 SELECT s.nombre AS sede, p.id_pedido, p.estado, c.nombre_completo AS cliente,
        p.total_registrado                          AS valor_total,
        COALESCE(pg.pagado, 0)                      AS pagos_confirmados,
        p.total_registrado - COALESCE(pg.pagado, 0) AS saldo_por_pagar
 FROM reportes.vista_pedidos_consolidado p
-JOIN catalogo.sedes    s ON s.id_sede    = p.id_sede
-JOIN catalogo.clientes c ON c.id_cliente = p.id_cliente
+JOIN catalogo_sedes    s ON s.id_sede    = p.id_sede
+JOIN catalogo_clientes c ON c.id_cliente = p.id_cliente
 LEFT JOIN (SELECT id_sede, id_pedido, SUM(valor) AS pagado
-           FROM ventas.pagos
+           FROM ventas_pagos
            WHERE estado = 'CONFIRMADO'
            GROUP BY id_sede, id_pedido) pg
        ON pg.id_sede = p.id_sede AND pg.id_pedido = p.id_pedido
@@ -170,6 +237,10 @@ ORDER BY saldo_por_pagar DESC;
 -- que quedo guardado en el pedido: deberian coincidir.
 -- MAX(total_registrado) solo sirve para mostrarlo: es el mismo valor en
 -- todas las filas del pedido.
+WITH catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+)
 SELECT s.nombre AS sede, d.id_pedido,
        COUNT(DISTINCT d.id_producto)            AS productos_distintos,
        SUM(d.cantidad)                          AS unidades,
@@ -177,7 +248,7 @@ SELECT s.nombre AS sede, d.id_pedido,
        MAX(p.total_registrado)                  AS total_registrado
 FROM reportes.vista_detalle_pedido_consolidado d
 JOIN reportes.vista_pedidos_consolidado p ON p.id_sede = d.id_sede AND p.id_pedido = d.id_pedido
-JOIN catalogo.sedes s ON s.id_sede = d.id_sede
+JOIN catalogo_sedes s ON s.id_sede = d.id_sede
 GROUP BY s.nombre, d.id_sede, d.id_pedido
 HAVING COUNT(DISTINCT d.id_producto) >= 3
 ORDER BY productos_distintos DESC, importe_detalle DESC;
@@ -197,6 +268,14 @@ ORDER BY pp.dias_antiguedad DESC;
 -- producto en el almacen del pedido. es una subconsulta correlacionada:
 -- se vuelve a ejecutar por cada fila, usando p.id_almacen y d.id_producto
 -- de esa fila. si no hay registro, COALESCE lo toma como 0.
+WITH catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+),
+catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+)
 SELECT s.nombre AS sede, p.id_pedido, p.fecha_pedido, pr.nombre AS producto,
        d.cantidad AS cantidad_pedida,
        COALESCE((SELECT i.existencia_actual
@@ -205,8 +284,8 @@ SELECT s.nombre AS sede, p.id_pedido, p.fecha_pedido, pr.nombre AS producto,
                    AND i.id_producto = d.id_producto), 0) AS existencia_almacen
 FROM reportes.vista_pedidos_consolidado p
 JOIN reportes.vista_detalle_pedido_consolidado d ON d.id_sede = p.id_sede AND d.id_pedido = p.id_pedido
-JOIN catalogo.sedes     s  ON s.id_sede      = p.id_sede
-JOIN catalogo.productos pr ON pr.id_producto = d.id_producto
+JOIN catalogo_sedes     s  ON s.id_sede      = p.id_sede
+JOIN catalogo_productos pr ON pr.id_producto = d.id_producto
 WHERE p.estado = 'PENDIENTE'
   AND d.cantidad > COALESCE((SELECT i.existencia_actual            -- la misma subconsulta, ahora para filtrar
                              FROM reportes.vista_inventario_consolidado i
@@ -221,16 +300,28 @@ ORDER BY s.nombre, p.id_pedido;
 -- ultima_recepcion: la fecha de la ultima entrega de cada orden recibida.
 -- totales: cuantas ordenes tiene cada proveedor (sin las canceladas).
 -- el LEFT JOIN deja tambien a los proveedores sin ordenes recibidas.
-WITH ultima_recepcion AS (
+WITH compras_ordenes_compra AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_orden_compra, id_proveedor, id_almacen_destino, id_empleado, fecha_orden, fecha_estimada, estado FROM compras.ordenes_compra')
+        AS t(id_orden_compra INTEGER, id_proveedor INTEGER, id_almacen_destino INTEGER, id_empleado INTEGER, fecha_orden DATE, fecha_estimada DATE, estado VARCHAR(10))
+),
+compras_recepciones_compra AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_recepcion, id_orden_compra, fecha_recepcion, estado FROM compras.recepciones_compra')
+        AS t(id_recepcion INTEGER, id_orden_compra INTEGER, fecha_recepcion DATE, estado VARCHAR(10))
+),
+catalogo_proveedores AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_proveedor, identificacion, razon_social, ciudad, correo, telefono, estado FROM catalogo.proveedores')
+        AS t(id_proveedor INTEGER, identificacion VARCHAR(20), razon_social VARCHAR(100), ciudad VARCHAR(60), correo VARCHAR(100), telefono VARCHAR(20), estado VARCHAR(10))
+),
+ultima_recepcion AS (
     SELECT oc.id_orden_compra, oc.id_proveedor, oc.fecha_estimada,
            MAX(rc.fecha_recepcion) AS fecha_ultima_recepcion
-    FROM compras.ordenes_compra oc
-    JOIN compras.recepciones_compra rc ON rc.id_orden_compra = oc.id_orden_compra
+    FROM compras_ordenes_compra oc
+    JOIN compras_recepciones_compra rc ON rc.id_orden_compra = oc.id_orden_compra
     WHERE oc.estado = 'RECIBIDA' AND rc.estado = 'REGISTRADA'
     GROUP BY oc.id_orden_compra, oc.id_proveedor, oc.fecha_estimada
 ), totales AS (
     SELECT id_proveedor, COUNT(*) AS total_ordenes
-    FROM compras.ordenes_compra
+    FROM compras_ordenes_compra
     WHERE estado <> 'CANCELADA'
     GROUP BY id_proveedor
 )
@@ -243,7 +334,7 @@ SELECT pv.razon_social                                                          
                       THEN u.fecha_ultima_recepcion - u.fecha_estimada
                       ELSE 0 END), 2)                                           AS promedio_dias_retraso
 FROM totales t
-JOIN catalogo.proveedores pv ON pv.id_proveedor = t.id_proveedor
+JOIN catalogo_proveedores pv ON pv.id_proveedor = t.id_proveedor
 LEFT JOIN ultima_recepcion u ON u.id_proveedor = t.id_proveedor
 GROUP BY pv.razon_social, t.total_ordenes
 ORDER BY promedio_dias_retraso DESC NULLS LAST;
@@ -252,17 +343,41 @@ ORDER BY promedio_dias_retraso DESC NULLS LAST;
 \echo '=== Consulta 12. Compras pendientes de recibir (incluye recepciones parciales) ==='
 -- pedido vs recibido por orden y producto. se suma lo recibido en todas
 -- las recepciones de la orden (puede llegar en varias entregas).
+WITH compras_ordenes_compra AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_orden_compra, id_proveedor, id_almacen_destino, id_empleado, fecha_orden, fecha_estimada, estado FROM compras.ordenes_compra')
+        AS t(id_orden_compra INTEGER, id_proveedor INTEGER, id_almacen_destino INTEGER, id_empleado INTEGER, fecha_orden DATE, fecha_estimada DATE, estado VARCHAR(10))
+),
+compras_detalle_orden_compra AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_orden_compra, id_producto, cantidad_solicitada, costo_unitario FROM compras.detalle_orden_compra')
+        AS t(id_orden_compra INTEGER, id_producto INTEGER, cantidad_solicitada INTEGER, costo_unitario NUMERIC(14,2))
+),
+catalogo_proveedores AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_proveedor, identificacion, razon_social, ciudad, correo, telefono, estado FROM catalogo.proveedores')
+        AS t(id_proveedor INTEGER, identificacion VARCHAR(20), razon_social VARCHAR(100), ciudad VARCHAR(60), correo VARCHAR(100), telefono VARCHAR(20), estado VARCHAR(10))
+),
+catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+),
+compras_recepciones_compra AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_recepcion, id_orden_compra, fecha_recepcion, estado FROM compras.recepciones_compra')
+        AS t(id_recepcion INTEGER, id_orden_compra INTEGER, fecha_recepcion DATE, estado VARCHAR(10))
+),
+compras_detalle_recepcion AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_recepcion, id_producto, cantidad_recibida FROM compras.detalle_recepcion')
+        AS t(id_recepcion INTEGER, id_producto INTEGER, cantidad_recibida INTEGER)
+)
 SELECT oc.id_orden_compra, oc.estado, pv.razon_social AS proveedor, p.nombre AS producto,
        d.cantidad_solicitada,
        COALESCE(r.recibida, 0)                         AS cantidad_recibida,
        d.cantidad_solicitada - COALESCE(r.recibida, 0) AS cantidad_pendiente
-FROM compras.ordenes_compra oc
-JOIN compras.detalle_orden_compra d ON d.id_orden_compra = oc.id_orden_compra
-JOIN catalogo.proveedores pv ON pv.id_proveedor = oc.id_proveedor
-JOIN catalogo.productos   p  ON p.id_producto   = d.id_producto
+FROM compras_ordenes_compra oc
+JOIN compras_detalle_orden_compra d ON d.id_orden_compra = oc.id_orden_compra
+JOIN catalogo_proveedores pv ON pv.id_proveedor = oc.id_proveedor
+JOIN catalogo_productos   p  ON p.id_producto   = d.id_producto
 LEFT JOIN (SELECT rc.id_orden_compra, dr.id_producto, SUM(dr.cantidad_recibida) AS recibida
-           FROM compras.recepciones_compra rc
-           JOIN compras.detalle_recepcion dr ON dr.id_recepcion = rc.id_recepcion
+           FROM compras_recepciones_compra rc
+           JOIN compras_detalle_recepcion dr ON dr.id_recepcion = rc.id_recepcion
            WHERE rc.estado = 'REGISTRADA'
            GROUP BY rc.id_orden_compra, dr.id_producto) r
        ON r.id_orden_compra = d.id_orden_compra AND r.id_producto = d.id_producto
@@ -274,20 +389,40 @@ ORDER BY oc.id_orden_compra, p.nombre;
 -- en transito = ya salio (tiene fecha de despacho) pero no ha llegado.
 -- almacenes y sedes se unen dos veces: una para el origen y otra para el
 -- destino, con alias distintos.
+WITH inventarios_transferencias AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_transferencia, id_almacen_origen, id_almacen_destino, fecha_solicitud, fecha_despacho, fecha_recepcion, estado FROM inventarios.transferencias')
+        AS t(id_transferencia INTEGER, id_almacen_origen INTEGER, id_almacen_destino INTEGER, fecha_solicitud DATE, fecha_despacho DATE, fecha_recepcion DATE, estado VARCHAR(10))
+),
+inventarios_detalle_transferencia AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_transferencia, id_producto, cantidad_enviada, cantidad_recibida FROM inventarios.detalle_transferencia')
+        AS t(id_transferencia INTEGER, id_producto INTEGER, cantidad_enviada INTEGER, cantidad_recibida INTEGER)
+),
+catalogo_almacenes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_almacen, id_sede, nombre, tipo_almacen, estado FROM catalogo.almacenes')
+        AS t(id_almacen INTEGER, id_sede INTEGER, nombre VARCHAR(60), tipo_almacen VARCHAR(15), estado VARCHAR(10))
+),
+catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+),
+catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+)
 SELECT t.id_transferencia,
        so.nombre || ' / ' || ao.nombre AS origen,
        sd.nombre || ' / ' || ad.nombre AS destino,
        p.nombre AS producto, dt.cantidad_enviada,
        t.fecha_despacho,
        pr.fecha_corte - t.fecha_despacho AS dias_transcurridos
-FROM inventarios.transferencias t
+FROM inventarios_transferencias t
 CROSS JOIN reportes.parametros pr
-JOIN inventarios.detalle_transferencia dt ON dt.id_transferencia = t.id_transferencia
-JOIN catalogo.almacenes ao ON ao.id_almacen = t.id_almacen_origen
-JOIN catalogo.sedes     so ON so.id_sede    = ao.id_sede
-JOIN catalogo.almacenes ad ON ad.id_almacen = t.id_almacen_destino
-JOIN catalogo.sedes     sd ON sd.id_sede    = ad.id_sede
-JOIN catalogo.productos p  ON p.id_producto = dt.id_producto
+JOIN inventarios_detalle_transferencia dt ON dt.id_transferencia = t.id_transferencia
+JOIN catalogo_almacenes ao ON ao.id_almacen = t.id_almacen_origen
+JOIN catalogo_sedes     so ON so.id_sede    = ao.id_sede
+JOIN catalogo_almacenes ad ON ad.id_almacen = t.id_almacen_destino
+JOIN catalogo_sedes     sd ON sd.id_sede    = ad.id_sede
+JOIN catalogo_productos p  ON p.id_producto = dt.id_producto
 WHERE t.fecha_despacho IS NOT NULL
   AND t.fecha_recepcion IS NULL
   AND t.estado = 'DESPACHADA'
@@ -297,12 +432,24 @@ ORDER BY dias_transcurridos DESC, t.id_transferencia;
 \echo '=== Consulta 14. Diferencias entre cantidad enviada y recibida ==='
 -- solo productos ya recibidos (cantidad_recibida no es NULL) donde no
 -- llego lo mismo que se envio
+WITH inventarios_transferencias AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_transferencia, id_almacen_origen, id_almacen_destino, fecha_solicitud, fecha_despacho, fecha_recepcion, estado FROM inventarios.transferencias')
+        AS t(id_transferencia INTEGER, id_almacen_origen INTEGER, id_almacen_destino INTEGER, fecha_solicitud DATE, fecha_despacho DATE, fecha_recepcion DATE, estado VARCHAR(10))
+),
+inventarios_detalle_transferencia AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_transferencia, id_producto, cantidad_enviada, cantidad_recibida FROM inventarios.detalle_transferencia')
+        AS t(id_transferencia INTEGER, id_producto INTEGER, cantidad_enviada INTEGER, cantidad_recibida INTEGER)
+),
+catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+)
 SELECT t.id_transferencia, t.fecha_recepcion, p.nombre AS producto,
        dt.cantidad_enviada, dt.cantidad_recibida,
        dt.cantidad_recibida - dt.cantidad_enviada AS diferencia
-FROM inventarios.transferencias t
-JOIN inventarios.detalle_transferencia dt ON dt.id_transferencia = t.id_transferencia
-JOIN catalogo.productos p ON p.id_producto = dt.id_producto
+FROM inventarios_transferencias t
+JOIN inventarios_detalle_transferencia dt ON dt.id_transferencia = t.id_transferencia
+JOIN catalogo_productos p ON p.id_producto = dt.id_producto
 WHERE dt.cantidad_recibida IS NOT NULL
   AND dt.cantidad_recibida <> dt.cantidad_enviada
 ORDER BY t.id_transferencia;
@@ -312,7 +459,15 @@ ORDER BY t.id_transferencia;
 -- stock_sede: existencia y minimo de cada producto por sede.
 -- despues la CTE se une consigo misma: ex es la sede que le sobra y fa
 -- la que le falta, del mismo producto y en sedes distintas.
-WITH stock_sede AS (
+WITH catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+),
+catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+),
+stock_sede AS (
     SELECT id_sede, id_producto,
            SUM(existencia_actual) AS existencia,
            SUM(stock_minimo)      AS minimo
@@ -331,9 +486,9 @@ SELECT p.nombre                         AS producto,
             ELSE fa.minimo - fa.existencia END AS unidades_sugeridas
 FROM stock_sede ex
 JOIN stock_sede fa ON fa.id_producto = ex.id_producto AND fa.id_sede <> ex.id_sede
-JOIN catalogo.productos p  ON p.id_producto = ex.id_producto
-JOIN catalogo.sedes     so ON so.id_sede    = ex.id_sede
-JOIN catalogo.sedes     sd ON sd.id_sede    = fa.id_sede
+JOIN catalogo_productos p  ON p.id_producto = ex.id_producto
+JOIN catalogo_sedes     so ON so.id_sede    = ex.id_sede
+JOIN catalogo_sedes     sd ON sd.id_sede    = fa.id_sede
 WHERE ex.existencia > ex.minimo
   AND fa.existencia < fa.minimo
 -- ex.id_sede y fa.id_sede desempatan: sin eso, dos filas con el mismo
@@ -346,6 +501,10 @@ ORDER BY unidades_sugeridas DESC, p.nombre, ex.id_sede, fa.id_sede;
 -- ultimos 90 dias. HAVING: que todavia tenga existencia.
 -- ultima_venta es una subconsulta correlacionada solo para mostrar
 -- cuando se vendio por ultima vez (NULL = nunca).
+WITH catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+)
 SELECT p.sku, p.nombre AS producto, p.estado,
        SUM(i.existencia_actual) AS existencia_total,
        (SELECT MAX(pv.fecha_pedido)
@@ -353,7 +512,7 @@ SELECT p.sku, p.nombre AS producto, p.estado,
         JOIN reportes.vista_pedidos_consolidado pv ON pv.id_sede = d.id_sede AND pv.id_pedido = d.id_pedido
         WHERE d.id_producto = p.id_producto
           AND pv.estado IN ('CONFIRMADO', 'ENTREGADO')) AS ultima_venta
-FROM catalogo.productos p
+FROM catalogo_productos p
 JOIN reportes.vista_inventario_consolidado i ON i.id_producto = p.id_producto
 CROSS JOIN reportes.parametros pr
 WHERE NOT EXISTS (SELECT 1
@@ -371,7 +530,23 @@ ORDER BY ultima_venta NULLS FIRST, p.sku;
 \echo '=== Consulta 17. Devoluciones por producto y categoria (periodo jul-oct 2026) ==='
 -- vendidas y devueltas se calculan aparte (dos CTE) y luego se juntan.
 -- solo cuentan ventas confirmadas y devoluciones aprobadas (RN-34).
-WITH vendidas AS (
+WITH ventas_devoluciones AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_devolucion, id_sede, id_pedido, fecha_solicitud, motivo, estado FROM ventas.devoluciones')
+        AS t(id_devolucion INTEGER, id_sede INTEGER, id_pedido INTEGER, fecha_solicitud DATE, motivo VARCHAR(200), estado VARCHAR(10))
+),
+ventas_detalle_devolucion AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_devolucion, id_producto, cantidad, condicion_producto FROM ventas.detalle_devolucion')
+        AS t(id_devolucion INTEGER, id_producto INTEGER, cantidad INTEGER, condicion_producto VARCHAR(10))
+),
+catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+),
+catalogo_categorias AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_categoria, nombre, descripcion, estado FROM catalogo.categorias')
+        AS t(id_categoria INTEGER, nombre VARCHAR(60), descripcion VARCHAR(200), estado VARCHAR(10))
+),
+vendidas AS (
     SELECT d.id_producto, SUM(d.cantidad) AS vendidas
     FROM reportes.vista_detalle_pedido_consolidado d
     JOIN reportes.vista_pedidos_consolidado p ON p.id_sede = d.id_sede AND p.id_pedido = d.id_pedido
@@ -380,8 +555,8 @@ WITH vendidas AS (
     GROUP BY d.id_producto
 ), devueltas AS (
     SELECT dd.id_producto, SUM(dd.cantidad) AS devueltas
-    FROM ventas.devoluciones dv
-    JOIN ventas.detalle_devolucion dd ON dd.id_devolucion = dv.id_devolucion
+    FROM ventas_devoluciones dv
+    JOIN ventas_detalle_devolucion dd ON dd.id_devolucion = dv.id_devolucion
     JOIN reportes.vista_pedidos_consolidado p ON p.id_sede = dv.id_sede AND p.id_pedido = dv.id_pedido
     WHERE dv.estado = 'APROBADA'
       AND p.fecha_pedido BETWEEN DATE '2026-07-01' AND DATE '2026-10-15'
@@ -395,33 +570,57 @@ SELECT c.nombre AS categoria, p.nombre AS producto,
        round(100.0 * SUM(COALESCE(d.devueltas, 0)) OVER (PARTITION BY c.id_categoria)
              / SUM(v.vendidas) OVER (PARTITION BY c.id_categoria), 2) AS pct_devolucion_categoria
 FROM vendidas v
-JOIN catalogo.productos  p ON p.id_producto  = v.id_producto
-JOIN catalogo.categorias c ON c.id_categoria = p.id_categoria
+JOIN catalogo_productos  p ON p.id_producto  = v.id_producto
+JOIN catalogo_categorias c ON c.id_categoria = p.id_categoria
 LEFT JOIN devueltas d ON d.id_producto = v.id_producto   -- productos sin devoluciones salen con 0 %
 ORDER BY c.nombre, pct_devolucion DESC, v.vendidas DESC;
 
 \echo
 \echo '=== Consulta 18a. Productos que hay en Bogota y NO en Cali (EXCEPT) ==='
 -- EXCEPT: lo que esta en la primera lista y no en la segunda.
--- aqui se leen los fragmentos directamente: es una consulta por sede.
+-- aqui se leen los fragmentos directamente (por dblink, desde andina_inventarios): es una consulta por sede.
+WITH catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+),
+inventarios_inv_bogota AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_bogota')
+        AS t(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER, existencia_actual INTEGER, stock_minimo INTEGER, fecha_actualizacion TIMESTAMP)
+),
+inventarios_inv_cali AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_cali')
+        AS t(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER, existencia_actual INTEGER, stock_minimo INTEGER, fecha_actualizacion TIMESTAMP)
+)
 SELECT p.sku, p.nombre
-FROM catalogo.productos p
+FROM catalogo_productos p
 WHERE p.id_producto IN (
-    SELECT id_producto FROM inventarios.inv_bogota
+    SELECT id_producto FROM inventarios_inv_bogota
     EXCEPT
-    SELECT id_producto FROM inventarios.inv_cali
+    SELECT id_producto FROM inventarios_inv_cali
 )
 ORDER BY p.sku;
 
 \echo
 \echo '=== Consulta 18b. Productos comunes a Medellin y Cali (INTERSECT) ==='
 -- INTERSECT: lo que esta en las dos listas
+WITH catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+),
+inventarios_inv_medellin AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_medellin')
+        AS t(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER, existencia_actual INTEGER, stock_minimo INTEGER, fecha_actualizacion TIMESTAMP)
+),
+inventarios_inv_cali AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_cali')
+        AS t(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER, existencia_actual INTEGER, stock_minimo INTEGER, fecha_actualizacion TIMESTAMP)
+)
 SELECT p.sku, p.nombre
-FROM catalogo.productos p
+FROM catalogo_productos p
 WHERE p.id_producto IN (
-    SELECT id_producto FROM inventarios.inv_medellin
+    SELECT id_producto FROM inventarios_inv_medellin
     INTERSECT
-    SELECT id_producto FROM inventarios.inv_cali
+    SELECT id_producto FROM inventarios_inv_cali
 )
 ORDER BY p.sku;
 
@@ -429,7 +628,15 @@ ORDER BY p.sku;
 \echo '=== Consulta 19. Clasificacion de vendedores por sede (RANK) ==='
 -- RANK da el puesto dentro de cada sede; si dos empatan comparten puesto
 -- y el siguiente se salta (1, 1, 3).
-WITH ventas_empleado AS (
+WITH catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+),
+identidad_empleados AS (
+    SELECT * FROM dblink('srv_identidad', 'SELECT id_empleado, id_sede, num_documento, nombre_completo, cargo, correo, estado FROM identidad.empleados')
+        AS t(id_empleado INTEGER, id_sede INTEGER, num_documento VARCHAR(20), nombre_completo VARCHAR(120), cargo VARCHAR(30), correo VARCHAR(100), estado VARCHAR(10))
+),
+ventas_empleado AS (
     SELECT id_sede, id_empleado, COUNT(*) AS pedidos, SUM(total_registrado) AS total_vendido
     FROM reportes.vista_pedidos_consolidado
     WHERE estado IN ('CONFIRMADO', 'ENTREGADO')
@@ -438,8 +645,8 @@ WITH ventas_empleado AS (
 SELECT s.nombre AS sede, e.nombre_completo AS vendedor, v.pedidos, v.total_vendido,
        RANK() OVER (PARTITION BY v.id_sede ORDER BY v.total_vendido DESC) AS puesto
 FROM ventas_empleado v
-JOIN catalogo.sedes      s ON s.id_sede     = v.id_sede
-JOIN identidad.empleados e ON e.id_empleado = v.id_empleado
+JOIN catalogo_sedes      s ON s.id_sede     = v.id_sede
+JOIN identidad_empleados e ON e.id_empleado = v.id_empleado
 ORDER BY s.id_sede, puesto;
 
 \echo
@@ -447,14 +654,38 @@ ORDER BY s.id_sede, puesto;
 -- cada fuente se resume en su propia CTE (una fila por sede) y al final
 -- se juntan por sede. si se uniera todo en un solo JOIN, los totales
 -- saldrian multiplicados. es la misma idea de vista_reporte_corporativo.
-WITH inv AS (
+WITH catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+),
+compras_ordenes_compra AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_orden_compra, id_proveedor, id_almacen_destino, id_empleado, fecha_orden, fecha_estimada, estado FROM compras.ordenes_compra')
+        AS t(id_orden_compra INTEGER, id_proveedor INTEGER, id_almacen_destino INTEGER, id_empleado INTEGER, fecha_orden DATE, fecha_estimada DATE, estado VARCHAR(10))
+),
+compras_detalle_orden_compra AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_orden_compra, id_producto, cantidad_solicitada, costo_unitario FROM compras.detalle_orden_compra')
+        AS t(id_orden_compra INTEGER, id_producto INTEGER, cantidad_solicitada INTEGER, costo_unitario NUMERIC(14,2))
+),
+catalogo_almacenes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_almacen, id_sede, nombre, tipo_almacen, estado FROM catalogo.almacenes')
+        AS t(id_almacen INTEGER, id_sede INTEGER, nombre VARCHAR(60), tipo_almacen VARCHAR(15), estado VARCHAR(10))
+),
+inventarios_transferencias AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_transferencia, id_almacen_origen, id_almacen_destino, fecha_solicitud, fecha_despacho, fecha_recepcion, estado FROM inventarios.transferencias')
+        AS t(id_transferencia INTEGER, id_almacen_origen INTEGER, id_almacen_destino INTEGER, fecha_solicitud DATE, fecha_despacho DATE, fecha_recepcion DATE, estado VARCHAR(10))
+),
+catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+),
+inv AS (
     SELECT id_sede, SUM(existencia_actual) AS unidades_inventario
     FROM reportes.vista_inventario_consolidado
     GROUP BY id_sede
 ), activos AS (
     SELECT i.id_sede, COUNT(DISTINCT i.id_producto) AS productos_activos
     FROM reportes.vista_inventario_consolidado i
-    JOIN catalogo.productos p ON p.id_producto = i.id_producto
+    JOIN catalogo_productos p ON p.id_producto = i.id_producto
     WHERE p.estado = 'ACTIVO'
     GROUP BY i.id_sede
 ), ven AS (
@@ -466,17 +697,17 @@ WITH inv AS (
 ), com AS (
     SELECT a.id_sede, COUNT(DISTINCT oc.id_orden_compra) AS ordenes_compra,
            SUM(d.cantidad_solicitada * d.costo_unitario) AS valor_compras
-    FROM compras.ordenes_compra oc
-    JOIN compras.detalle_orden_compra d ON d.id_orden_compra = oc.id_orden_compra
-    JOIN catalogo.almacenes a ON a.id_almacen = oc.id_almacen_destino
+    FROM compras_ordenes_compra oc
+    JOIN compras_detalle_orden_compra d ON d.id_orden_compra = oc.id_orden_compra
+    JOIN catalogo_almacenes a ON a.id_almacen = oc.id_almacen_destino
     WHERE oc.estado <> 'CANCELADA'
     GROUP BY a.id_sede
 ), tra AS (
     -- DISTINCT: si origen y destino son de la misma sede (las dos bodegas
     -- del CEDI), la transferencia sale dos veces y se contaria doble
     SELECT a.id_sede, COUNT(DISTINCT t.id_transferencia) AS transferencias
-    FROM inventarios.transferencias t
-    JOIN catalogo.almacenes a ON a.id_almacen IN (t.id_almacen_origen, t.id_almacen_destino)
+    FROM inventarios_transferencias t
+    JOIN catalogo_almacenes a ON a.id_almacen IN (t.id_almacen_origen, t.id_almacen_destino)
     WHERE t.estado <> 'CANCELADA'
     GROUP BY a.id_sede
 )
@@ -488,7 +719,7 @@ SELECT s.nombre AS sede,
        COALESCE(com.ordenes_compra, 0)     AS ordenes_compra,
        COALESCE(com.valor_compras, 0)      AS valor_compras,
        COALESCE(tra.transferencias, 0)     AS transferencias
-FROM catalogo.sedes s
+FROM catalogo_sedes s
 LEFT JOIN activos ac ON ac.id_sede  = s.id_sede
 LEFT JOIN inv        ON inv.id_sede = s.id_sede
 LEFT JOIN ven        ON ven.id_sede = s.id_sede

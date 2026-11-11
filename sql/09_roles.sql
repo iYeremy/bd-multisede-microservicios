@@ -41,14 +41,14 @@
 --  ------------------+----------+-----------+---------+--------------------------+--------------------------------+---------
 --  rol_administrador | SIUD     | SIUD      | SIUD    | SIUD                     | SIUD                           | S
 --  rol_gerencia      | -        | -         | -       | -                        | -                              | S (vistas)
---  rol_inventario    | S        | -         | -       | SIU transferencias;      | -                              | S (3 vistas + ultima carga)
+--  rol_inventario    | S        | -         | -       | SIU transferencias;      | -                              | S (3 vistas + ultima act.)
 --                    |          |           |         | SIU solo fragmento sede  |                                |
---  rol_compras       | S        | -         | SIU     | -                        | -                              | S (1 vista + ultima carga)
+--  rol_compras       | S        | -         | SIU     | -                        | -                              | S (1 vista + ultima act.)
 --  rol_vendedor      | S (2)    | -         | -       | -                        | SIU solo fragmento sede;       | -
 --                    |          |           |         |                          | SIU pagos, devoluciones        |
 --  rol_auditor       | S        | S (*)     | S       | S                        | S                              | S
---  svc_<servicio>    | SIU solo en las tablas de su servicio (svc_reportes: lee todo en su base,
---                    | recarga el staging y refresca las vistas)
+--  svc_<servicio>    | SIU solo en las tablas de su servicio (svc_reportes: lee y refresca
+--                    | las vistas de reportes)
 --
 --  (*) el auditor no ve la columna password_hash de identidad.usuarios.
 -- =====================================================================
@@ -207,33 +207,30 @@ GRANT SELECT, INSERT, UPDATE ON ventas.ped_cali,   ventas.det_ped_cali   TO vend
 
 -- ---------------------------------------------------------------------
 -- 10. base andina_reportes
---    aqui esta el staging (catalogo, identidad, compras, inventarios,
---    ventas), el control del ETL (etl) y las vistas (reportes).
---    gerencia, inventario y compras solo ven vistas, nunca el staging.
---    las vistas materializadas guardan su resultado, asi que leerlas
---    solo pide permiso sobre la vista, no sobre las tablas de abajo. por
---    eso gerencia ve los reportes sin tener permiso sobre el staging.
---    svc_reportes es el usuario del ETL cuando lo haga el backend:
---      - INSERT y DELETE en el staging, para recargarlo;
---      - INSERT en etl.cargas, para el control;
---      - MAINTAIN en las vistas, que es el permiso para hacerles
---        REFRESH sin ser su dueno (existe desde postgresql 17).
+--    aqui solo hay vistas (esquema reportes). las vistas materializadas
+--    guardan su resultado, asi que leerlas solo pide permiso sobre la
+--    vista: gerencia ve los reportes sin poder tocar las otras bases.
+--
+--    dblink: por defecto cualquiera puede ejecutar sus funciones (estan
+--    en el esquema public). se le quita a todos, asi solo postgres (el
+--    dueno de las vistas) usa dblink. el REFRESH corre con los permisos
+--    del dueno de la vista, por eso igual funciona.
+--
+--    svc_reportes recibe MAINTAIN: el permiso para hacer REFRESH sin ser
+--    el dueno (existe desde postgresql 17). asi el backend podra
+--    refrescar los reportes cada X minutos.
 -- ---------------------------------------------------------------------
 \c andina_reportes
-GRANT USAGE ON SCHEMA catalogo, identidad, compras, inventarios, ventas, etl, reportes
-      TO rol_administrador, rol_auditor, svc_reportes;
-GRANT SELECT ON ALL TABLES IN SCHEMA catalogo, identidad, compras, inventarios, ventas, etl, reportes
-      TO rol_administrador, rol_auditor, svc_reportes;
-GRANT INSERT, DELETE ON ALL TABLES IN SCHEMA catalogo, identidad, compras, inventarios, ventas
-      TO svc_reportes;
-GRANT INSERT ON etl.cargas TO svc_reportes;
+REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
+
+GRANT USAGE  ON SCHEMA reportes TO rol_administrador, rol_auditor, rol_gerencia,
+                                   rol_inventario, rol_compras, svc_reportes;
+GRANT SELECT ON ALL TABLES IN SCHEMA reportes TO rol_administrador, rol_auditor, rol_gerencia, svc_reportes;
 GRANT MAINTAIN ON ALL TABLES IN SCHEMA reportes TO svc_reportes;
 
-GRANT USAGE  ON SCHEMA reportes TO rol_gerencia, rol_inventario, rol_compras;
-GRANT SELECT ON ALL TABLES IN SCHEMA reportes TO rol_gerencia;
 GRANT SELECT ON reportes.vista_alertas_reabastecimiento,
                 reportes.vista_transferencias_en_transito,
                 reportes.vista_productos_sin_inventario,
-                reportes.vista_ultima_carga TO rol_inventario;
+                reportes.vista_ultima_actualizacion TO rol_inventario;
 GRANT SELECT ON reportes.vista_compras_pendientes,
-                reportes.vista_ultima_carga TO rol_compras;
+                reportes.vista_ultima_actualizacion TO rol_compras;

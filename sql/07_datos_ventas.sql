@@ -5,9 +5,11 @@
 -- y 22 devoluciones.
 --
 -- cuando este servicio necesita datos de otro (ids, precios...) no los
--- puede leer directo, porque estan en otra base. los toma del CSV que
--- ese servicio publico (carpeta csv/, ver sql/etl/extraer_*.sql). en el sistema
--- real eso seria una llamada HTTP al otro servicio.
+-- puede leer directo, porque estan en otra base. los trae con dblink
+-- (ver sql/dblink/servidores.sql) y al terminar se quita dblink de esta
+-- base (dblink/quitar.sql), para que el servicio no quede conectado a
+-- otra base. en el sistema real esto seria una llamada HTTP al otro
+-- servicio.
 -- aqui se necesitan los precios (catalogo) y que productos tiene cada
 -- almacen (inventarios), para vender solo lo que hay.
 -- los ids de clientes (1 a 100) y de vendedores de cada sede se escriben
@@ -20,23 +22,27 @@
 SELECT setseed(0.2026);
 
 -- ---------------------------------------------------------------------
--- datos que vienen de otros servicios
+-- datos que vienen de otros servicios, por dblink
+-- dblink('srv_x', 'consulta') corre la consulta en la otra base; AS t(...)
+-- dice que columnas trae y de que tipo.
 -- ---------------------------------------------------------------------
-CREATE TEMP TABLE tmp_productos (
-    id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER,
-    unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15)
-);
-\copy tmp_productos FROM 'csv/catalogo.productos.csv' WITH (FORMAT csv, HEADER)
+\ir dblink/servidores.sql
 
--- los 4 fragmentos de inventario van a una sola tabla temporal
-CREATE TEMP TABLE tmp_inv (
-    id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER,
-    existencia_actual INTEGER, stock_minimo INTEGER, fecha_actualizacion TIMESTAMP
-);
-\copy tmp_inv FROM 'csv/inventarios.inv_bogota.csv'   WITH (FORMAT csv, HEADER)
-\copy tmp_inv FROM 'csv/inventarios.inv_medellin.csv' WITH (FORMAT csv, HEADER)
-\copy tmp_inv FROM 'csv/inventarios.inv_cali.csv'     WITH (FORMAT csv, HEADER)
-\copy tmp_inv FROM 'csv/inventarios.inv_cedi.csv'     WITH (FORMAT csv, HEADER)
+-- precios de catalogo
+CREATE TEMP TABLE tmp_productos AS
+SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, precio_lista FROM catalogo.productos')
+         AS t(id_producto INTEGER, precio_lista NUMERIC(14,2));
+
+-- que productos hay en cada almacen. la consulta que viaja por dblink
+-- junta los 4 fragmentos con UNION ALL alla, en andina_inventarios, y
+-- trae una sola tabla.
+CREATE TEMP TABLE tmp_inv AS
+SELECT * FROM dblink('srv_inventarios',
+         'SELECT id_sede, id_almacen, id_producto FROM inventarios.inv_bogota
+          UNION ALL SELECT id_sede, id_almacen, id_producto FROM inventarios.inv_medellin
+          UNION ALL SELECT id_sede, id_almacen, id_producto FROM inventarios.inv_cali
+          UNION ALL SELECT id_sede, id_almacen, id_producto FROM inventarios.inv_cedi')
+         AS t(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER);
 
 -- ---------------------------------------------------------------------
 -- ventas: 300 pedidos (bogota 100, medellin 80, cali 70, CEDI 50)
@@ -209,3 +215,6 @@ WHERE x.n <= 1 + x.id_devolucion % 2;
 
 -- limpieza de las tablas temporales
 DROP TABLE tmp_productos, tmp_inv, tmp_ped_base, tmp_ped, tmp_det, tmp_pag, tmp_dev;
+
+-- ya no hace falta dblink en esta base
+\ir dblink/quitar.sql

@@ -3,9 +3,8 @@
 -- microservicio de catalogo y terceros: las tablas "base" que usan
 -- todos los demas (sedes, almacenes, productos, clientes...).
 --
--- se corre en la base andina_catalogo. tambien se corre en
--- andina_reportes para crear ahi el staging del ETL: las mismas tablas
--- (mismas columnas, mismas restricciones) donde llega la copia.
+-- se corre en la base andina_catalogo. reportes lee estas tablas con
+-- dblink.
 --
 -- aqui las FK son normales porque todo esta dentro de catalogo. los
 -- otros servicios guardan los id de estas tablas pero sin FK

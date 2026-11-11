@@ -5,31 +5,31 @@
 -- transferencias.
 --
 -- cuando este servicio necesita datos de otro (ids, precios...) no los
--- puede leer directo, porque estan en otra base. los toma del CSV que
--- ese servicio publico (carpeta csv/, ver sql/etl/extraer_*.sql). en el sistema
--- real eso seria una llamada HTTP al otro servicio.
+-- puede leer directo, porque estan en otra base. los trae con dblink
+-- (ver sql/dblink/servidores.sql) y al terminar se quita dblink de esta
+-- base (dblink/quitar.sql), para que el servicio no quede conectado a
+-- otra base. en el sistema real esto seria una llamada HTTP al otro
+-- servicio.
 -- aqui se necesitan los almacenes (con su sede) y los productos.
 -- =====================================================================
 
 SELECT setseed(0.2026);
 
 -- ---------------------------------------------------------------------
--- datos que vienen de catalogo
--- tablas temporales (CREATE TEMP TABLE, desaparecen al cerrar la
--- sesion) con las mismas columnas del CSV, en el mismo orden.
--- \copy ... FROM lee el archivo desde el computador donde corre psql.
--- HEADER: la primera linea del archivo son los nombres de las columnas.
+-- datos que vienen de catalogo, por dblink
+-- se guardan en tablas temporales (CREATE TEMP TABLE, desaparecen al
+-- cerrar la sesion). dblink('srv_catalogo', 'consulta') corre la
+-- consulta en andina_catalogo; AS t(...) dice que columnas trae.
 -- ---------------------------------------------------------------------
-CREATE TEMP TABLE tmp_almacenes (
-    id_almacen INTEGER, id_sede INTEGER, nombre VARCHAR(60), tipo_almacen VARCHAR(15), estado VARCHAR(10)
-);
-\copy tmp_almacenes FROM 'csv/catalogo.almacenes.csv' WITH (FORMAT csv, HEADER)
+\ir dblink/servidores.sql
 
-CREATE TEMP TABLE tmp_productos (
-    id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER,
-    unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15)
-);
-\copy tmp_productos FROM 'csv/catalogo.productos.csv' WITH (FORMAT csv, HEADER)
+CREATE TEMP TABLE tmp_almacenes AS
+SELECT * FROM dblink('srv_catalogo', 'SELECT id_almacen, id_sede FROM catalogo.almacenes')
+         AS t(id_almacen INTEGER, id_sede INTEGER);
+
+CREATE TEMP TABLE tmp_productos AS
+SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto FROM catalogo.productos')
+         AS t(id_producto INTEGER);
 
 -- ---------------------------------------------------------------------
 -- inventarios
@@ -142,3 +142,6 @@ WHERE t.id_transferencia = dt.id_transferencia
 
 -- limpieza de las tablas temporales
 DROP TABLE tmp_almacenes, tmp_productos, tmp_inv, tmp_tr;
+
+-- ya no hace falta dblink en esta base
+\ir dblink/quitar.sql

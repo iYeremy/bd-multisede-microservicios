@@ -6,8 +6,8 @@
 -- cada parte se conecta (\c) a la base donde esta lo que prueba, por eso
 -- los numeros no van en orden (la prueba 9 de permisos esta repartida en
 -- varias bases). al final hay dos pruebas nuevas: la 11 muestra que una
--- base no puede leer las tablas de otra, y la 12 muestra el ETL: un
--- pedido nuevo no aparece en los reportes hasta que corre el ETL.
+-- base no puede leer las tablas de otra sin dblink, y la 12 muestra que
+-- un pedido nuevo no aparece en los reportes hasta el REFRESH.
 --
 -- cada parte va entre BEGIN y ROLLBACK: lo que se inserta o cambia se
 -- deshace al final, asi el script se puede correr las veces que sea sin
@@ -210,8 +210,9 @@ ROLLBACK;
 
 -- ---------------------------------------------------------------------
 -- base andina_reportes: pruebas 6, 7, 9.1, 10 y la de referencias sin FK
--- aqui esta el staging con los datos de todos los servicios, por eso es
--- el unico lugar donde se pueden cruzar (y revisar los huerfanos).
+-- reportes es la unica base con dblink, por eso es el unico lugar donde
+-- se pueden cruzar los datos de varios servicios (y revisar huerfanos).
+-- cada tabla de otra base llega por dblink en una CTE (esquema_tabla).
 -- ---------------------------------------------------------------------
 \c andina_reportes
 BEGIN;
@@ -224,20 +225,40 @@ FROM reportes.vista_inventario_consolidado
 GROUP BY fragmento, id_sede
 ORDER BY id_sede;
 
+WITH inventarios_inv_bogota AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_bogota')
+        AS t(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER, existencia_actual INTEGER, stock_minimo INTEGER, fecha_actualizacion TIMESTAMP)
+),
+inventarios_inv_medellin AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_medellin')
+        AS t(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER, existencia_actual INTEGER, stock_minimo INTEGER, fecha_actualizacion TIMESTAMP)
+),
+inventarios_inv_cali AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_cali')
+        AS t(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER, existencia_actual INTEGER, stock_minimo INTEGER, fecha_actualizacion TIMESTAMP)
+),
+inventarios_inv_cedi AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_cedi')
+        AS t(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER, existencia_actual INTEGER, stock_minimo INTEGER, fecha_actualizacion TIMESTAMP)
+)
 SELECT (SELECT COUNT(*) FROM reportes.vista_inventario_consolidado) AS filas_vista,
-       (SELECT COUNT(*) FROM inventarios.inv_bogota) + (SELECT COUNT(*) FROM inventarios.inv_medellin)
-     + (SELECT COUNT(*) FROM inventarios.inv_cali)   + (SELECT COUNT(*) FROM inventarios.inv_cedi) AS suma_fragmentos;
+       (SELECT COUNT(*) FROM inventarios_inv_bogota) + (SELECT COUNT(*) FROM inventarios_inv_medellin)
+     + (SELECT COUNT(*) FROM inventarios_inv_cali)   + (SELECT COUNT(*) FROM inventarios_inv_cedi) AS suma_fragmentos;
 
 \echo
 \echo '=== Prueba 7a. Consulta con CTE: ventas confirmadas por sede ==='
-WITH ventas_sede AS (
+WITH catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+),
+ventas_sede AS (
     SELECT id_sede, SUM(total_registrado) AS total
     FROM reportes.vista_pedidos_consolidado
     WHERE estado IN ('CONFIRMADO', 'ENTREGADO')
     GROUP BY id_sede
 )
 SELECT s.nombre, v.total
-FROM ventas_sede v JOIN catalogo.sedes s ON s.id_sede = v.id_sede
+FROM ventas_sede v JOIN catalogo_sedes s ON s.id_sede = v.id_sede
 ORDER BY v.total DESC;
 
 \echo
@@ -255,9 +276,10 @@ GROUP BY sede;
 SET ROLE gerente_general;
 SELECT sede, valor_ventas, pedidos_pendientes FROM reportes.vista_reporte_corporativo ORDER BY id_sede;
 
-\echo '--- 9.1b gerente_general: leer el staging de ventas en reportes (DENEGADO) -> esperado: ERROR permiso denegado ---'
--- ve el reporte, pero no las tablas que hay debajo
-SELECT COUNT(*) FROM ventas.ped_bogota;
+\echo '--- 9.1b gerente_general: usar dblink para leer ventas (DENEGADO) -> esperado: ERROR permiso denegado para la funcion dblink ---'
+-- ve el reporte, pero no puede usar dblink para ir a las otras bases:
+-- 09_roles.sql le quito a todos el permiso de ejecutar sus funciones
+SELECT * FROM dblink('srv_ventas', 'SELECT COUNT(*) FROM ventas.ped_bogota') AS t(pedidos BIGINT);
 RESET ROLE;
 
 
@@ -265,6 +287,10 @@ RESET ROLE;
 \echo '=== Prueba 10. El reporte corporativo no duplica ventas ni cantidades ==='
 -- cada total del reporte se compara con el mismo total sacado
 -- directo de la fuente: si son iguales, el reporte no duplico nada
+WITH compras_ordenes_compra AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_orden_compra, id_proveedor, id_almacen_destino, id_empleado, fecha_orden, fecha_estimada, estado FROM compras.ordenes_compra')
+        AS t(id_orden_compra INTEGER, id_proveedor INTEGER, id_almacen_destino INTEGER, id_empleado INTEGER, fecha_orden DATE, fecha_estimada DATE, estado VARCHAR(10))
+)
 SELECT 'valor_ventas' AS medida,
        (SELECT SUM(valor_ventas) FROM reportes.vista_reporte_corporativo) AS reporte,
        (SELECT SUM(total_registrado) FROM reportes.vista_pedidos_consolidado WHERE estado IN ('CONFIRMADO', 'ENTREGADO')) AS fuente
@@ -275,7 +301,7 @@ SELECT 'unidades_inventario',
 UNION ALL
 SELECT 'ordenes_compra',
        (SELECT SUM(ordenes_compra) FROM reportes.vista_reporte_corporativo),
-       (SELECT COUNT(*) FROM compras.ordenes_compra WHERE estado <> 'CANCELADA')
+       (SELECT COUNT(*) FROM compras_ordenes_compra WHERE estado <> 'CANCELADA')
 UNION ALL
 SELECT 'pedidos_pendientes',
        (SELECT SUM(pedidos_pendientes) FROM reportes.vista_reporte_corporativo),
@@ -296,62 +322,110 @@ WHERE p.estado IN ('CONFIRMADO', 'ENTREGADO');
 -- apuntan a algo inexistente (huerfanos). todas deben dar 0.
 -- las que dicen "de su sede" revisan tambien que el almacen o el
 -- empleado sean de la misma sede que la fila.
+WITH compras_ordenes_compra AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_orden_compra, id_proveedor, id_almacen_destino, id_empleado, fecha_orden, fecha_estimada, estado FROM compras.ordenes_compra')
+        AS t(id_orden_compra INTEGER, id_proveedor INTEGER, id_almacen_destino INTEGER, id_empleado INTEGER, fecha_orden DATE, fecha_estimada DATE, estado VARCHAR(10))
+),
+catalogo_proveedores AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_proveedor, identificacion, razon_social, ciudad, correo, telefono, estado FROM catalogo.proveedores')
+        AS t(id_proveedor INTEGER, identificacion VARCHAR(20), razon_social VARCHAR(100), ciudad VARCHAR(60), correo VARCHAR(100), telefono VARCHAR(20), estado VARCHAR(10))
+),
+identidad_empleados AS (
+    SELECT * FROM dblink('srv_identidad', 'SELECT id_empleado, id_sede, num_documento, nombre_completo, cargo, correo, estado FROM identidad.empleados')
+        AS t(id_empleado INTEGER, id_sede INTEGER, num_documento VARCHAR(20), nombre_completo VARCHAR(120), cargo VARCHAR(30), correo VARCHAR(100), estado VARCHAR(10))
+),
+compras_detalle_orden_compra AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_orden_compra, id_producto, cantidad_solicitada, costo_unitario FROM compras.detalle_orden_compra')
+        AS t(id_orden_compra INTEGER, id_producto INTEGER, cantidad_solicitada INTEGER, costo_unitario NUMERIC(14,2))
+),
+catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+),
+catalogo_almacenes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_almacen, id_sede, nombre, tipo_almacen, estado FROM catalogo.almacenes')
+        AS t(id_almacen INTEGER, id_sede INTEGER, nombre VARCHAR(60), tipo_almacen VARCHAR(15), estado VARCHAR(10))
+),
+inventarios_detalle_transferencia AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_transferencia, id_producto, cantidad_enviada, cantidad_recibida FROM inventarios.detalle_transferencia')
+        AS t(id_transferencia INTEGER, id_producto INTEGER, cantidad_enviada INTEGER, cantidad_recibida INTEGER)
+),
+catalogo_clientes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_cliente, tipo_documento, num_documento, nombre_completo, correo, telefono, estado FROM catalogo.clientes')
+        AS t(id_cliente INTEGER, tipo_documento VARCHAR(10), num_documento VARCHAR(20), nombre_completo VARCHAR(120), correo VARCHAR(100), telefono VARCHAR(20), estado VARCHAR(10))
+),
+ventas_pagos AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_pago, id_sede, id_pedido, fecha_pago, valor, medio_pago, estado FROM ventas.pagos')
+        AS t(id_pago INTEGER, id_sede INTEGER, id_pedido INTEGER, fecha_pago DATE, valor NUMERIC(14,2), medio_pago VARCHAR(20), estado VARCHAR(10))
+),
+ventas_devoluciones AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_devolucion, id_sede, id_pedido, fecha_solicitud, motivo, estado FROM ventas.devoluciones')
+        AS t(id_devolucion INTEGER, id_sede INTEGER, id_pedido INTEGER, fecha_solicitud DATE, motivo VARCHAR(200), estado VARCHAR(10))
+),
+ventas_detalle_devolucion AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_devolucion, id_producto, cantidad, condicion_producto FROM ventas.detalle_devolucion')
+        AS t(id_devolucion INTEGER, id_producto INTEGER, cantidad INTEGER, condicion_producto VARCHAR(10))
+),
+catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+)
 SELECT 'compras.ordenes_compra.id_proveedor' AS referencia, COUNT(*) AS huerfanos
-FROM compras.ordenes_compra o
-WHERE NOT EXISTS (SELECT 1 FROM catalogo.proveedores p WHERE p.id_proveedor = o.id_proveedor)
+FROM compras_ordenes_compra o
+WHERE NOT EXISTS (SELECT 1 FROM catalogo_proveedores p WHERE p.id_proveedor = o.id_proveedor)
 UNION ALL
 SELECT 'compras.ordenes_compra.id_empleado', COUNT(*)
-FROM compras.ordenes_compra o
-WHERE NOT EXISTS (SELECT 1 FROM identidad.empleados e WHERE e.id_empleado = o.id_empleado)
+FROM compras_ordenes_compra o
+WHERE NOT EXISTS (SELECT 1 FROM identidad_empleados e WHERE e.id_empleado = o.id_empleado)
 UNION ALL
 SELECT 'compras.detalle_orden_compra.id_producto', COUNT(*)
-FROM compras.detalle_orden_compra d
-WHERE NOT EXISTS (SELECT 1 FROM catalogo.productos p WHERE p.id_producto = d.id_producto)
+FROM compras_detalle_orden_compra d
+WHERE NOT EXISTS (SELECT 1 FROM catalogo_productos p WHERE p.id_producto = d.id_producto)
 UNION ALL
 SELECT 'inventarios.inv_*.id_almacen (y su sede)', COUNT(*)
 FROM reportes.vista_inventario_consolidado i
-WHERE NOT EXISTS (SELECT 1 FROM catalogo.almacenes a WHERE a.id_almacen = i.id_almacen AND a.id_sede = i.id_sede)
+WHERE NOT EXISTS (SELECT 1 FROM catalogo_almacenes a WHERE a.id_almacen = i.id_almacen AND a.id_sede = i.id_sede)
 UNION ALL
 SELECT 'inventarios.detalle_transferencia.id_producto', COUNT(*)
-FROM inventarios.detalle_transferencia d
-WHERE NOT EXISTS (SELECT 1 FROM catalogo.productos p WHERE p.id_producto = d.id_producto)
+FROM inventarios_detalle_transferencia d
+WHERE NOT EXISTS (SELECT 1 FROM catalogo_productos p WHERE p.id_producto = d.id_producto)
 UNION ALL
 SELECT 'ventas.ped_*.id_cliente', COUNT(*)
 FROM reportes.vista_pedidos_consolidado v
-WHERE NOT EXISTS (SELECT 1 FROM catalogo.clientes c WHERE c.id_cliente = v.id_cliente)
+WHERE NOT EXISTS (SELECT 1 FROM catalogo_clientes c WHERE c.id_cliente = v.id_cliente)
 UNION ALL
 SELECT 'ventas.ped_*.id_almacen (de su sede)', COUNT(*)
 FROM reportes.vista_pedidos_consolidado v
-WHERE NOT EXISTS (SELECT 1 FROM catalogo.almacenes a WHERE a.id_almacen = v.id_almacen AND a.id_sede = v.id_sede)
+WHERE NOT EXISTS (SELECT 1 FROM catalogo_almacenes a WHERE a.id_almacen = v.id_almacen AND a.id_sede = v.id_sede)
 UNION ALL
 SELECT 'ventas.ped_*.id_empleado (de su sede)', COUNT(*)
 FROM reportes.vista_pedidos_consolidado v
-WHERE NOT EXISTS (SELECT 1 FROM identidad.empleados e WHERE e.id_empleado = v.id_empleado AND e.id_sede = v.id_sede)
+WHERE NOT EXISTS (SELECT 1 FROM identidad_empleados e WHERE e.id_empleado = v.id_empleado AND e.id_sede = v.id_sede)
 UNION ALL
 SELECT 'ventas.det_ped_*.id_producto', COUNT(*)
 FROM reportes.vista_detalle_pedido_consolidado d
-WHERE NOT EXISTS (SELECT 1 FROM catalogo.productos p WHERE p.id_producto = d.id_producto)
+WHERE NOT EXISTS (SELECT 1 FROM catalogo_productos p WHERE p.id_producto = d.id_producto)
 UNION ALL
 SELECT 'ventas.pagos (id_sede, id_pedido)', COUNT(*)
-FROM ventas.pagos g
+FROM ventas_pagos g
 WHERE NOT EXISTS (SELECT 1 FROM reportes.vista_pedidos_consolidado v
                   WHERE v.id_sede = g.id_sede AND v.id_pedido = g.id_pedido)
 UNION ALL
 SELECT 'ventas.devoluciones (id_sede, id_pedido)', COUNT(*)
-FROM ventas.devoluciones dv
+FROM ventas_devoluciones dv
 WHERE NOT EXISTS (SELECT 1 FROM reportes.vista_pedidos_consolidado v
                   WHERE v.id_sede = dv.id_sede AND v.id_pedido = dv.id_pedido)
 UNION ALL
 SELECT 'ventas.detalle_devolucion: producto del pedido', COUNT(*)
-FROM ventas.detalle_devolucion dd
-JOIN ventas.devoluciones dv ON dv.id_devolucion = dd.id_devolucion
+FROM ventas_detalle_devolucion dd
+JOIN ventas_devoluciones dv ON dv.id_devolucion = dd.id_devolucion
 WHERE NOT EXISTS (SELECT 1 FROM reportes.vista_detalle_pedido_consolidado d
                   WHERE d.id_sede = dv.id_sede AND d.id_pedido = dv.id_pedido
                     AND d.id_producto = dd.id_producto)
 UNION ALL
 SELECT 'identidad.empleados.id_sede', COUNT(*)
-FROM identidad.empleados e
-WHERE NOT EXISTS (SELECT 1 FROM catalogo.sedes s WHERE s.id_sede = e.id_sede);
+FROM identidad_empleados e
+WHERE NOT EXISTS (SELECT 1 FROM catalogo_sedes s WHERE s.id_sede = e.id_sede);
 
 ROLLBACK;
 
@@ -359,12 +433,15 @@ ROLLBACK;
 \echo '=== Prueba 11. Cada servicio solo ve su propia base ==='
 -- conectados a ventas, las tablas de catalogo no existen: viven en otra
 -- base. esto es lo que obliga a que ventas le pida los datos al
--- servicio de catalogo (y a que reportes reciba los datos por un ETL).
+-- servicio de catalogo. la unica base que puede leer otras es reportes,
+-- porque tiene dblink.
 \c andina_ventas
 \echo '--- 11.1 desde andina_ventas: leer catalogo.productos -> esperado: ERROR la relacion no existe ---'
 SELECT COUNT(*) FROM catalogo.productos;
 
 \echo '--- 11.2 nombrando la otra base (base.esquema.tabla) -> esperado: ERROR no estan implementadas las referencias entre bases ---'
+-- sin dblink postgresql no puede ir a otra base. ventas no tiene dblink
+-- (se le quito al terminar sus datos de prueba).
 SELECT COUNT(*) FROM andina_catalogo.catalogo.productos;
 
 \echo '--- 11.3 a que base puede entrar cada rol (has_database_privilege) ---'
@@ -382,13 +459,13 @@ FROM (VALUES ('gerente_general'), ('vendedor_bogota'), ('inventario_cedi'), ('co
 ORDER BY r.rol;
 
 \echo
-\echo '=== Prueba 12. ETL: los reportes van atrasados hasta que corre el ETL (consistencia eventual) ==='
--- la idea: un pedido nuevo se guarda en andina_ventas, pero los reportes
--- no lo ven hasta que el ETL lo lleva a reportes y refresca las vistas
--- materializadas.
--- esta prueba NO va en BEGIN ... ROLLBACK: el ETL tiene que ver el
--- pedido guardado de verdad. al final se borra y se corre el ETL otra
--- vez, asi los datos quedan como estaban.
+\echo '=== Prueba 12. Vistas materializadas: el reporte no cambia hasta el REFRESH ==='
+-- la idea: un pedido nuevo se guarda en andina_ventas, pero el reporte
+-- (vista materializada) sigue con el resultado guardado hasta que corre
+-- refrescar_reportes.sql, que vuelve a traer los datos por dblink.
+-- esta prueba NO va en BEGIN ... ROLLBACK: el refresco tiene que ver el
+-- pedido guardado de verdad. al final se borra y se refresca otra vez,
+-- asi los datos quedan como estaban.
 
 \echo '--- 12.1 antes: pedidos de Bogota que ve el reporte ---'
 \c andina_reportes
@@ -405,56 +482,96 @@ VALUES (1, 5, 3, DATE '2026-10-15', 'PENDIENTE', 0)
 RETURNING id_pedido AS pedido_prueba \gset
 SELECT COUNT(*) AS pedidos_bogota_en_ventas FROM ventas.ped_bogota;
 
-\echo '--- 12.3 el reporte todavia NO lo ve: sigue con la ultima carga ---'
+\echo '--- 12.3 el reporte todavia NO lo ve: sigue con el ultimo REFRESH ---'
 \c andina_reportes
 SELECT COUNT(*) AS pedidos_bogota_en_reporte
 FROM reportes.vista_pedidos_consolidado
 WHERE id_sede = 1;
 
-\echo '--- 12.4 se corre el ETL completo ---'
-\ir etl/refrescar_reportes.sql
+\echo '--- 12.4 se refrescan los reportes ---'
+\ir refrescar_reportes.sql
 
 \echo '--- 12.5 ahora el reporte si lo ve (uno mas que en 12.1) ---'
 SELECT COUNT(*) AS pedidos_bogota_en_reporte
 FROM reportes.vista_pedidos_consolidado
 WHERE id_sede = 1;
 
-\echo '--- 12.6 control de la carga: tablas donde no cuadran las filas de origen y de staging (debe dar 0) ---'
--- etl.cargas no deja guardar una fila que no cuadre (CHECK), asi que
--- esto siempre da 0. si una tabla no cuadrara, la carga entera se habria
--- deshecho.
-SELECT COUNT(*) AS tablas_que_no_cuadran
-FROM etl.cargas
-WHERE fecha_carga = (SELECT MAX(fecha_carga) FROM etl.cargas)
-  AND filas_origen <> filas_staging;
-
-\echo '--- 12.7 limpieza: se borra el pedido de prueba y se corre el ETL otra vez ---'
+\echo '--- 12.6 limpieza: se borra el pedido de prueba y se refrescan los reportes otra vez ---'
 -- es la unica vez que se borra algo: es solo la limpieza de esta prueba
 \c andina_ventas
 DELETE FROM ventas.ped_bogota WHERE id_pedido = :pedido_prueba;
-\ir etl/refrescar_reportes.sql
+\c andina_reportes
+\ir refrescar_reportes.sql
 
 -- refrescar_reportes.sql prende ON_ERROR_STOP, se vuelve a apagar
 \set ON_ERROR_STOP off
 
 \c andina_reportes
 \echo
-\echo '--- Volumen de datos de prueba (en el staging de reportes, sin las filas de las pruebas) ---'
+\echo '--- Volumen de datos de prueba (leido por dblink desde cada base, sin las filas de las pruebas) ---'
 -- conteo final para comparar con los minimos de la seccion 10
-SELECT 'sedes' AS tabla, COUNT(*) FROM catalogo.sedes
-UNION ALL SELECT 'almacenes', COUNT(*) FROM catalogo.almacenes
-UNION ALL SELECT 'categorias', COUNT(*) FROM catalogo.categorias
-UNION ALL SELECT 'productos', COUNT(*) FROM catalogo.productos
-UNION ALL SELECT 'proveedores', COUNT(*) FROM catalogo.proveedores
-UNION ALL SELECT 'clientes', COUNT(*) FROM catalogo.clientes
-UNION ALL SELECT 'empleados', COUNT(*) FROM identidad.empleados
+WITH catalogo_sedes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, ciudad, direccion, tipo_sede, estado FROM catalogo.sedes')
+        AS t(id_sede INTEGER, nombre VARCHAR(60), ciudad VARCHAR(60), direccion VARCHAR(120), tipo_sede VARCHAR(15), estado VARCHAR(10))
+),
+catalogo_almacenes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_almacen, id_sede, nombre, tipo_almacen, estado FROM catalogo.almacenes')
+        AS t(id_almacen INTEGER, id_sede INTEGER, nombre VARCHAR(60), tipo_almacen VARCHAR(15), estado VARCHAR(10))
+),
+catalogo_categorias AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_categoria, nombre, descripcion, estado FROM catalogo.categorias')
+        AS t(id_categoria INTEGER, nombre VARCHAR(60), descripcion VARCHAR(200), estado VARCHAR(10))
+),
+catalogo_productos AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, unidad_medida, precio_lista, estado FROM catalogo.productos')
+        AS t(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, unidad_medida VARCHAR(10), precio_lista NUMERIC(14,2), estado VARCHAR(15))
+),
+catalogo_proveedores AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_proveedor, identificacion, razon_social, ciudad, correo, telefono, estado FROM catalogo.proveedores')
+        AS t(id_proveedor INTEGER, identificacion VARCHAR(20), razon_social VARCHAR(100), ciudad VARCHAR(60), correo VARCHAR(100), telefono VARCHAR(20), estado VARCHAR(10))
+),
+catalogo_clientes AS (
+    SELECT * FROM dblink('srv_catalogo', 'SELECT id_cliente, tipo_documento, num_documento, nombre_completo, correo, telefono, estado FROM catalogo.clientes')
+        AS t(id_cliente INTEGER, tipo_documento VARCHAR(10), num_documento VARCHAR(20), nombre_completo VARCHAR(120), correo VARCHAR(100), telefono VARCHAR(20), estado VARCHAR(10))
+),
+identidad_empleados AS (
+    SELECT * FROM dblink('srv_identidad', 'SELECT id_empleado, id_sede, num_documento, nombre_completo, cargo, correo, estado FROM identidad.empleados')
+        AS t(id_empleado INTEGER, id_sede INTEGER, num_documento VARCHAR(20), nombre_completo VARCHAR(120), cargo VARCHAR(30), correo VARCHAR(100), estado VARCHAR(10))
+),
+ventas_pagos AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_pago, id_sede, id_pedido, fecha_pago, valor, medio_pago, estado FROM ventas.pagos')
+        AS t(id_pago INTEGER, id_sede INTEGER, id_pedido INTEGER, fecha_pago DATE, valor NUMERIC(14,2), medio_pago VARCHAR(20), estado VARCHAR(10))
+),
+ventas_devoluciones AS (
+    SELECT * FROM dblink('srv_ventas', 'SELECT id_devolucion, id_sede, id_pedido, fecha_solicitud, motivo, estado FROM ventas.devoluciones')
+        AS t(id_devolucion INTEGER, id_sede INTEGER, id_pedido INTEGER, fecha_solicitud DATE, motivo VARCHAR(200), estado VARCHAR(10))
+),
+compras_ordenes_compra AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_orden_compra, id_proveedor, id_almacen_destino, id_empleado, fecha_orden, fecha_estimada, estado FROM compras.ordenes_compra')
+        AS t(id_orden_compra INTEGER, id_proveedor INTEGER, id_almacen_destino INTEGER, id_empleado INTEGER, fecha_orden DATE, fecha_estimada DATE, estado VARCHAR(10))
+),
+compras_recepciones_compra AS (
+    SELECT * FROM dblink('srv_compras', 'SELECT id_recepcion, id_orden_compra, fecha_recepcion, estado FROM compras.recepciones_compra')
+        AS t(id_recepcion INTEGER, id_orden_compra INTEGER, fecha_recepcion DATE, estado VARCHAR(10))
+),
+inventarios_transferencias AS (
+    SELECT * FROM dblink('srv_inventarios', 'SELECT id_transferencia, id_almacen_origen, id_almacen_destino, fecha_solicitud, fecha_despacho, fecha_recepcion, estado FROM inventarios.transferencias')
+        AS t(id_transferencia INTEGER, id_almacen_origen INTEGER, id_almacen_destino INTEGER, fecha_solicitud DATE, fecha_despacho DATE, fecha_recepcion DATE, estado VARCHAR(10))
+)
+SELECT 'sedes' AS tabla, COUNT(*) FROM catalogo_sedes
+UNION ALL SELECT 'almacenes', COUNT(*) FROM catalogo_almacenes
+UNION ALL SELECT 'categorias', COUNT(*) FROM catalogo_categorias
+UNION ALL SELECT 'productos', COUNT(*) FROM catalogo_productos
+UNION ALL SELECT 'proveedores', COUNT(*) FROM catalogo_proveedores
+UNION ALL SELECT 'clientes', COUNT(*) FROM catalogo_clientes
+UNION ALL SELECT 'empleados', COUNT(*) FROM identidad_empleados
 UNION ALL SELECT 'pedidos_venta', COUNT(*) FROM reportes.vista_pedidos_consolidado
 UNION ALL SELECT 'detalle_pedido', COUNT(*) FROM reportes.vista_detalle_pedido_consolidado
-UNION ALL SELECT 'pagos', COUNT(*) FROM ventas.pagos
-UNION ALL SELECT 'devoluciones', COUNT(*) FROM ventas.devoluciones
-UNION ALL SELECT 'ordenes_compra', COUNT(*) FROM compras.ordenes_compra
-UNION ALL SELECT 'recepciones_compra', COUNT(*) FROM compras.recepciones_compra
-UNION ALL SELECT 'transferencias', COUNT(*) FROM inventarios.transferencias
+UNION ALL SELECT 'pagos', COUNT(*) FROM ventas_pagos
+UNION ALL SELECT 'devoluciones', COUNT(*) FROM ventas_devoluciones
+UNION ALL SELECT 'ordenes_compra', COUNT(*) FROM compras_ordenes_compra
+UNION ALL SELECT 'recepciones_compra', COUNT(*) FROM compras_recepciones_compra
+UNION ALL SELECT 'transferencias', COUNT(*) FROM inventarios_transferencias
 UNION ALL SELECT 'inventarios', COUNT(*) FROM reportes.vista_inventario_consolidado;
 
 -- se dejan las opciones de psql como estaban
