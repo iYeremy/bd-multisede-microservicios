@@ -28,7 +28,7 @@ La organización necesita que cada sede consulte y registre sus propios datos lo
 
 Se diseña e implementa un sistema de **microservicios** sobre PostgreSQL. Cada microservicio (Catálogo y Terceros, Compras y Abastecimiento, Inventarios y Transferencias, Ventas y Pagos, Identidad y Accesos, y Reportes Corporativos) tiene **su propia base de datos** y es el único que la modifica. Como una consulta de PostgreSQL no puede leer tablas de otra base, ningún servicio accede directamente a los datos de otro: cuando los necesita, se los pide al servicio dueño.
 
-Los inventarios y los pedidos de venta se fragmentan horizontalmente por sede dentro de la base de su servicio. Reportes Corporativos mantiene en su base una **copia de solo lectura** de los datos de los demás servicios, que se actualiza al sincronizar, y sobre esa copia construye las vistas de integración.
+Los inventarios y los pedidos de venta se fragmentan horizontalmente por sede dentro de la base de su servicio. Reportes Corporativos se alimenta con un **proceso ETL**: cada X minutos extrae los datos de cada servicio, los carga en el *staging* de su base y refresca **vistas materializadas** con los reportes. Ninguna base se conecta a otra.
 
 Cada servicio tendrá un backend propio que expone su información por HTTP, y la solución se desplegará en la nube.
 
@@ -45,14 +45,14 @@ Diseñar e implementar en PostgreSQL la capa de datos de un sistema comercial mu
 3. Implementar la integridad de los datos con claves primarias, claves foráneas locales, UNIQUE, NOT NULL y CHECK.
 4. Fragmentar horizontalmente por sede los inventarios y los pedidos de venta, y unificarlos con vistas consolidadas.
 5. Definir seis roles con privilegios diferenciados por base de datos, esquema y operación.
-6. Mantener una copia de lectura de los datos de todos los servicios en la base de reportes, y crear sobre ella diez vistas y veinte consultas SQL avanzadas que respondan a las necesidades de información de la empresa.
+6. Alimentar la base de reportes con un proceso ETL y crear sobre ella diez vistas (materializadas, refrescadas en cada carga) y veinte consultas SQL avanzadas que respondan a las necesidades de información de la empresa.
 7. Generar datos de prueba coherentes, de al menos cuatro meses, que permitan verificar consultas, restricciones y permisos.
 8. Desarrollar el backend de cada microservicio, con comunicación entre servicios por HTTP.
 9. Desplegar la solución en la nube.
 
 ## 3. Alcance
 
-El proyecto cubre el diseño y la implementación en PostgreSQL de las bases de datos de cada microservicio, el backend que las usa y su despliegue en la nube. La primera parte, ya terminada, es toda la capa de datos: bases, tablas, datos, sincronización, vistas, roles, consultas y pruebas.
+El proyecto cubre el diseño y la implementación en PostgreSQL de las bases de datos de cada microservicio, el backend que las usa y su despliegue en la nube. La primera parte, ya terminada, es toda la capa de datos: bases, tablas, datos, ETL hacia reportes, vistas materializadas, roles, consultas y pruebas.
 
 ### 3.1 Sedes y almacenes
 
@@ -67,7 +67,7 @@ Son cuatro sedes y cinco almacenes. Cada almacén pertenece a una sola sede.
 
 ### 3.2 Microservicios y bases de datos
 
-Cada base tiene dentro un esquema con el nombre del servicio, así las tablas se llaman igual en su base y en la copia de reportes (por ejemplo `ventas.ped_bogota`).
+Cada base tiene dentro un esquema con el nombre del servicio, así las tablas se llaman igual en su base y en el staging de reportes (por ejemplo `ventas.ped_bogota`).
 
 | Microservicio | Base (esquema) | Tablas que administra |
 | --- | --- | --- |
@@ -76,7 +76,7 @@ Cada base tiene dentro un esquema con el nombre del servicio, así las tablas se
 | Inventarios y Transferencias | `andina_inventarios` (`inventarios`) | inventarios (fragmentada por sede), transferencias, detalle\_transferencia |
 | Ventas y Pagos | `andina_ventas` (`ventas`) | pedidos\_venta y detalle\_pedido (fragmentadas por sede), pagos, devoluciones, detalle\_devolucion |
 | Identidad y Accesos | `andina_identidad` (`identidad`) | empleados, usuarios, auditoria\_accesos |
-| Reportes Corporativos | `andina_reportes` (`reportes`) | Ninguna tabla propia. Guarda una copia de solo lectura de las tablas de los demás servicios (excepto usuarios y auditoría) y sobre ella crea las vistas y consultas de integración |
+| Reportes Corporativos | `andina_reportes` (`reportes`) | Ninguna tabla de negocio. Tiene el *staging* que carga el ETL (copia de las tablas de los demás servicios, excepto usuarios y auditoría), el control de cargas (`etl.cargas`) y las vistas materializadas de integración |
 
 ### 3.3 Fragmentación horizontal
 
@@ -86,7 +86,7 @@ Se fragmentan dos conjuntos operacionales por sede: los **inventarios** y los **
 
 - Modelo Entidad–Relación, modelo relacional, normalización hasta 3FN y diccionario de datos.
 - Diagrama de arquitectura de microservicios con responsables de datos e interacciones conceptuales.
-- Scripts de bases, tablas, restricciones, fragmentos, sincronización hacia reportes, vistas, roles, datos de prueba y consultas.
+- Scripts de bases, tablas, restricciones, fragmentos, ETL hacia reportes, vistas, roles, datos de prueba y consultas.
 - Diez vistas, veinte consultas avanzadas y una matriz de pruebas de restricciones y permisos.
 - Manual de instalación y ejecución con psql.
 - Backend por microservicio (Go) con comunicación por HTTP, y despliegue en la nube.
@@ -95,7 +95,8 @@ Se fragmentan dos conjuntos operacionales por sede: los **inventarios** y los **
 
 - Docker como requisito: está permitido, pero no se califica. Los scripts funcionan igual en un contenedor.
 - Triggers, políticas RLS y pruebas de concurrencia, bloqueo o reversión de transacciones.
-- Sincronización en tiempo real hacia reportes: la copia se actualiza por lotes.
+- Actualización en tiempo real de los reportes: el ETL corre por lotes, cada X minutos.
+- Conexión directa entre bases (`dblink`, `postgres_fdw`): rompería el aislamiento entre servicios.
 - Conciliación automática de movimientos de inventario.
 
 ### 3.6 Volumen de datos de prueba
@@ -135,7 +136,7 @@ Los siguientes supuestos resuelven lo que el enunciado deja abierto; si alguno c
 - **S-10.** No hay triggers. Las consecuencias entre servicios (por ejemplo, que una recepción aumente el inventario) se resuelven entre servicios por HTTP en el backend; en los datos de prueba ya se cargan coherentes.
 - **S-11.** Los valores monetarios usan `NUMERIC(14,2)` y las cantidades `INTEGER`. Los productos se manejan en unidades enteras.
 - **S-12.** En los datos de prueba las contraseñas son un hash de ejemplo (`md5`). El inicio de sesión real lo hará el backend de Identidad y Accesos, con un algoritmo de hash seguro.
-- **S-18.** Reportes trabaja sobre una copia de lectura que se actualiza al sincronizar: cada servicio exporta sus tablas a CSV y reportes las carga (en el backend lo hará un proceso periódico). Entre una sincronización y otra, los reportes pueden ir algo atrasados (consistencia eventual).
+- **S-18.** Los reportes se alimentan con un ETL por lotes: se extraen las tablas de cada servicio a CSV, se cargan en el staging de reportes (carga completa, en una transacción) y se refrescan las vistas materializadas. Hoy lo corre `psql` (programado con cron); con el backend lo hará el servicio de reportes. Entre una carga y otra, los reportes pueden ir atrasados (consistencia eventual).
 
 ### 4.3 De datos y consultas
 
@@ -219,7 +220,7 @@ Las reglas se agrupan por microservicio; la última columna de cada tabla indica
 | RN-39 | Cada microservicio es dueño de su base. Un servicio no puede conectarse a la base de otro, y un rol de un microservicio no puede modificar tablas de otro. | CONNECT por base, GRANT / REVOKE |
 | RN-40 | Un vendedor solo registra pedidos y pagos de su sede, y un responsable de inventario solo actualiza las sedes autorizadas. | GRANT sobre los fragmentos de cada sede |
 | RN-41 | Gerencia y auditoría solo consultan; no modifican información operativa. | Solo SELECT |
-| RN-42 | Los reportes corporativos se calculan en la base de reportes, sobre su copia de lectura, con vistas de solo lectura, agregando cada fuente por separado antes de unirlas para no duplicar cifras. | Diseño de vistas |
+| RN-42 | Los reportes corporativos se calculan en la base de reportes, sobre su staging, con vistas materializadas de solo lectura, agregando cada fuente por separado antes de unirlas para no duplicar cifras. | Diseño de vistas |
 | RN-43 | Ningún registro se borra físicamente si tiene historial; se cambia su estado. | Documentación |
 
 ### 5.7 Dominios de estados
@@ -248,8 +249,10 @@ Las reglas se agrupan por microservicio; la última columna de cada tabla indica
 | Microservicio | Componente con una responsabilidad de negocio definida y dueño de sus propios datos. |
 | Base de datos por servicio | Cada microservicio guarda sus datos en una base propia a la que solo él se conecta. |
 | Esquema | Espacio de nombres dentro de una base. Aquí cada base tiene un esquema con el nombre de su servicio. |
-| Copia de lectura | Réplica de las tablas de los demás servicios que guarda la base de reportes para poder cruzarlas. |
-| Consistencia eventual | La copia puede ir atrasada respecto al original, pero se pone al día al sincronizar. |
+| ETL | Extraer, transformar y cargar: el proceso que lleva los datos de cada servicio a la base de reportes. |
+| Staging | Área de la base de reportes donde el ETL deja la copia de las tablas de cada servicio antes de transformarlas. |
+| Vista materializada | Vista que guarda su resultado; se actualiza con `REFRESH MATERIALIZED VIEW` en cada corrida del ETL. |
+| Consistencia eventual | Los reportes pueden ir atrasados respecto al original, pero se ponen al día en la siguiente carga del ETL. |
 | Fragmentación horizontal | División de las filas de una tabla en varias tablas físicas según una condición, aquí la sede. |
 | Fragmento | Tabla física que contiene las filas de una sede; en este proyecto hay una por sede para inventarios, pedidos y detalles de pedido. |
 | Identificador compartido | Clave de una entidad de otro microservicio que se guarda sin FK declarada. |

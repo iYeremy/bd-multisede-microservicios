@@ -28,9 +28,9 @@ Tipos usados: `INTEGER` para identificadores y cantidades (unidades enteras, S-1
 | `andina_compras` · `compras` (Compras y Abastecimiento) | ordenes_compra, detalle_orden_compra, recepciones_compra, detalle_recepcion |
 | `andina_inventarios` · `inventarios` (Inventarios y Transferencias) | inv_bogota, inv_medellin, inv_cali, inv_cedi, transferencias, detalle_transferencia |
 | `andina_ventas` · `ventas` (Ventas y Pagos) | ped_bogota, ped_medellin, ped_cali, ped_cedi, det_ped_bogota, det_ped_medellin, det_ped_cali, det_ped_cedi, pagos, devoluciones, detalle_devolucion |
-| `andina_reportes` · `reportes` (Reportes Corporativos) | Ninguna tabla propia: copia de lectura de los demás + vistas (sección 7) |
+| `andina_reportes` · `reportes` (Reportes Corporativos) | Ninguna tabla de negocio: staging que carga el ETL, control de cargas (`etl.cargas`) y vistas materializadas (sección 7) |
 
-En total hay 31 tablas físicas, que corresponden a 22 tablas lógicas. Además, `andina_reportes` guarda una copia de 29 de ellas (todas menos `identidad.usuarios` y `identidad.auditoria_accesos`, que no salen de su servicio porque tienen contraseñas).
+En total hay 31 tablas físicas, que corresponden a 22 tablas lógicas. Además, el staging de `andina_reportes` guarda una copia de 29 de ellas (todas menos `identidad.usuarios` y `identidad.auditoria_accesos`, que no salen de su servicio porque tienen contraseñas).
 
 ---
 
@@ -338,17 +338,30 @@ Estas reglas están en el modelo, pero no hay una restricción que las haga cump
 
 ## 7. Base `andina_reportes`
 
-Reportes no es dueño de ninguna tabla. Su base tiene dos partes:
+Reportes no es dueño de ninguna tabla de negocio. Su base se alimenta con un **ETL** (`sql/etl/`) y tiene tres partes:
 
-- **Copia de lectura** (esquemas `catalogo`, `identidad`, `compras`, `inventarios` y `ventas`): las mismas tablas de las secciones 1 a 5, creadas con los mismos scripts y cargadas desde los CSV que exporta cada servicio (`sql/sync/`). Puede ir un poco atrasada respecto a la base original (consistencia eventual). De `identidad` solo se copia `empleados`.
-- **Esquema `reportes`**: solo vistas de lectura (`08_vistas.sql`), que leen la copia. Las fuentes de la tabla de abajo se refieren a esa copia.
+- **Staging** (esquemas `catalogo`, `identidad`, `compras`, `inventarios` y `ventas`): las mismas tablas de las secciones 1 a 5, creadas con los mismos scripts y cargadas por el ETL desde los CSV que se extraen de cada servicio. Puede ir atrasado hasta la siguiente corrida del ETL (consistencia eventual). De `identidad` solo se copia `empleados`. Nadie escribe aquí salvo el ETL.
+- **Control de cargas** (esquema `etl`, tabla `cargas`, abajo).
+- **Esquema `reportes`**: solo vistas (`08_vistas.sql`). Las de la tabla de abajo son **materializadas** (guardan su resultado y se actualizan con `REFRESH MATERIALIZED VIEW` en cada corrida del ETL), salvo `parametros` y `vista_ultima_carga`, que son vistas normales. Las fuentes se refieren al staging.
 
-Vistas del esquema `reportes`:
+### etl.cargas
+
+Una fila por tabla en cada carga del ETL.
+
+| Columna | Tipo | Nulo | Clave | Default | Restricciones | Descripción |
+| --- | --- | --- | --- | --- | --- | --- |
+| id_carga | INTEGER | No | PK | IDENTITY | | Identificador de la fila |
+| fecha_carga | TIMESTAMP | No | UQ (fecha_carga, tabla) | | | Hora de la carga (la misma para todas las tablas de una corrida) |
+| tabla | VARCHAR(60) | No | UQ (fecha_carga, tabla) | | | Tabla cargada (`esquema.tabla`) |
+| filas_origen | INTEGER | No | | | `>= 0` | Filas que había en la base del servicio al extraer |
+| filas_staging | INTEGER | No | | | `>= 0`; `= filas_origen` (`carga_cuadra`) | Filas que quedaron en el staging. Si no cuadran, la carga entera se deshace |
+
+### Vistas del esquema `reportes`
 
 | Vista | Tipo | Fuentes | Contenido |
 | --- | --- | --- | --- |
 | parametros | Apoyo | — | Fecha de corte (2026-10-15) y umbrales de 15 y 90 días (S-14 a S-16) |
-| vista_inventario_consolidado | Consolidación | `inv_*` | `UNION ALL` de los 4 fragmentos de inventario, con la columna `fragmento` |
+| vista_inventario_consolidado | Consolidación | `inv_*` | `UNION ALL` de los 4 fragmentos de inventario, con la columna `fragmento` (base y tabla de origen, p. ej. `andina_inventarios.inv_cali`) |
 | vista_pedidos_consolidado | Consolidación | `ped_*` | `UNION ALL` de los 4 fragmentos de pedidos |
 | vista_detalle_pedido_consolidado | Consolidación | `det_ped_*` | `UNION ALL` de los 4 fragmentos de detalle |
 | vista_inventario_por_sede | Obligatoria 1 | Inventarios, Catálogo | Existencias por producto, sede y almacén |
@@ -361,3 +374,4 @@ Vistas del esquema `reportes`:
 | vista_transferencias_en_transito | Obligatoria 8 | Inventarios, Catálogo | Traslados despachados y no recibidos |
 | vista_devoluciones_por_producto | Obligatoria 9 | Ventas, Catálogo | Cantidades vendidas, devueltas y porcentaje |
 | vista_reporte_corporativo | Obligatoria 10 | Compras, Ventas, Inventarios, Catálogo | Resumen por sede sin conteos duplicados (RN-42) |
+| vista_ultima_carga | Control (vista normal) | `etl.cargas` | Fecha de la última carga del ETL, tablas y filas cargadas |
