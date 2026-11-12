@@ -1,0 +1,23 @@
+// pedidos_venta: dos claves candidatas; id_sede es primo, asi que cumple 3FN
+// para regenerar la imagen: dot -Tpng -Gdpi=150 dependencias_pedidos.dot -o dependencias_pedidos.png
+digraph pedidos {
+    rankdir=LR; compound=true; bgcolor="white"; pad=0.3; nodesep=0.5; ranksep=1.2;
+    node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=12, color="#4a6fa5", fillcolor="#e8eef7", margin="0.2,0.12"];
+    edge [fontname="DejaVu Sans", fontsize=10, color="#333333", fontcolor="#333333"];
+    graph [fontname="DejaVu Sans", fontsize=12];
+
+    subgraph cluster_k2 {
+        label="clave candidata 2: (id_almacen, id_pedido)"; style="rounded,filled"; color="#4a6fa5"; fillcolor="#f5f8fc";
+        A  [label="id_almacen"];
+        P2 [label="id_pedido"];
+    }
+    subgraph cluster_k1 {
+        label="clave candidata 1: (id_sede, id_pedido)"; style="rounded,filled"; color="#4a6fa5"; fillcolor="#f5f8fc";
+        S  [label="id_sede", fillcolor="#fff4d6", color="#c9a227"];
+        P1 [label="id_pedido"];
+    }
+    R [label="id_cliente, id_empleado,\nfecha_pedido, estado,\ntotal_registrado", fillcolor="#ebf6f1", color="#3d8b6e"];
+
+    A -> S [label="id_almacen → id_sede\n(permitido: id_sede es primo)", color="#c9a227", fontcolor="#8a6d00", penwidth=2];
+    P1 -> R [ltail=cluster_k1, label="depende de la clave"];
+}

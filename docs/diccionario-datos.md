@@ -19,20 +19,7 @@ Cada microservicio tiene su **propia base de datos** (`andina_<servicio>`) y den
 
 ### Las tres formas en que una tabla apunta a otra
 
-```mermaid
-flowchart LR
-    subgraph v["andina_ventas"]
-        ped["ped_bogota<br/>(id_sede, id_pedido)"]
-        det["det_ped_bogota"]
-        pag["pagos<br/>(id_sede, id_pedido)"]
-    end
-    subgraph c["andina_catalogo"]
-        cli["clientes<br/>(id_cliente)"]
-    end
-    det -->|"FK: misma base"| ped
-    pag -.->|"ref: el pedido puede estar<br/>en cualquiera de los 4 ped_*"| ped
-    ped -.->|"ref: otra base,<br/>una FK no puede cruzar bases"| cli
-```
+![Las tres formas en que una tabla apunta a otra](diagramas/04_diccionario/referencias.png)
 
 | Caso | Marca | Ejemplo | Quién garantiza que exista |
 | --- | --- | --- | --- |
@@ -242,15 +229,7 @@ Existencias por sede, almacén y producto (RN-15). Son **cuatro tablas físicas 
 | inv_cali | `id_sede = 3` | Cali |
 | inv_cedi | `id_sede = 4` | CEDI Funza |
 
-```mermaid
-flowchart LR
-    L["inventarios<br/>(tabla lógica)"]
-    L --> B["inv_bogota<br/>CHECK (id_sede = 1)"]
-    L --> M["inv_medellin<br/>CHECK (id_sede = 2)"]
-    L --> C["inv_cali<br/>CHECK (id_sede = 3)"]
-    L --> E["inv_cedi<br/>CHECK (id_sede = 4)<br/>almacenes 4 y 5"]
-    B & M & C & E -->|"UNION ALL"| V["reportes.vista_inventario_consolidado<br/>(reconstruye la tabla completa)"]
-```
+![Fragmentación del inventario y su reconstrucción con UNION ALL](diagramas/04_diccionario/fragmentacion.png)
 
 Las cuatro tienen exactamente las mismas columnas; cada fila está en un solo fragmento porque el `CHECK` no deja meter filas de otra sede. Lo mismo pasa con `pedidos_venta` (`ped_*`) y `detalle_pedido` (`det_ped_*`).
 
@@ -309,13 +288,7 @@ Pedidos de venta. Son **cuatro tablas físicas con la misma estructura**, una po
 ### 5.2 det_ped_bogota, det_ped_medellin, det_ped_cali, det_ped_cedi (fragmentos de `detalle_pedido`)
 Productos de cada pedido (RN-26). Se fragmentan con la **misma condición** que los pedidos (**fragmentación derivada**), así cada detalle queda en el mismo fragmento que su pedido y se enlaza con una FK local:
 
-```mermaid
-flowchart LR
-    PB["ped_bogota"] --- DB["det_ped_bogota"]
-    PM["ped_medellin"] --- DM["det_ped_medellin"]
-    PC["ped_cali"] --- DC["det_ped_cali"]
-    PE["ped_cedi"] --- DE["det_ped_cedi"]
-```
+![Fragmentación derivada: cada detalle va con su pedido](diagramas/04_diccionario/fragmentacion_derivada.png)
 
 Cada par está unido por una FK compuesta `(id_sede, id_pedido)`, que solo funciona porque el detalle y su pedido están siempre en la misma sede (y en la misma base).
 

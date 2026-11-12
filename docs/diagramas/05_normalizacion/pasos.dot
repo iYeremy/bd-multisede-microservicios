@@ -1,0 +1,16 @@
+// recorrido del pedido de venta de 0FN a 3FN
+// para regenerar la imagen: dot -Tpng -Gdpi=150 pasos.dot -o pasos.png
+digraph pasos {
+    rankdir=LR; bgcolor="white"; pad=0.3; ranksep=0.9;
+    node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=12, color="#4a6fa5", fillcolor="#e8eef7", margin="0.25,0.15"];
+    edge [fontname="DejaVu Sans", fontsize=10, color="#333333", fontcolor="#333333"];
+
+    N  [label=<<b>0FN</b><br/>PEDIDO<br/>con la lista de productos<br/>adentro>, fillcolor="#fdf1ec", color="#e07a5f"];
+    F1 [label=<<b>1FN</b><br/>PEDIDO<br/>LINEA_PEDIDO>];
+    F2 [label=<<b>2FN</b><br/>PEDIDO<br/>LINEA_PEDIDO<br/>PRODUCTO>];
+    F3 [label=<<b>3FN</b><br/>pedidos_venta · detalle_pedido<br/>productos · categorias<br/>clientes · empleados<br/>almacenes · sedes>, fillcolor="#ebf6f1", color="#3d8b6e"];
+
+    N  -> F1 [label="separar el\ngrupo repetitivo"];
+    F1 -> F2 [label="quitar dependencias\nparciales"];
+    F2 -> F3 [label="quitar dependencias\ntransitivas"];
+}

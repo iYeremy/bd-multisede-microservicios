@@ -22,13 +22,7 @@ Este ejemplo muestra cómo se llega a las tablas de ventas desde el documento qu
 
 El recorrido completo, que se explica paso a paso abajo:
 
-```mermaid
-flowchart LR
-    N["0FN<br/>PEDIDO<br/>con la lista de productos<br/>adentro"]
-    N -->|"separar el<br/>grupo repetitivo"| F1["1FN<br/>PEDIDO<br/>LINEA_PEDIDO"]
-    F1 -->|"quitar dependencias<br/>parciales"| F2["2FN<br/>PEDIDO<br/>LINEA_PEDIDO<br/>PRODUCTO"]
-    F2 -->|"quitar dependencias<br/>transitivas"| F3["3FN<br/>pedidos_venta · detalle_pedido<br/>productos · categorias<br/>clientes · empleados<br/>almacenes · sedes"]
-```
+![Recorrido del pedido de 0FN a 3FN](diagramas/05_normalizacion/pasos.png)
 
 | Paso | Qué se busca | Ejemplo en el pedido |
 | --- | --- | --- |
@@ -176,15 +170,7 @@ En `detalle_pedido`, `pagos` y `devoluciones`, `id_sede` no es redundante: forma
 
 **Dependencia:** cada almacén pertenece a una sola sede (RN-02), así que `id_almacen → id_sede`. Lo contrario no se cumple: el CEDI tiene dos almacenes (4 y 5).
 
-```mermaid
-flowchart LR
-    subgraph K["clave candidata: (id_almacen, id_producto)"]
-        A["id_almacen"]
-        P["id_producto"]
-    end
-    K --> X["existencia_actual<br/>stock_minimo<br/>fecha_actualizacion"]
-    A -->|"depende solo de una parte<br/>de la clave"| S["id_sede"]
-```
+![Dependencias de inventarios](diagramas/05_normalizacion/dependencias_inventarios.png)
 
 La flecha de abajo es la dependencia parcial: `id_sede` no necesita a `id_producto`, le basta con `id_almacen`.
 
@@ -206,19 +192,7 @@ La flecha de abajo es la dependencia parcial: `id_sede` no necesita a `id_produc
 
 Aquí también se cumple `id_almacen → id_sede`, pero la situación es distinta:
 
-```mermaid
-flowchart LR
-    subgraph K1["clave candidata 1: (id_sede, id_pedido)"]
-        S["id_sede"]
-        P1["id_pedido"]
-    end
-    subgraph K2["clave candidata 2: (id_almacen, id_pedido)"]
-        A["id_almacen"]
-        P2["id_pedido"]
-    end
-    K1 --> R["id_cliente, id_empleado,<br/>fecha_pedido, estado,<br/>total_registrado"]
-    A -->|"id_almacen → id_sede<br/>(id_sede es primo)"| S
-```
+![Dependencias de pedidos_venta](diagramas/05_normalizacion/dependencias_pedidos.png)
 
 `id_pedido` aparece dos veces porque forma parte de las dos claves. La diferencia con inventarios: aquí `id_sede` **es parte de una clave candidata** (es primo), y la 3FN permite que un atributo primo dependa de algo que no es clave.
 

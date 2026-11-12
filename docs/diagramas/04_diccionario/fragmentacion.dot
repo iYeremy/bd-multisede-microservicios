@@ -1,0 +1,19 @@
+// fragmentacion horizontal del inventario y su reconstruccion
+// para regenerar la imagen: dot -Tpng -Gdpi=150 fragmentacion.dot -o fragmentacion.png
+digraph fragmentacion {
+    rankdir=LR; bgcolor="white"; pad=0.3; nodesep=0.35; ranksep=0.9;
+    node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=12, color="#4a6fa5", fillcolor="#e8eef7", margin="0.2,0.12"];
+    edge [fontname="DejaVu Sans", fontsize=10, color="#333333"];
+
+    L [label="inventarios\n(tabla lógica)", fillcolor="#f3f3f3", color="#888888", style="rounded,filled,dashed"];
+    B [label="inv_bogota\nCHECK (id_sede = 1)"];
+    M [label="inv_medellin\nCHECK (id_sede = 2)"];
+    C [label="inv_cali\nCHECK (id_sede = 3)"];
+    E [label="inv_cedi\nCHECK (id_sede = 4)\nalmacenes 4 y 5"];
+    U [label="UNION ALL", shape=ellipse, fillcolor="#fff4d6", color="#c9a227"];
+    V [label="reportes.vista_inventario_consolidado\n(reconstruye la tabla completa)", fillcolor="#ebf6f1", color="#3d8b6e"];
+
+    L -> {B M C E} [label="se parte\npor sede", fontsize=9, color="#888888", fontcolor="#666666"];
+    {B M C E} -> U;
+    U -> V;
+}
