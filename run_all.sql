@@ -1,7 +1,7 @@
 -- run_all.sql
--- ejecuta todo el proyecto en orden. ver sql/README.md.
+-- ejecuta todo el proyecto en orden. ver sql/README.md
 --     psql -U postgres -f run_all.sql
--- si dblink pide contrasena: ver sql/03_dblink/README.md.
+-- si dblink pide contrasena: ver sql/03_dblink/README.md
 
 \set ON_ERROR_STOP on
 \pset pager off
