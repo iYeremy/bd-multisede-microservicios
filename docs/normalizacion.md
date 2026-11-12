@@ -14,10 +14,27 @@ Este documento cubre la parte de normalización del entregable 4. El modelo rela
 
 - Un **atributo primo** es el que forma parte de alguna clave candidata. La 3FN se evalúa sobre **todas** las claves candidatas, no solo sobre la PK declarada.
 - Las tablas fragmentadas (`inv_*`, `ped_*`, `det_ped_*`) tienen la misma estructura en las cuatro sedes, así que se analizan como una sola relación lógica: `inventarios`, `pedidos_venta` y `detalle_pedido`.
+- **Una base por microservicio no cambia el análisis.** La normalización se evalúa tabla por tabla, mirando sus dependencias funcionales. Que `clientes` esté en `andina_catalogo` y `pedidos_venta` en `andina_ventas` no cambia que `id_cliente → nombre_cliente` haya que sacarlo del pedido. Lo que sí cambia es **cómo se controla** la referencia que queda: dentro de una base es una FK; entre bases no puede haber FK, y queda como identificador compartido (ver el [diccionario](diccionario-datos.md)).
 
 ## 2. Proceso de normalización: el pedido de venta
 
 Este ejemplo muestra cómo se llega a las tablas de ventas desde el documento que se usa en el negocio. Las tablas de compras (orden y detalle), transferencias y devoluciones se obtienen con el mismo procedimiento.
+
+El recorrido completo, que se explica paso a paso abajo:
+
+```mermaid
+flowchart LR
+    N["0FN<br/>PEDIDO<br/>con la lista de productos<br/>adentro"]
+    N -->|"separar el<br/>grupo repetitivo"| F1["1FN<br/>PEDIDO<br/>LINEA_PEDIDO"]
+    F1 -->|"quitar dependencias<br/>parciales"| F2["2FN<br/>PEDIDO<br/>LINEA_PEDIDO<br/>PRODUCTO"]
+    F2 -->|"quitar dependencias<br/>transitivas"| F3["3FN<br/>pedidos_venta · detalle_pedido<br/>productos · categorias<br/>clientes · empleados<br/>almacenes · sedes"]
+```
+
+| Paso | Qué se busca | Ejemplo en el pedido |
+| --- | --- | --- |
+| 0FN → 1FN | Grupos repetitivos (varios valores en un campo) | La lista de productos va a `LINEA_PEDIDO` |
+| 1FN → 2FN | Atributos que dependen de **una parte** de la clave | `nombre_producto` depende solo de `id_producto` → `PRODUCTO` |
+| 2FN → 3FN | Atributos que dependen de **otro atributo que no es clave** | `nombre_cliente` depende de `id_cliente` → `clientes` |
 
 ### 2.1 Forma no normalizada
 
@@ -159,6 +176,18 @@ En `detalle_pedido`, `pagos` y `devoluciones`, `id_sede` no es redundante: forma
 
 **Dependencia:** cada almacén pertenece a una sola sede (RN-02), así que `id_almacen → id_sede`. Lo contrario no se cumple: el CEDI tiene dos almacenes (4 y 5).
 
+```mermaid
+flowchart LR
+    subgraph K["clave candidata: (id_almacen, id_producto)"]
+        A["id_almacen"]
+        P["id_producto"]
+    end
+    K --> X["existencia_actual<br/>stock_minimo<br/>fecha_actualizacion"]
+    A -->|"depende solo de una parte<br/>de la clave"| S["id_sede"]
+```
+
+La flecha de abajo es la dependencia parcial: `id_sede` no necesita a `id_producto`, le basta con `id_almacen`.
+
 **Consecuencia:** la PK declarada `(id_sede, id_almacen, id_producto)` es una superclave, no una clave mínima. La única clave candidata es `(id_almacen, id_producto)`. Entonces `id_sede` es un atributo no primo que depende de una **parte** de la clave, y en sentido estricto la relación no cumple la 2FN.
 
 **Por qué se conserva:**
@@ -167,21 +196,37 @@ En `detalle_pedido`, `pagos` y `devoluciones`, `id_sede` no es redundante: forma
 2. El enunciado propone `Inventarios = (id_sede, id_almacen, id_producto, …)` y el requerimiento 6 pide guardar las existencias "por sede y almacén".
 3. Dentro de un fragmento, `id_sede` es constante, así que no puede tomar valores distintos para el mismo almacén. La anomalía de actualización que evita la 2FN no aparece mientras un almacén no cambie de sede.
 
-**Cómo se controla:** `11_pruebas.sql` comprueba con `NOT EXISTS`, desde `andina_reportes` con `dblink`, que cada fila tenga un almacén que pertenezca a la sede de su fragmento (resultado esperado: 0 filas). La base de datos no lo impide por sí sola, porque `almacenes` vive en otra base (`andina_catalogo`) y una FK no puede apuntar a otra base (S-09). En el sistema real lo valida el servicio de inventarios, preguntándole a catálogo antes de guardar.
+**Cómo se controla:** `08_pruebas/pruebas.sql` comprueba con `NOT EXISTS`, desde `andina_reportes` con `dblink`, que cada fila tenga un almacén que pertenezca a la sede de su fragmento (resultado esperado: 0 filas). La base de datos no lo impide por sí sola, porque `almacenes` vive en otra base (`andina_catalogo`) y una FK no puede apuntar a otra base (S-09). En el sistema real lo valida el servicio de inventarios, preguntándole a catálogo antes de guardar.
 
 **Alternativa evaluada:** quitar `id_sede` y fragmentar por almacén, con `CHECK (id_almacen = 1)` en Bogotá, … y `CHECK (id_almacen IN (4, 5))` en el CEDI. La tabla quedaría en 3FN y la fragmentación seguiría siendo por sede, pero se apartaría de la estructura del enunciado y el `CHECK` dependería de los identificadores de los almacenes. Se mantiene la versión del enunciado.
 
-> **Pendiente:** confirmar con el profesor cuál de las dos versiones prefiere.
+> **Aceptado.** El profesor revisó esta decisión y la aprobó: una **desnormalización** (romper a propósito una forma normal) es válida cuando está justificada y documentada, como aquí.
 
 ### 4.2 `id_sede` en pedidos_venta: cumple 3FN
 
 Aquí también se cumple `id_almacen → id_sede`, pero la situación es distinta:
 
+```mermaid
+flowchart LR
+    subgraph K1["clave candidata 1: (id_sede, id_pedido)"]
+        S["id_sede"]
+        P1["id_pedido"]
+    end
+    subgraph K2["clave candidata 2: (id_almacen, id_pedido)"]
+        A["id_almacen"]
+        P2["id_pedido"]
+    end
+    K1 --> R["id_cliente, id_empleado,<br/>fecha_pedido, estado,<br/>total_registrado"]
+    A -->|"id_almacen → id_sede<br/>(id_sede es primo)"| S
+```
+
+`id_pedido` aparece dos veces porque forma parte de las dos claves. La diferencia con inventarios: aquí `id_sede` **es parte de una clave candidata** (es primo), y la 3FN permite que un atributo primo dependa de algo que no es clave.
+
 - `id_pedido` es único dentro de cada fragmento, y el almacén determina el fragmento. Por eso `(id_almacen, id_pedido)` también es clave candidata, además de `(id_sede, id_pedido)`.
 - `id_sede` forma parte de una clave candidata, así que es **atributo primo**. La 3FN acepta `X → A` cuando A es primo, por lo que la relación **cumple la 3FN**.
 - No cumple la **FNBC**, porque `id_almacen` no es superclave. El proyecto exige hasta 3FN.
 
-La misma prueba de `11_pruebas.sql` verifica que el almacén y el empleado de cada pedido sean de la sede del pedido.
+La misma prueba de `08_pruebas/pruebas.sql` verifica que el almacén y el empleado de cada pedido sean de la sede del pedido.
 
 `id_empleado → id_sede` **no** se toma como dependencia de la tabla: un empleado trabaja en una sede a la vez (S-03), pero puede cambiar de sede, y sus pedidos anteriores conservan la sede donde se registraron. `id_sede` registra un hecho histórico del pedido.
 

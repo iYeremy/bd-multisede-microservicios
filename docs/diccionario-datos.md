@@ -2,7 +2,7 @@
 
 Proyecto final de Bases de Datos · Comercializadora Andina S.A.S.
 
-Este documento cubre la parte de diccionario de datos del entregable 4. Se generó a partir de los scripts `sql/02` a `sql/08`, que son la fuente de verdad.
+Este documento cubre la parte de diccionario de datos del entregable 4. Se generó a partir de los scripts de `sql/02_tablas/` (las tablas) y `sql/05_reportes/vistas.sql` (las vistas), que son la fuente de verdad, y se verificó contra el catálogo de PostgreSQL: columnas, tipos, nulos, defaults, PK, FK, UNIQUE y CHECK coinciden en las 31 tablas.
 
 Cada microservicio tiene su **propia base de datos** (`andina_<servicio>`) y dentro de ella un esquema con el nombre del servicio. Por eso cada tabla se nombra `esquema.tabla` (por ejemplo `ventas.ped_bogota`), igual en su base y en las consultas por `dblink` de `andina_reportes`.
 
@@ -12,10 +12,33 @@ Cada microservicio tiene su **propia base de datos** (`andina_<servicio>`) y den
 | --- | --- |
 | **PK** | Clave primaria o parte de ella |
 | **FK → tabla** | Clave foránea declarada en PostgreSQL (siempre dentro de la misma base: una FK no puede apuntar a otra base) |
-| **ref → esquema.tabla** | Identificador compartido: guarda el id de una tabla de otro microservicio (que vive en otra base), **sin FK**. Se valida con `NOT EXISTS` en `11_pruebas.sql`, desde `andina_reportes` con `dblink`. En los scripts aparece como el comentario `-- ref:`. |
+| **ref → esquema.tabla** | Identificador compartido: guarda el id de una tabla de otro microservicio (que vive en otra base), **sin FK**. Se valida con `NOT EXISTS` en `08_pruebas/pruebas.sql`, desde `andina_reportes` con `dblink`. En los scripts aparece como el comentario `-- ref:`. |
 | **UQ** | Restricción `UNIQUE`. Si dice `UQ (a, b)`, la unicidad es de la combinación. |
 | **IDENTITY** | `GENERATED ALWAYS AS IDENTITY`: PostgreSQL asigna el número al insertar. |
 | Nulo: **No** | La columna es `NOT NULL` |
+
+### Las tres formas en que una tabla apunta a otra
+
+```mermaid
+flowchart LR
+    subgraph v["andina_ventas"]
+        ped["ped_bogota<br/>(id_sede, id_pedido)"]
+        det["det_ped_bogota"]
+        pag["pagos<br/>(id_sede, id_pedido)"]
+    end
+    subgraph c["andina_catalogo"]
+        cli["clientes<br/>(id_cliente)"]
+    end
+    det -->|"FK: misma base"| ped
+    pag -.->|"ref: el pedido puede estar<br/>en cualquiera de los 4 ped_*"| ped
+    ped -.->|"ref: otra base,<br/>una FK no puede cruzar bases"| cli
+```
+
+| Caso | Marca | Ejemplo | Quién garantiza que exista |
+| --- | --- | --- | --- |
+| Las dos tablas están en la misma base | **FK** | `det_ped_bogota (id_sede, id_pedido)` → `ped_bogota` | PostgreSQL (rechaza el `INSERT`) |
+| La tabla apuntada está en otra base | **ref** | `ped_bogota.id_cliente` → `catalogo.clientes` | Nadie en la base: se revisa con `NOT EXISTS` en las pruebas |
+| El destino está fragmentado | **ref** | `pagos (id_sede, id_pedido)` → `ped_<sede>` | Igual: una FK solo puede apuntar a una tabla, no a cuatro |
 
 Tipos usados: `INTEGER` para identificadores y cantidades (unidades enteras, S-11), `NUMERIC(14,2)` para valores en pesos colombianos, `VARCHAR(n)` para texto, `DATE` para fechas de negocio y `TIMESTAMP` para registros con hora.
 
@@ -219,6 +242,18 @@ Existencias por sede, almacén y producto (RN-15). Son **cuatro tablas físicas 
 | inv_cali | `id_sede = 3` | Cali |
 | inv_cedi | `id_sede = 4` | CEDI Funza |
 
+```mermaid
+flowchart LR
+    L["inventarios<br/>(tabla lógica)"]
+    L --> B["inv_bogota<br/>CHECK (id_sede = 1)"]
+    L --> M["inv_medellin<br/>CHECK (id_sede = 2)"]
+    L --> C["inv_cali<br/>CHECK (id_sede = 3)"]
+    L --> E["inv_cedi<br/>CHECK (id_sede = 4)<br/>almacenes 4 y 5"]
+    B & M & C & E -->|"UNION ALL"| V["reportes.vista_inventario_consolidado<br/>(reconstruye la tabla completa)"]
+```
+
+Las cuatro tienen exactamente las mismas columnas; cada fila está en un solo fragmento porque el `CHECK` no deja meter filas de otra sede. Lo mismo pasa con `pedidos_venta` (`ped_*`) y `detalle_pedido` (`det_ped_*`).
+
 | Columna | Tipo | Nulo | Clave | Default | Restricciones | Descripción |
 | --- | --- | --- | --- | --- | --- | --- |
 | id_sede | INTEGER | No | PK · ref → catalogo.sedes | n (la sede del fragmento) | `= n` | Sede del registro. Es la **clave de fragmentación**. |
@@ -272,7 +307,17 @@ Pedidos de venta. Son **cuatro tablas físicas con la misma estructura**, una po
 | total_registrado | NUMERIC(14,2) | No | | `0` | `>= 0` | Σ cantidad × precio_unitario de sus detalles (RN-28). Valor derivado que se almacena. |
 
 ### 5.2 det_ped_bogota, det_ped_medellin, det_ped_cali, det_ped_cedi (fragmentos de `detalle_pedido`)
-Productos de cada pedido (RN-26). Se fragmentan con la **misma condición** que los pedidos (fragmentación derivada), así cada detalle queda en el mismo fragmento que su pedido y se enlaza con una FK local.
+Productos de cada pedido (RN-26). Se fragmentan con la **misma condición** que los pedidos (**fragmentación derivada**), así cada detalle queda en el mismo fragmento que su pedido y se enlaza con una FK local:
+
+```mermaid
+flowchart LR
+    PB["ped_bogota"] --- DB["det_ped_bogota"]
+    PM["ped_medellin"] --- DM["det_ped_medellin"]
+    PC["ped_cali"] --- DC["det_ped_cali"]
+    PE["ped_cedi"] --- DE["det_ped_cedi"]
+```
+
+Cada par está unido por una FK compuesta `(id_sede, id_pedido)`, que solo funciona porque el detalle y su pedido están siempre en la misma sede (y en la misma base).
 
 | Columna | Tipo | Nulo | Clave | Default | Restricciones | Descripción |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -323,7 +368,7 @@ Productos y cantidades de cada devolución.
 
 ## 6. Reglas que la base de datos no impone
 
-Estas reglas están en el modelo, pero no hay una restricción que las haga cumplir. Se respetan en los datos de prueba, y las que son referencias se comprueban con `NOT EXISTS` en `11_pruebas.sql`.
+Estas reglas están en el modelo, pero no hay una restricción que las haga cumplir. Se respetan en los datos de prueba, y las que son referencias se comprueban con `NOT EXISTS` en `08_pruebas/pruebas.sql`.
 
 | Regla | Motivo |
 | --- | --- |
@@ -338,7 +383,7 @@ Estas reglas están en el modelo, pero no hay una restricción que las haga cump
 
 ## 7. Base `andina_reportes`
 
-Reportes no tiene tablas. Su base tiene la extensión `dblink` (con un servidor remoto registrado por cada base: `srv_catalogo`, `srv_ventas`…) y el esquema `reportes`, con solo vistas (`08_vistas.sql`). Las de la tabla de abajo son **materializadas**: traen los datos de las otras bases por `dblink`, guardan el resultado y se actualizan con `REFRESH MATERIALIZED VIEW` (`sql/refrescar_reportes.sql`). `parametros` es una vista normal.
+Reportes no tiene tablas. Su base tiene la extensión `dblink` (con un servidor remoto registrado por cada base: `srv_catalogo`, `srv_ventas`…) y el esquema `reportes`, con solo vistas (`05_reportes/vistas.sql`). Las de la tabla de abajo son **materializadas**: traen los datos de las otras bases por `dblink`, guardan el resultado y se actualizan con `REFRESH MATERIALIZED VIEW` (`sql/05_reportes/refrescar.sql`). `parametros` es una vista normal.
 
 
 ### Vistas del esquema `reportes`
