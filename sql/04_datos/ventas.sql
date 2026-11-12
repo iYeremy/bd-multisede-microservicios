@@ -1,41 +1,18 @@
--- =====================================================================
--- 07_datos_ventas.sql
--- datos de prueba del servicio de ventas (base andina_ventas): 300
--- pedidos con sus detalles (cada uno en el fragmento de su sede), pagos
--- y 22 devoluciones.
---
--- cuando este servicio necesita datos de otro (ids, precios...) no los
--- puede leer directo, porque estan en otra base. los trae con dblink
--- (ver sql/dblink/servidores.sql) y al terminar se quita dblink de esta
--- base (dblink/quitar.sql), para que el servicio no quede conectado a
--- otra base. en el sistema real esto seria una llamada HTTP al otro
--- servicio.
--- aqui se necesitan los precios (catalogo) y que productos tiene cada
--- almacen (inventarios), para vender solo lo que hay.
--- los ids de clientes (1 a 100) y de vendedores de cada sede se escriben
--- a mano: son los que crearon los scripts de catalogo e identidad.
---
--- tecnica: los datos se generan primero en tablas temporales y despues
--- cada fila se inserta en el fragmento de su sede (WHERE id_sede = n).
--- =====================================================================
+-- 04_datos/ventas.sql
+-- datos de prueba de ventas (base andina_ventas). ver README.md.
+-- lee precios (catalogo) y surtido (inventarios) con dblink y al final lo quita.
 
 SELECT setseed(0.2026);
 
--- ---------------------------------------------------------------------
--- datos que vienen de otros servicios, por dblink
--- dblink('srv_x', 'consulta') corre la consulta en la otra base; AS t(...)
--- dice que columnas trae y de que tipo.
--- ---------------------------------------------------------------------
-\ir dblink/servidores.sql
+-- de otros servicios, por dblink
+\ir ../03_dblink/servidores.sql
 
--- precios de catalogo
+-- precios
 CREATE TEMP TABLE tmp_productos AS
 SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, precio_lista FROM catalogo.productos')
          AS t(id_producto INTEGER, precio_lista NUMERIC(14,2));
 
--- que productos hay en cada almacen. la consulta que viaja por dblink
--- junta los 4 fragmentos con UNION ALL alla, en andina_inventarios, y
--- trae una sola tabla.
+-- que hay en cada almacen (el UNION ALL se hace alla, en andina_inventarios)
 CREATE TEMP TABLE tmp_inv AS
 SELECT * FROM dblink('srv_inventarios',
          'SELECT id_sede, id_almacen, id_producto FROM inventarios.inv_bogota
@@ -44,13 +21,7 @@ SELECT * FROM dblink('srv_inventarios',
           UNION ALL SELECT id_sede, id_almacen, id_producto FROM inventarios.inv_cedi')
          AS t(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER);
 
--- ---------------------------------------------------------------------
--- ventas: 300 pedidos (bogota 100, medellin 80, cali 70, CEDI 50)
--- primero la base de cada pedido: sede, almacen de esa sede, cliente al
--- azar, uno de los vendedores de la sede, fecha en el periodo y cuantas
--- lineas (1 a 5) tendra. generate_series(1, 100) con "n <= cant" deja
--- la cantidad exacta de pedidos de cada sede.
--- ---------------------------------------------------------------------
+-- 300 pedidos: bogota 100, medellin 80, cali 70, CEDI 50
 CREATE TEMP TABLE tmp_ped_base AS
 SELECT s.id_sede, s.id_almacen,
        1 + floor(random() * 100)::int                                         AS id_cliente,
@@ -65,12 +36,7 @@ FROM (VALUES (1, 1, 100, ARRAY[3, 4, 5]),
 CROSS JOIN generate_series(1, 100) AS g(n)
 WHERE g.n <= s.cant;
 
--- id_pedido: ROW_NUMBER() OVER (PARTITION BY id_sede ...) numera desde 1
--- dentro de cada sede en orden de fecha, igual que lo hara el IDENTITY
--- de cada fragmento.
--- estado segun antiguedad: los pedidos viejos casi siempre ya estan
--- entregados y los recientes suelen seguir pendientes; algunos viejos
--- quedan pendientes a proposito (consulta 9).
+-- id_pedido desde 1 en cada sede (como el IDENTITY). estado segun antiguedad
 CREATE TEMP TABLE tmp_ped AS
 SELECT b.*,
        ROW_NUMBER() OVER (PARTITION BY b.id_sede ORDER BY b.fecha_pedido, b.id_cliente, b.r_estado)::int AS id_pedido,
@@ -85,12 +51,7 @@ SELECT b.*,
        END AS estado
 FROM tmp_ped_base b;
 
--- detalles: a cada pedido se le asignan nlineas productos distintos al
--- azar (ROW_NUMBER sobre ORDER BY random() y luego n <= nlineas) entre
--- los que existen en el almacen del pedido.
--- el precio se guarda en el detalle: antes de agosto la lista era 5 %
--- menor, asi se ve que el precio historico no depende del catalogo
--- actual (RN-27). el CEDI vende al por mayor (cantidades hasta 30, S-02).
+-- detalles: productos al azar del almacen. antes de agosto el precio era 5 % menor (RN-27)
 CREATE TEMP TABLE tmp_det AS
 SELECT c.id_sede, c.id_pedido, c.id_producto,
        1 + floor(random() * CASE WHEN c.id_sede = 4 THEN 30 ELSE 8 END)::int AS cantidad,
@@ -105,9 +66,7 @@ FROM (SELECT p.id_sede, p.id_pedido, p.fecha_pedido, p.nlineas, pr.id_producto, 
              OR pr.id_producto NOT IN (12, 27, 44, 58, 75, 39, 64, 80))) c -- sin ventas desde julio
 WHERE c.n <= c.nlineas;
 
--- total registrado = suma de cantidad x precio de los detalles (RN-28).
--- UPDATE ... FROM actualiza cada pedido con el total calculado en la
--- subconsulta d.
+-- total = suma de los detalles (RN-28)
 ALTER TABLE tmp_ped ADD COLUMN total_registrado NUMERIC(14,2);
 UPDATE tmp_ped p
 SET total_registrado = d.total
@@ -115,11 +74,7 @@ FROM (SELECT id_sede, id_pedido, SUM(cantidad * precio_unitario) AS total
       FROM tmp_det GROUP BY id_sede, id_pedido) d
 WHERE p.id_sede = d.id_sede AND p.id_pedido = d.id_pedido;
 
--- cada pedido va a su fragmento, y sus detalles al fragmento de la misma
--- sede. los pedidos se insertan ordenados por id_pedido SIN indicar el
--- numero: el IDENTITY del fragmento les asigna 1, 2, 3..., los mismos
--- numeros que ya tienen sus detalles en tmp_det. por eso la FK de los
--- detalles encuentra su pedido.
+-- cada pedido y sus detalles a su fragmento. el IDENTITY repite los mismos numeros
 INSERT INTO ventas.ped_bogota (id_sede, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado)
 SELECT id_sede, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado FROM tmp_ped WHERE id_sede = 1 ORDER BY id_pedido;
 INSERT INTO ventas.ped_medellin (id_sede, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado)
@@ -138,13 +93,7 @@ SELECT id_sede, id_pedido, id_producto, cantidad, precio_unitario FROM tmp_det W
 INSERT INTO ventas.det_ped_cedi (id_sede, id_pedido, id_producto, cantidad, precio_unitario)
 SELECT id_sede, id_pedido, id_producto, cantidad, precio_unitario FROM tmp_det WHERE id_sede = 4;
 
--- pagos (RN-30, RN-31):
---   entregados   pagados completos, en 1 o 2 cuotas
---   confirmados  algunos pagados, otros con saldo (consulta 7)
---   pendientes   algunos con anticipo del 30 %
---   anulados     algunos con un pago rechazado
--- el primer INSERT crea el primer pago y el segundo la segunda cuota.
--- las fechas nunca pasan de la fecha de corte.
+-- pagos: completos, parciales, anticipos y rechazados (RN-30, RN-31)
 CREATE TEMP TABLE tmp_pag AS
 SELECT id_sede, id_pedido, fecha_pedido, estado, total_registrado AS total, random() AS r,
        (ARRAY['EFECTIVO', 'TARJETA_DEBITO', 'TARJETA_CREDITO', 'TRANSFERENCIA'])[1 + floor(random() * 4)::int] AS medio
@@ -177,9 +126,7 @@ FROM tmp_pag
 WHERE (estado = 'ENTREGADO' AND r < 0.3)
    OR (estado = 'CONFIRMADO' AND r >= 0.7);
 
--- devoluciones: 22 pedidos confirmados o entregados elegidos al azar
--- (RN-32), con 1 o 2 productos cada una. estado: la mayoria aprobadas,
--- algunas solicitadas y rechazadas.
+-- 22 devoluciones de pedidos confirmados o entregados (RN-32)
 CREATE TEMP TABLE tmp_dev AS
 SELECT (ROW_NUMBER() OVER ())::int AS id_devolucion, x.*
 FROM (SELECT id_sede, id_pedido, fecha_pedido
@@ -200,9 +147,7 @@ SELECT id_sede, id_pedido,
 FROM tmp_dev
 ORDER BY id_devolucion;
 
--- se devuelven los 1 o 2 productos con mas unidades del pedido, la mitad
--- de lo vendido (nunca mas de lo vendido, RN-33). como salen del JOIN
--- con los detalles del pedido, siempre son productos del pedido (RN-32).
+-- la mitad de lo vendido de 1 o 2 productos del pedido (RN-33)
 INSERT INTO ventas.detalle_devolucion (id_devolucion, id_producto, cantidad, condicion_producto)
 SELECT x.id_devolucion, x.id_producto,
        CASE WHEN x.cantidad / 2 < 1 THEN 1 ELSE x.cantidad / 2 END,
@@ -213,8 +158,8 @@ FROM (SELECT d.id_devolucion, dp.id_producto, dp.cantidad,
       JOIN tmp_det dp ON dp.id_sede = d.id_sede AND dp.id_pedido = d.id_pedido) x
 WHERE x.n <= 1 + x.id_devolucion % 2;
 
--- limpieza de las tablas temporales
+-- limpieza
 DROP TABLE tmp_productos, tmp_inv, tmp_ped_base, tmp_ped, tmp_det, tmp_pag, tmp_dev;
 
--- ya no hace falta dblink en esta base
-\ir dblink/quitar.sql
+-- ya no hace falta dblink aqui
+\ir ../03_dblink/quitar.sql

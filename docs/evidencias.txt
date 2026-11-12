@@ -1,7 +1,7 @@
 El paginador no se usará.
 Ahora está conectado a la base de datos «postgres» con el usuario «postgres».
 SET
->> 00 reset
+>> bases
 DROP DATABASE
 DROP DATABASE
 DROP DATABASE
@@ -12,7 +12,6 @@ DROP DATABASE
 DROP ROLE
 DROP ROLE
 DROP ROLE
->> 01 bases (una por microservicio)
 CREATE DATABASE
 CREATE DATABASE
 CREATE DATABASE
@@ -107,7 +106,7 @@ SELECT 70
 INSERT 0 70
 INSERT 0 193
 DROP TABLE
-psql:sql/dblink/quitar.sql:12: NOTICE:  drop cascades to 10 other objects
+psql:sql/03_dblink/quitar.sql:5: NOTICE:  drop cascades to 10 other objects
 DETALLE:  drop cascades to server srv_catalogo
 drop cascades to user mapping for postgres on server srv_catalogo
 drop cascades to server srv_identidad
@@ -164,7 +163,7 @@ INSERT 0 25
 INSERT 0 75
 UPDATE 4
 DROP TABLE
-psql:sql/dblink/quitar.sql:12: NOTICE:  drop cascades to 10 other objects
+psql:sql/03_dblink/quitar.sql:5: NOTICE:  drop cascades to 10 other objects
 DETALLE:  drop cascades to server srv_catalogo
 drop cascades to user mapping for postgres on server srv_catalogo
 drop cascades to server srv_identidad
@@ -240,7 +239,7 @@ SELECT 22
 INSERT 0 22
 INSERT 0 29
 DROP TABLE
-psql:sql/dblink/quitar.sql:12: NOTICE:  drop cascades to 10 other objects
+psql:sql/03_dblink/quitar.sql:5: NOTICE:  drop cascades to 10 other objects
 DETALLE:  drop cascades to server srv_catalogo
 drop cascades to user mapping for postgres on server srv_catalogo
 drop cascades to server srv_identidad
@@ -252,7 +251,7 @@ drop cascades to user mapping for postgres on server srv_inventarios
 drop cascades to server srv_ventas
 drop cascades to user mapping for postgres on server srv_ventas
 DROP EXTENSION
->> reportes: dblink
+>> reportes
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
 CREATE EXTENSION
 CREATE SERVER
@@ -265,7 +264,6 @@ CREATE USER MAPPING
 CREATE USER MAPPING
 CREATE USER MAPPING
 CREATE USER MAPPING
->> 08 vistas (materializadas, todavia vacias)
 CREATE SCHEMA
 COMMENT
 CREATE VIEW
@@ -297,7 +295,6 @@ COMMENT
 COMMENT
 CREATE MATERIALIZED VIEW
 COMMENT
->> refrescar reportes (dblink trae los datos)
 BEGIN
 REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
@@ -314,12 +311,12 @@ REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
 COMMIT
-   reportes_actualizados_en   
-------------------------------
- 2026-11-11 12:23:29.09388-05
+   reportes_actualizados_en    
+-------------------------------
+ 2026-11-11 13:42:18.379094-05
 (1 fila)
 
->> 09 roles y permisos
+>> roles y permisos
 CREATE ROLE
 CREATE ROLE
 CREATE ROLE
@@ -395,7 +392,7 @@ GRANT
 GRANT
 GRANT
 GRANT
->> 10 consultas
+>> consultas
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
 
 === Consulta 1. Inventario por producto y sede ===
@@ -1681,7 +1678,7 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
  CEDI Funza    |                77 |               21152 |  19348085.00 |                  7 |             46 |   67821310.00 |             20
 (4 filas)
 
->> 11 pruebas
+>> pruebas
 Ahora está conectado a la base de datos «andina_catalogo» con el usuario «postgres».
 BEGIN
 
@@ -1694,40 +1691,40 @@ INSERT 0 1
 
 
 === Prueba 2. SKU duplicado (UNIQUE) -> esperado: ERROR llave duplicada ===
-psql:sql/11_pruebas.sql:51: ERROR:  duplicate key value violates unique constraint "productos_sku_key"
+psql:sql/08_pruebas/pruebas.sql:25: ERROR:  duplicate key value violates unique constraint "productos_sku_key"
 DETALLE:  Key (sku)=(ALI-001) already exists.
 
 === Prueba 4. Clave foranea local inexistente (FK) -> esperado: ERROR viola la llave foranea ===
-psql:sql/11_pruebas.sql:57: ERROR:  insert or update on table "productos" violates foreign key constraint "productos_id_categoria_fkey"
+psql:sql/08_pruebas/pruebas.sql:31: ERROR:  insert or update on table "productos" violates foreign key constraint "productos_id_categoria_fkey"
 DETALLE:  Key (id_categoria)=(999) is not present in table "categorias".
 
 === Prueba 9. Accesos permitidos y denegados por rol (por partes, en cada base) ===
 --- 9.5 vendedor_bogota: modifica el precio de un producto del catalogo (DENEGADO) -> esperado: ERROR permiso denegado ---
 SET
-psql:sql/11_pruebas.sql:65: ERROR:  permission denied for table productos
+psql:sql/08_pruebas/pruebas.sql:38: ERROR:  permission denied for table productos
 RESET
 ROLLBACK
 Ahora está conectado a la base de datos «andina_compras» con el usuario «postgres».
 BEGIN
 
 === Prueba 3. Cantidad negativa (CHECK) -> esperado: ERROR viola la restriccion check ===
-psql:sql/11_pruebas.sql:82: ERROR:  new row for relation "detalle_orden_compra" violates check constraint "detalle_orden_compra_cantidad_solicitada_check"
+psql:sql/08_pruebas/pruebas.sql:51: ERROR:  new row for relation "detalle_orden_compra" violates check constraint "detalle_orden_compra_cantidad_solicitada_check"
 DETALLE:  Failing row contains (1, 80, -5, 1000.00).
 --- 9.8b auditor_interno: modificar una orden de compra -> esperado: ERROR permiso denegado ---
 SET
-psql:sql/11_pruebas.sql:86: ERROR:  permission denied for table ordenes_compra
+psql:sql/08_pruebas/pruebas.sql:55: ERROR:  permission denied for table ordenes_compra
 RESET
 ROLLBACK
 Ahora está conectado a la base de datos «andina_inventarios» con el usuario «postgres».
 BEGIN
 
 --- 3b. Existencia negativa (CHECK) -> esperado: ERROR viola la restriccion check ---
-psql:sql/11_pruebas.sql:99: ERROR:  new row for relation "inv_bogota" violates check constraint "inv_bogota_existencia_actual_check"
+psql:sql/08_pruebas/pruebas.sql:66: ERROR:  new row for relation "inv_bogota" violates check constraint "inv_bogota_existencia_actual_check"
 DETALLE:  Failing row contains (1, 1, 1, -1, 13, 2026-10-15 18:00:00).
 
 --- 4b. Una fila de otra sede no entra en el fragmento de Bogota -> esperado: ERROR viola la restriccion check ---
-psql:sql/11_pruebas.sql:105: ERROR:  new row for relation "inv_bogota" violates check constraint "inv_bogota_id_sede_check"
-DETALLE:  Failing row contains (2, 2, 1, 10, 5, 2026-11-11 12:23:30.065655).
+psql:sql/08_pruebas/pruebas.sql:72: ERROR:  new row for relation "inv_bogota" violates check constraint "inv_bogota_id_sede_check"
+DETALLE:  Failing row contains (2, 2, 1, 10, 5, 2026-11-11 13:42:19.498461).
 
 === Prueba 5. Los fragmentos de dos sedes contienen registros distintos ===
  fragmento  | filas | sede_min | sede_max 
@@ -1758,14 +1755,14 @@ SET
 (1 fila)
 
 UPDATE 1
-psql:sql/11_pruebas.sql:140: ERROR:  permission denied for table inv_bogota
+psql:sql/08_pruebas/pruebas.sql:107: ERROR:  permission denied for table inv_bogota
 RESET
 ROLLBACK
 Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
 BEGIN
 
 --- 4c. Detalle de un pedido que no existe (FK compuesta) -> esperado: ERROR viola la llave foranea ---
-psql:sql/11_pruebas.sql:156: ERROR:  insert or update on table "det_ped_bogota" violates foreign key constraint "det_ped_bogota_id_sede_id_pedido_fkey"
+psql:sql/08_pruebas/pruebas.sql:120: ERROR:  insert or update on table "det_ped_bogota" violates foreign key constraint "det_ped_bogota_id_sede_id_pedido_fkey"
 DETALLE:  Key (id_sede, id_pedido)=(1, 99999) is not present in table "ped_bogota".
 
 --- 5b. Fragmentos de pedidos de dos sedes ---
@@ -1777,7 +1774,7 @@ DETALLE:  Key (id_sede, id_pedido)=(1, 99999) is not present in table "ped_bogot
 
 --- 9.2 gerente_general: INSERT en ventas.pagos (DENEGADO) -> esperado: ERROR permiso denegado ---
 SET
-psql:sql/11_pruebas.sql:171: ERROR:  permission denied for schema ventas
+psql:sql/08_pruebas/pruebas.sql:134: ERROR:  permission denied for schema ventas
 LÍNEA 1: INSERT INTO ventas.pagos (id_sede, id_pedido, fecha_pago, va...
                      ^
 RESET
@@ -1791,9 +1788,9 @@ SET
 INSERT 0 1
 INSERT 0 1
 --- 9.4 vendedor_bogota: consulta pedidos de Cali (DENEGADO) -> esperado: ERROR permiso denegado ---
-psql:sql/11_pruebas.sql:186: ERROR:  permission denied for table ped_cali
+psql:sql/08_pruebas/pruebas.sql:148: ERROR:  permission denied for table ped_cali
 --- 9.6 vendedor_bogota: borra un pago (DENEGADO por el REVOKE DELETE) -> esperado: ERROR permiso denegado ---
-psql:sql/11_pruebas.sql:189: ERROR:  permission denied for table pagos
+psql:sql/08_pruebas/pruebas.sql:151: ERROR:  permission denied for table pagos
 RESET
 ROLLBACK
 Ahora está conectado a la base de datos «andina_identidad» con el usuario «postgres».
@@ -1807,7 +1804,7 @@ SET
  inventario_bogota | INVENTARIO    | ACTIVO
 (3 filas)
 
-psql:sql/11_pruebas.sql:205: ERROR:  permission denied for table usuarios
+psql:sql/08_pruebas/pruebas.sql:165: ERROR:  permission denied for table usuarios
 RESET
 ROLLBACK
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
@@ -1858,7 +1855,7 @@ SET
 (4 filas)
 
 --- 9.1b gerente_general: usar dblink para leer ventas (DENEGADO) -> esperado: ERROR permiso denegado para la funcion dblink ---
-psql:sql/11_pruebas.sql:282: ERROR:  permission denied for function dblink
+psql:sql/08_pruebas/pruebas.sql:219: ERROR:  permission denied for function dblink
 RESET
 
 === Prueba 10. El reporte corporativo no duplica ventas ni cantidades ===
@@ -1900,11 +1897,11 @@ ROLLBACK
 === Prueba 11. Cada servicio solo ve su propia base ===
 Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
 --- 11.1 desde andina_ventas: leer catalogo.productos -> esperado: ERROR la relacion no existe ---
-psql:sql/11_pruebas.sql:440: ERROR:  relation "catalogo.productos" does not exist
+psql:sql/08_pruebas/pruebas.sql:336: ERROR:  relation "catalogo.productos" does not exist
 LÍNEA 1: SELECT COUNT(*) FROM catalogo.productos;
                               ^
 --- 11.2 nombrando la otra base (base.esquema.tabla) -> esperado: ERROR no estan implementadas las referencias entre bases ---
-psql:sql/11_pruebas.sql:445: ERROR:  cross-database references are not implemented: "andina_catalogo.catalogo.productos"
+psql:sql/08_pruebas/pruebas.sql:340: ERROR:  cross-database references are not implemented: "andina_catalogo.catalogo.productos"
 LÍNEA 1: SELECT COUNT(*) FROM andina_catalogo.catalogo.productos;
                               ^
 --- 11.3 a que base puede entrar cada rol (has_database_privilege) ---
@@ -1962,7 +1959,7 @@ REFRESH MATERIALIZED VIEW
 COMMIT
    reportes_actualizados_en    
 -------------------------------
- 2026-11-11 12:23:30.258797-05
+ 2026-11-11 13:42:19.735244-05
 (1 fila)
 
 --- 12.5 ahora el reporte si lo ve (uno mas que en 12.1) ---
@@ -1993,7 +1990,7 @@ REFRESH MATERIALIZED VIEW
 COMMIT
    reportes_actualizados_en    
 -------------------------------
- 2026-11-11 12:23:30.648871-05
+ 2026-11-11 13:42:20.192146-05
 (1 fila)
 
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».

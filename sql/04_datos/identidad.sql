@@ -1,21 +1,10 @@
--- =====================================================================
--- 07_datos_identidad.sql
--- datos de prueba del servicio de identidad (base andina_identidad):
--- 20 empleados, 12 usuarios y 60 accesos en la auditoria.
---
--- id_sede de cada empleado es un id de catalogo (1 bogota, 2 medellin,
--- 3 cali, 4 CEDI) que se escribe a mano: son las 4 sedes fijas.
--- =====================================================================
+-- 04_datos/identidad.sql
+-- datos de prueba de identidad (base andina_identidad). ver README.md.
 
--- setseed fija la semilla de random(): cada ejecucion genera exactamente
--- los mismos "numeros al azar", y por eso los mismos datos. cada script
--- de datos pone su propia semilla porque cada uno corre en su base (una
--- sesion nueva).
+-- semilla fija: el "azar" sale siempre igual
 SELECT setseed(0.2026);
 
--- id_empleado 1 a 20 en el orden de la lista. los vendedores de cada
--- sede (3-5 bogota, 8-10 medellin, 12-14 cali, 18-19 CEDI) se usan
--- abajo para asignar los pedidos.
+-- vendedores: 3-5 bogota, 8-10 medellin, 12-14 cali, 18-19 CEDI
 INSERT INTO identidad.empleados (id_sede, num_documento, nombre_completo, cargo, correo) VALUES
     (1, '79100001', 'Ricardo Acosta Peña',      'ADMINISTRADOR',   'racosta@andina.co'),
     (1, '52100002', 'Mónica Salazar Ríos',      'GERENTE',         'msalazar@andina.co'),
@@ -38,9 +27,7 @@ INSERT INTO identidad.empleados (id_sede, num_documento, nombre_completo, cargo,
     (4, '52100019', 'Gloria Barrera Pinzón',    'VENDEDOR',        'gbarrera@andina.co'),
     (1, '79100020', 'Tomás Villamil Ortega',    'AUDITOR',         'tvillamil@andina.co');
 
--- 12 de los 20 empleados tienen usuario (relacion 1:1 opcional).
--- VALUES (...) AS u(...) funciona como una tabla escrita a mano.
--- md5() genera un hash de ejemplo (S-12).
+-- 12 de los 20 empleados tienen usuario. md5 = hash de ejemplo (S-12)
 INSERT INTO identidad.usuarios (id_empleado, nombre_usuario, password_hash, rol, fecha_creacion)
 SELECT u.emp, u.usr, md5(u.usr || '2026'), u.rol, TIMESTAMP '2026-04-20 08:00' + u.id * INTERVAL '1 hour'
 FROM (VALUES
@@ -59,7 +46,7 @@ FROM (VALUES
 ) AS u(id, emp, usr, rol)
 ORDER BY u.id;
 
--- 60 accesos al azar repartidos en el periodo
+-- 60 accesos al azar en el periodo
 INSERT INTO identidad.auditoria_accesos (id_usuario, fecha_hora, accion, objeto_consultado)
 SELECT 1 + floor(random() * 12)::int,
        TIMESTAMP '2026-05-01 07:00' + (random() * 167) * INTERVAL '1 day',

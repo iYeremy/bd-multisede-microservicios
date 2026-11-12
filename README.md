@@ -19,7 +19,7 @@ Necesitas PostgreSQL 17 o superior (probado en la 18), con la extensión `dblink
 psql -U postgres -f run_all.sql
 ```
 
-Eso borra todo, crea las 6 bases, mete los datos de prueba, crea los reportes (que traen los datos por `dblink`), corre las 20 consultas y las pruebas. Se puede correr las veces que quiera uno, siempre da lo mismo (semilla fija). Si `dblink` no puede conectarse sin contraseña, ver `sql/dblink/servidores.sql`.
+Eso borra todo, crea las 6 bases, mete los datos de prueba, crea los reportes (que traen los datos por `dblink`), corre las 20 consultas y las pruebas. Se puede correr las veces que quiera uno, siempre da lo mismo (semilla fija). Si `dblink` no puede conectarse sin contraseña, ver `sql/03_dblink/servidores.sql`.
 
 Sí, salen varios `ERROR`: son las pruebas de rechazo (SKU duplicado, permisos denegados, leer otra base…) y es justo lo que se espera. La salida completa está en [`docs/evidencias.txt`](docs/evidencias.txt).
 
@@ -27,18 +27,17 @@ Más detalle en el [manual](docs/manual-ejecucion.md).
 
 ## Estructura scripts
 
-| Ruta | Qué es |
+| Ruta | Qué es (cada carpeta tiene su README explicando el código) |
 | --- | --- |
-| `sql/README.md` | **qué hace cada script** y lo que no es SQL de clase (comandos de psql, trucos) |
-| `sql/00_reset.sql`, `sql/01_bases.sql` | borra todo y crea las 6 bases |
-| `sql/02`–`06` | tablas, un archivo por microservicio |
-| `sql/07_datos_<servicio>.sql` | datos de prueba de cada servicio: 300 pedidos, 80 productos, 100 clientes… Totalmente generadas con IA :) |
-| `sql/dblink/` | `servidores.sql` instala `dblink` y registra las otras bases (`srv_catalogo`…); `quitar.sql` lo quita (los datos de prueba lo usan y luego lo quitan) |
-| `sql/refrescar_reportes.sql` | `REFRESH` de todas las vistas materializadas, en orden. Es lo que se programa cada X minutos |
-| `sql/08_vistas.sql` | vistas que unen los fragmentos + las 10 vistas obligatorias (en la base de reportes) |
-| `sql/09_roles.sql` | roles, usuarios y permisos, base por base |
-| `sql/10_consultas.sql` | las 20 consultas que pide el enunciado |
-| `sql/11_pruebas.sql` | pruebas de restricciones, fragmentos, permisos y aislamiento entre bases (todo con ROLLBACK, no ensucia nada) |
+| `sql/README.md` | **empezar aquí**: el orden, las carpetas y los comandos de psql |
+| `sql/01_bases/` | borrar todo y crear las 6 bases |
+| `sql/02_tablas/` | las tablas, un archivo por microservicio (con la fragmentación por sede) |
+| `sql/03_dblink/` | instalar y quitar `dblink` para consultar otra base |
+| `sql/04_datos/` | datos de prueba de cada servicio: 300 pedidos, 80 productos, 100 clientes… Totalmente generadas con IA :) |
+| `sql/05_reportes/` | vistas materializadas de reportes y `refrescar.sql` (lo que se programa cada X minutos) |
+| `sql/06_roles/` | roles, usuarios y permisos, con la matriz de permisos |
+| `sql/07_consultas/` | las 20 consultas que pide el enunciado |
+| `sql/08_pruebas/` | pruebas de restricciones, fragmentos, permisos y aislamiento entre bases (todo con ROLLBACK, no ensucia nada) |
 | `docs/enunciado.pdf` | Todo el contexto y requisitos que se nos dio para el proyecto |
 | `docs/` | reglas de negocio, normalización, diccionario, manual, evidencias, diagramas |
 
@@ -57,6 +56,6 @@ Más detalle en el [manual](docs/manual-ejecucion.md).
 ## Notas
 
 - **Solo SQL visto en clase.** Nada de secuencias, `NULLIF`, `GREATEST`/`LEAST` ni particionamiento declarativo. `COALESCE` es la única excepción (tengo que explicarlo en el informe xd).
-- Las relaciones **entre** microservicios no tienen FK (una FK no puede apuntar a otra base). Son "identificadores compartidos" y se validan con `NOT EXISTS` en `11_pruebas.sql`, desde reportes con `dblink`.
+- Las relaciones **entre** microservicios no tienen FK (una FK no puede apuntar a otra base). Son "identificadores compartidos" y se validan con `NOT EXISTS` en `08_pruebas/pruebas.sql`, desde reportes con `dblink`.
 - Los reportes pueden ir un poco atrasados respecto a cada servicio (hasta el siguiente refresco): eso es **consistencia eventual**. `reportes.vista_ultima_actualizacion` dice de cuándo son los datos.
-- Para poner los reportes al día sin rehacer todo: `psql -U postgres -d andina_reportes -f sql/refrescar_reportes.sql`.
+- Para poner los reportes al día sin rehacer todo: `psql -U postgres -d andina_reportes -f sql/05_reportes/refrescar.sql`.

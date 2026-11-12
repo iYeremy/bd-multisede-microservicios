@@ -1,39 +1,17 @@
--- =====================================================================
--- 07_datos_compras.sql
--- datos de prueba del servicio de compras (base andina_compras): 60
--- ordenes de compra con sus detalles y recepciones.
---
--- cuando este servicio necesita datos de otro (ids, precios...) no los
--- puede leer directo, porque estan en otra base. los trae con dblink
--- (ver sql/dblink/servidores.sql) y al terminar se quita dblink de esta
--- base (dblink/quitar.sql), para que el servicio no quede conectado a
--- otra base. en el sistema real esto seria una llamada HTTP al otro
--- servicio.
--- aqui se necesita que productos vende cada proveedor y a que costo
--- (catalogo.producto_proveedor). los ids de empleados compradores (16 y
--- 17) y de almacenes (1 a 5) se escriben a mano.
--- =====================================================================
+-- 04_datos/compras.sql
+-- datos de prueba de compras (base andina_compras). ver README.md.
+-- lee producto_proveedor de catalogo con dblink y al final lo quita.
 
 SELECT setseed(0.2026);
 
--- ---------------------------------------------------------------------
--- datos que vienen de catalogo, por dblink
--- dblink('srv_catalogo', 'consulta') corre la consulta en
--- andina_catalogo; AS t(...) dice que columnas trae y de que tipo.
--- ---------------------------------------------------------------------
-\ir dblink/servidores.sql
+-- de catalogo, por dblink
+\ir ../03_dblink/servidores.sql
 
 CREATE TEMP TABLE tmp_producto_proveedor AS
 SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, id_proveedor, costo_referencia FROM catalogo.producto_proveedor')
          AS t(id_producto INTEGER, id_proveedor INTEGER, costo_referencia NUMERIC(14,2));
 
--- ---------------------------------------------------------------------
--- compras: 60 ordenes repartidas en el periodo
--- la mayoria llega al CEDI (almacen 4, S-06); cada 5 ordenes una llega
--- a una sede. retraso = dias que se pasa de la fecha estimada: los
--- proveedores 3 y 7 siempre se retrasan, los demas llegan entre 2 dias
--- antes y 1 despues.
--- ---------------------------------------------------------------------
+-- 60 ordenes, casi todas al CEDI. los proveedores 3 y 7 siempre se retrasan
 CREATE TEMP TABLE tmp_oc AS
 SELECT o.*,
        o.fecha_orden + 5 + (o.id_proveedor % 4) * 3 AS fecha_estimada,
@@ -47,8 +25,7 @@ FROM (SELECT i AS id_orden_compra,
              DATE '2026-05-01' + ((i - 1) * 163) / 59            AS fecha_orden
       FROM generate_series(1, 60) AS i) o;
 
--- estado de cada orden (RN-13): 2 canceladas, emitidas si aun no llega
--- la fecha estimada, algunas parciales y el resto recibidas
+-- estado de cada orden (RN-13)
 ALTER TABLE tmp_oc ADD COLUMN estado VARCHAR(10);
 UPDATE tmp_oc SET estado = CASE
     WHEN id_orden_compra IN (17, 41)                                 THEN 'CANCELADA'
@@ -61,9 +38,7 @@ SELECT id_proveedor, id_almacen_destino, id_empleado, fecha_orden, fecha_estimad
 FROM tmp_oc
 ORDER BY id_orden_compra;
 
--- cada orden pide entre 2 y 4 productos al azar de los que ofrece su
--- proveedor (JOIN con producto_proveedor). el costo pactado varia un
--- poco alrededor del costo de referencia (RN-27).
+-- 2 a 4 productos del proveedor, con costo cerca del de referencia
 INSERT INTO compras.detalle_orden_compra (id_orden_compra, id_producto, cantidad_solicitada, costo_unitario)
 SELECT x.id_orden_compra, x.id_producto,
        (2 + floor(random() * 10)::int) * 10,
@@ -74,12 +49,7 @@ FROM (SELECT o.id_orden_compra, pp.id_producto, pp.costo_referencia,
       JOIN tmp_producto_proveedor pp ON pp.id_proveedor = o.id_proveedor) x
 WHERE x.n <= 2 + x.id_orden_compra % 3;
 
--- recepciones (RN-11): las ordenes recibidas llegan en 1 o 2 entregas;
--- las parciales tienen una sola entrega con la mitad de lo pedido
--- (consulta 12). la fecha de recepcion no puede ser anterior a la orden
--- ni posterior a la fecha de corte.
--- el UNION ALL arma la primera entrega de todas y la segunda solo de
--- las que llegan en dos partes.
+-- recepciones: 1 o 2 entregas; las parciales, una con la mitad (RN-11)
 CREATE TEMP TABLE tmp_rec AS
 SELECT (ROW_NUMBER() OVER (ORDER BY x.id_orden_compra, x.nro))::int AS id_recepcion,
        x.id_orden_compra, x.nro, x.estado, x.dos_entregas,
@@ -99,8 +69,7 @@ FROM (
 INSERT INTO compras.recepciones_compra (id_orden_compra, fecha_recepcion, estado)
 SELECT id_orden_compra, fecha_recepcion, 'REGISTRADA' FROM tmp_rec ORDER BY id_recepcion;
 
--- cada recepcion recibe los productos de su orden (RN-12): la mitad si
--- es parcial, todo si es una sola entrega, o 60 % + 40 % si son dos
+-- lo que llego de cada producto (RN-12)
 INSERT INTO compras.detalle_recepcion (id_recepcion, id_producto, cantidad_recibida)
 SELECT r.id_recepcion, d.id_producto,
        CASE
@@ -112,8 +81,8 @@ SELECT r.id_recepcion, d.id_producto,
 FROM tmp_rec r
 JOIN compras.detalle_orden_compra d ON d.id_orden_compra = r.id_orden_compra;
 
--- limpieza de las tablas temporales
+-- limpieza
 DROP TABLE tmp_producto_proveedor, tmp_oc, tmp_rec;
 
--- ya no hace falta dblink en esta base
-\ir dblink/quitar.sql
+-- ya no hace falta dblink aqui
+\ir ../03_dblink/quitar.sql

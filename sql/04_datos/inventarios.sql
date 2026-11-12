@@ -1,27 +1,11 @@
--- =====================================================================
--- 07_datos_inventarios.sql
--- datos de prueba del servicio de inventarios (base andina_inventarios):
--- existencias de cada almacen (en el fragmento de su sede) y 25
--- transferencias.
---
--- cuando este servicio necesita datos de otro (ids, precios...) no los
--- puede leer directo, porque estan en otra base. los trae con dblink
--- (ver sql/dblink/servidores.sql) y al terminar se quita dblink de esta
--- base (dblink/quitar.sql), para que el servicio no quede conectado a
--- otra base. en el sistema real esto seria una llamada HTTP al otro
--- servicio.
--- aqui se necesitan los almacenes (con su sede) y los productos.
--- =====================================================================
+-- 04_datos/inventarios.sql
+-- datos de prueba de inventarios (base andina_inventarios). ver README.md.
+-- lee almacenes y productos de catalogo con dblink y al final lo quita.
 
 SELECT setseed(0.2026);
 
--- ---------------------------------------------------------------------
--- datos que vienen de catalogo, por dblink
--- se guardan en tablas temporales (CREATE TEMP TABLE, desaparecen al
--- cerrar la sesion). dblink('srv_catalogo', 'consulta') corre la
--- consulta en andina_catalogo; AS t(...) dice que columnas trae.
--- ---------------------------------------------------------------------
-\ir dblink/servidores.sql
+-- de catalogo, por dblink
+\ir ../03_dblink/servidores.sql
 
 CREATE TEMP TABLE tmp_almacenes AS
 SELECT * FROM dblink('srv_catalogo', 'SELECT id_almacen, id_sede FROM catalogo.almacenes')
@@ -31,18 +15,8 @@ CREATE TEMP TABLE tmp_productos AS
 SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto FROM catalogo.productos')
          AS t(id_producto INTEGER);
 
--- ---------------------------------------------------------------------
--- inventarios
--- se generan en una tabla temporal (tmp_inv) cruzando almacenes con
--- productos (CROSS JOIN = todas las combinaciones) y luego cada fila se
--- inserta en el fragmento de su sede.
---
--- r y r2 son dos numeros al azar por fila que deciden la existencia:
---   almacenes de venta (1-3): 6 % en cero, 14 % bajo el minimo y el
---     resto por encima (alertas de reabastecimiento, consulta 2).
---   bodega general CEDI (4): casi todo con mucho stock.
---   bodega de despacho CEDI (5): pocas unidades.
--- ---------------------------------------------------------------------
+-- existencias: todas las parejas almacen-producto (CROSS JOIN), salvo los
+-- huecos de surtido. r y r2 son numeros al azar que deciden la existencia
 CREATE TEMP TABLE tmp_inv AS
 SELECT x.id_sede, x.id_almacen, x.id_producto,
        CASE
@@ -62,23 +36,20 @@ FROM (SELECT a.id_sede, a.id_almacen, p.id_producto,
                                ELSE 10 + floor(random() * 21)::int END AS minimo
       FROM tmp_almacenes a
       CROSS JOIN tmp_productos p
-      -- huecos de surtido: cada almacen deja por fuera algunos productos
+      -- huecos de surtido
       WHERE (a.id_almacen = 1 AND p.id_producto % 9 <> 0)
          OR (a.id_almacen = 2 AND p.id_producto % 7 <> 0)
          OR (a.id_almacen = 3 AND p.id_producto % 5 <> 0)
          OR (a.id_almacen = 4 AND p.id_producto <> 80)
          OR (a.id_almacen = 5 AND p.id_producto <= 20)) x;
 
--- los productos sin rotacion deben tener existencia positiva: la
--- consulta 16 busca productos con stock que no se venden
+-- los productos sin rotacion necesitan existencia positiva (consulta 16)
 UPDATE tmp_inv
 SET existencia_actual = stock_minimo + 25
 WHERE id_producto IN (19, 35, 53, 70, 78, 12, 27, 44, 58, 75)
   AND existencia_actual = 0;
 
--- reparto en fragmentos: cada INSERT toma solo las filas de su sede
--- (WHERE id_sede = n). si una fila tuviera otra sede, el CHECK del
--- fragmento la rechazaria.
+-- cada fila a su fragmento (si no, el CHECK la rechaza)
 INSERT INTO inventarios.inv_bogota (id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion)
 SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM tmp_inv WHERE id_sede = 1;
 INSERT INTO inventarios.inv_medellin (id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion)
@@ -88,12 +59,7 @@ SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_
 INSERT INTO inventarios.inv_cedi (id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion)
 SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM tmp_inv WHERE id_sede = 4;
 
--- ---------------------------------------------------------------------
--- transferencias: 25, la mayoria del CEDI (almacen 4) hacia las sedes.
--- estados fijos: 4 despachadas sin recibir (en transito, consulta 13),
--- 2 solicitadas, 1 cancelada y el resto recibidas. las fechas de
--- despacho y recepcion solo existen cuando corresponde (RN-20).
--- ---------------------------------------------------------------------
+-- 25 transferencias, la mayoria del CEDI a las sedes. 4 en transito (consulta 13)
 CREATE TEMP TABLE tmp_tr AS
 SELECT t.*,
        CASE WHEN t.estado IN ('SOLICITADA', 'CANCELADA') THEN NULL
@@ -116,8 +82,7 @@ SELECT origen, destino, fecha_solicitud, fecha_despacho,
 FROM tmp_tr
 ORDER BY id_transferencia;
 
--- cada transferencia lleva entre 2 y 4 productos con existencia en el
--- origen. cantidad_recibida queda NULL si todavia no se recibe (RN-21).
+-- 2 a 4 productos con existencia en el origen
 INSERT INTO inventarios.detalle_transferencia (id_transferencia, id_producto, cantidad_enviada, cantidad_recibida)
 SELECT x.id_transferencia, x.id_producto, x.enviada,
        CASE WHEN x.estado = 'RECIBIDA' THEN x.enviada END
@@ -128,9 +93,7 @@ FROM (SELECT s.id_transferencia, s.estado, s.id_producto, 10 + floor(random() * 
             JOIN tmp_inv i ON i.id_almacen = t.origen AND i.existencia_actual > 0) s
       WHERE s.n <= 2 + s.id_transferencia % 3) x;
 
--- diferencias entre enviado y recibido en algunas transferencias
--- recibidas (RN-23, consulta 14): llegan 1 a 3 unidades menos del
--- primer producto
+-- algunas llegan con 1 a 3 unidades menos (RN-23, consulta 14)
 UPDATE inventarios.detalle_transferencia dt
 SET cantidad_recibida = dt.cantidad_enviada - (1 + dt.id_transferencia % 3)
 FROM inventarios.transferencias t
@@ -140,8 +103,8 @@ WHERE t.id_transferencia = dt.id_transferencia
   AND dt.id_producto = (SELECT min(id_producto) FROM inventarios.detalle_transferencia d2
                         WHERE d2.id_transferencia = dt.id_transferencia);
 
--- limpieza de las tablas temporales
+-- limpieza
 DROP TABLE tmp_almacenes, tmp_productos, tmp_inv, tmp_tr;
 
--- ya no hace falta dblink en esta base
-\ir dblink/quitar.sql
+-- ya no hace falta dblink aqui
+\ir ../03_dblink/quitar.sql

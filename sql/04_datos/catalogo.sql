@@ -1,24 +1,8 @@
--- =====================================================================
--- 07_datos_catalogo.sql
--- datos de prueba del servicio de catalogo (base andina_catalogo).
--- periodo: 1 de mayo al 15 de octubre de 2026 (mas de 4 meses, seccion
--- 10 del enunciado). fecha de corte: 2026-10-15 (S-14).
---
--- volumen: 4 sedes, 5 almacenes, 5 categorias, 80 productos,
--- 10 proveedores y 100 clientes. aqui no hay nada al azar: todo sale de
--- listas y formulas, asi que siempre queda igual.
---
--- los demas servicios usan estos ids (sede 1 = bogota, producto 15...),
--- por eso este script se corre primero.
--- =====================================================================
+-- 04_datos/catalogo.sql
+-- datos de prueba de catalogo (base andina_catalogo). ver README.md.
 
--- ---------------------------------------------------------------------
--- catalogo
--- las claves IDENTITY numeran las filas en el orden en que se insertan
--- (1, 2, 3...). los scripts de datos de los otros servicios usan esos
--- numeros: sede 1 = bogota, 2 = medellin, 3 = cali, 4 = CEDI; almacenes
--- 1 a 5 en el orden de la lista (4 y 5 son las dos bodegas del CEDI).
--- ---------------------------------------------------------------------
+-- los ids se ponen solos en orden: sede 1 = bogota, 2 = medellin, 3 = cali,
+-- 4 = CEDI; almacenes 1 a 5 (4 y 5 son del CEDI). los demas servicios usan estos ids
 INSERT INTO catalogo.sedes (nombre, ciudad, direccion, tipo_sede) VALUES
     ('Sede Bogotá',   'Bogotá',   'Calle 72 # 10-34',          'VENTA'),
     ('Sede Medellín', 'Medellín', 'Carrera 43A # 1-50',        'VENTA'),
@@ -39,8 +23,7 @@ INSERT INTO catalogo.categorias (nombre, descripcion) VALUES
     ('Limpieza del hogar',  'Detergentes, desinfectantes y accesorios'),
     ('Papelería y oficina', 'Útiles escolares y de oficina');
 
--- 16 productos por categoria. id_producto: ALI = 1-16, BEB = 17-32,
--- ASE = 33-48, LIM = 49-64, PAP = 65-80
+-- 16 productos por categoria: ALI 1-16, BEB 17-32, ASE 33-48, LIM 49-64, PAP 65-80
 INSERT INTO catalogo.productos (sku, nombre, id_categoria, unidad_medida, precio_lista, estado) VALUES
     ('ALI-001', 'Arroz blanco 1 kg',              1, 'KG',       4800, 'ACTIVO'),
     ('ALI-002', 'Azúcar refinada 1 kg',           1, 'KG',       4200, 'ACTIVO'),
@@ -135,11 +118,7 @@ INSERT INTO catalogo.proveedores (identificacion, razon_social, ciudad, correo, 
     ('900111009-9', 'Lácteos de la Montaña S.A.S.',     'Manizales',    'ventas@lacmontana.co',     '6064443322'),
     ('900111010-0', 'Comercial Santander Ltda.',        'Bucaramanga',  'info@comsantander.co',     '6071112233');
 
--- cada producto tiene un proveedor principal y los de id par un segundo
--- proveedor (RN-05: uno o varios). el proveedor sale de una formula con
--- % (modulo) para repartir los productos entre los 10 proveedores; el
--- costo es el 65 % o el 68 % del precio de lista.
--- UNION ALL junta las dos listas en un solo INSERT.
+-- proveedor principal para todos y uno segundo para los de id par (RN-05)
 INSERT INTO catalogo.producto_proveedor (id_producto, id_proveedor, costo_referencia, plazo_entrega_dias)
 SELECT p.id_producto, ((p.id_producto - 1) % 10) + 1,
        round(p.precio_lista * 0.65, 0), 5 + ((((p.id_producto - 1) % 10) + 1) % 4) * 3
@@ -150,10 +129,7 @@ SELECT p.id_producto, ((p.id_producto + 4) % 10) + 1,
 FROM catalogo.productos p
 WHERE p.id_producto % 2 = 0;
 
--- 100 clientes con generate_series(1, 100), que produce una fila por
--- cada numero i. con i se arma todo: cada 10 es una empresa (NIT), el
--- resto personas; los nombres salen de listas (ARRAY[...][posicion]).
--- los clientes 48 y 97 quedan inactivos.
+-- 100 clientes: cada 10 es una empresa (NIT); 48 y 97 inactivos
 INSERT INTO catalogo.clientes (tipo_documento, num_documento, nombre_completo, correo, telefono, estado)
 SELECT CASE WHEN i % 10 = 0 THEN 'NIT' WHEN i % 23 = 0 THEN 'CE' ELSE 'CC' END,
        CASE WHEN i % 10 = 0 THEN (900200000 + i * 37)::text ELSE (1010200000 + i * 7919)::text END,
