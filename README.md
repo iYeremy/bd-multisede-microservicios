@@ -39,6 +39,7 @@ Más detalle en el [manual](docs/manual-ejecucion.md).
 | `sql/07_consultas/` | las 20 consultas que pide el enunciado |
 | `sql/08_pruebas/` | pruebas de restricciones, fragmentos, permisos y aislamiento entre bases (todo con ROLLBACK, no ensucia nada) |
 | `docs/enunciado.pdf` | Todo el contexto y requisitos que se nos dio para el proyecto |
+| `docs/distribucion.md` | **bases, servicios, fragmentos por sede y vistas de integración** (entregable 5) |
 | `docs/` | reglas de negocio, normalización, diccionario, manual, evidencias, diagramas |
 
 ## Proceso
