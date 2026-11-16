@@ -85,7 +85,8 @@ func nuevoProxy(servicio string, destino *url.URL) *httputil.ReverseProxy {
 //	/interno/...         nunca se reenvia (no existe en el gateway)
 func (g *Gateway) Rutas() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/{servicio}/", g.reenviar)
+	mux.HandleFunc("/api/{servicio}/", g.reenviar) // /api/reportes/vista_...
+	mux.HandleFunc("/api/{servicio}", g.reenviar)  // /api/reportes (sin barra al final)
 	mux.HandleFunc("GET /salud", g.salud)
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		plataforma.ResponderJSON(w, http.StatusOK, map[string]string{

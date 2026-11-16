@@ -101,6 +101,15 @@ func (s *Servicio) Clientes(ctx context.Context) ([]Cliente, error) {
 	return pgx.CollectRows(rows, escanearCliente)
 }
 
+// ClientesPorIds devuelve los clientes de una lista de ids.
+func (s *Servicio) ClientesPorIds(ctx context.Context, ids []int32) ([]Cliente, error) {
+	rows, err := s.db.Query(ctx, selectClientes+` WHERE id_cliente = ANY($1) ORDER BY id_cliente`, ids)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, escanearCliente)
+}
+
 // Cliente devuelve un cliente por su id, o ErrNoExiste.
 func (s *Servicio) Cliente(ctx context.Context, id int) (Cliente, error) {
 	rows, err := s.db.Query(ctx, selectClientes+` WHERE id_cliente = $1`, id)
@@ -166,4 +175,25 @@ func (s *Servicio) ProveedoresPorIds(ctx context.Context, ids []int32) ([]Provee
 		return nil, err
 	}
 	return pgx.CollectRows(rows, pgx.RowToStructByPos[Proveedor])
+}
+
+// Almacen es un almacen de una sede.
+type Almacen struct {
+	ID     int    `json:"id_almacen"`
+	Nombre string `json:"nombre"`
+	IDSede int    `json:"id_sede"`
+	Estado string `json:"estado"`
+}
+
+// AlmacenesPorIds devuelve los almacenes de una lista de ids.
+func (s *Servicio) AlmacenesPorIds(ctx context.Context, ids []int32) ([]Almacen, error) {
+	rows, err := s.db.Query(ctx, `
+		SELECT id_almacen, nombre, id_sede, estado
+		FROM catalogo.almacenes
+		WHERE id_almacen = ANY($1)
+		ORDER BY id_almacen`, ids)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[Almacen])
 }

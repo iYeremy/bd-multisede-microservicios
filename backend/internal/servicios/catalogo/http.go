@@ -12,25 +12,38 @@ import (
 
 // Rutas cuelga las rutas del catalogo en el mux.
 //
-//	publicas (llegan por el gateway):
+//	publicas (llegan por el gateway, con sesion):
 //	  GET /api/catalogo/productos[?estado=ACTIVO]
 //	  GET /api/catalogo/clientes
 //	  GET /api/catalogo/sedes
 //	internas (solo otros servicios, con X-Token-Interno):
 //	  GET /interno/productos?ids=1,2,3
+//	  GET /interno/clientes?ids=1,2
 //	  GET /interno/clientes/{id}
+//	  GET /interno/almacenes?ids=1,2
 //	  GET /interno/sedes/{id}/almacen-venta
 //	  GET /interno/proveedores?ids=1,2
 func Rutas(mux *http.ServeMux, db *pgxpool.Pool, cfg plataforma.Config) {
 	s := &Servicio{db: db}
 	interno := func(h http.HandlerFunc) http.HandlerFunc { return plataforma.SoloInterno(cfg.TokenInterno, h) }
 
-	mux.HandleFunc("GET /api/catalogo/productos", s.verProductos)
-	mux.HandleFunc("GET /api/catalogo/clientes", s.verClientes)
-	mux.HandleFunc("GET /api/catalogo/sedes", s.verSedes)
+	// quien puede ver que (cada servicio autoriza)
+	conRol := func(h http.HandlerFunc, roles ...string) http.HandlerFunc {
+		return plataforma.ConRol(func(w http.ResponseWriter, r *http.Request, _ plataforma.Usuario) { h(w, r) }, roles...)
+	}
+	const (
+		admin, ger, inv, com, ven, aud = plataforma.RolAdmin, plataforma.RolGerencia, plataforma.RolInventario,
+			plataforma.RolCompras, plataforma.RolVendedor, plataforma.RolAuditor
+	)
+
+	mux.HandleFunc("GET /api/catalogo/productos", conRol(s.verProductos, admin, ger, inv, com, ven))
+	mux.HandleFunc("GET /api/catalogo/clientes", conRol(s.verClientes, admin, ven))
+	mux.HandleFunc("GET /api/catalogo/sedes", conRol(s.verSedes, admin, ger, inv, com, ven, aud))
 
 	mux.HandleFunc("GET /interno/productos", interno(s.productosPorIds))
+	mux.HandleFunc("GET /interno/clientes", interno(s.clientesPorIds))
 	mux.HandleFunc("GET /interno/clientes/{id}", interno(s.verCliente))
+	mux.HandleFunc("GET /interno/almacenes", interno(s.almacenesPorIds))
 	mux.HandleFunc("GET /interno/sedes/{id}/almacen-venta", interno(s.almacenVenta))
 	mux.HandleFunc("GET /interno/proveedores", interno(s.proveedoresPorIds))
 }
@@ -86,6 +99,32 @@ func (s *Servicio) proveedoresPorIds(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	plataforma.ResponderJSON(w, http.StatusOK, proveedores)
+}
+
+func (s *Servicio) clientesPorIds(w http.ResponseWriter, r *http.Request) {
+	ids, ok := leerIds(w, r)
+	if !ok {
+		return
+	}
+	clientes, err := s.ClientesPorIds(r.Context(), ids)
+	if err != nil {
+		plataforma.ErrorDB(w, r, err)
+		return
+	}
+	plataforma.ResponderJSON(w, http.StatusOK, clientes)
+}
+
+func (s *Servicio) almacenesPorIds(w http.ResponseWriter, r *http.Request) {
+	ids, ok := leerIds(w, r)
+	if !ok {
+		return
+	}
+	almacenes, err := s.AlmacenesPorIds(r.Context(), ids)
+	if err != nil {
+		plataforma.ErrorDB(w, r, err)
+		return
+	}
+	plataforma.ResponderJSON(w, http.StatusOK, almacenes)
 }
 
 func (s *Servicio) verCliente(w http.ResponseWriter, r *http.Request) {
