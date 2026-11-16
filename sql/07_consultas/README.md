@@ -13,7 +13,7 @@ título en la salida (así se ve en `docs/evidencias.txt`).
 - **Cuando necesitan una tabla de otra base, la traen con `dblink`** directamente en el `FROM` o el
   `JOIN` (ver `03_dblink/`):
   ```sql
-  JOIN dblink('srv_catalogo', 'SELECT id_sede, nombre FROM catalogo.sedes')
+  JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_sede, nombre FROM catalogo.sedes')
        AS s(id_sede INTEGER, nombre VARCHAR(60)) ON s.id_sede = p.id_sede
   ```
   Se lee como un `JOIN` normal con la tabla `s`.

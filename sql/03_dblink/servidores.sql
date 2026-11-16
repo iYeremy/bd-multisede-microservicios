@@ -1,36 +1,42 @@
 -- 03_dblink/servidores.sql
--- instala dblink en la base actual y registra las otras bases como
--- servidores remotos (srv_catalogo, srv_ventas...). ver README.md.
+-- instala dblink en la base actual y guarda como conectarse a la base de
+-- cada otro servicio (cada una vive en su propia instancia). los datos
+-- salen de la configuracion (00_config). ver README.md.
 
 CREATE EXTENSION IF NOT EXISTS dblink;
 
--- cada base se registra una vez con un nombre
-CREATE SERVER srv_catalogo    FOREIGN DATA WRAPPER dblink_fdw OPTIONS (dbname 'andina_catalogo');
-CREATE SERVER srv_identidad   FOREIGN DATA WRAPPER dblink_fdw OPTIONS (dbname 'andina_identidad');
-CREATE SERVER srv_compras     FOREIGN DATA WRAPPER dblink_fdw OPTIONS (dbname 'andina_compras');
-CREATE SERVER srv_inventarios FOREIGN DATA WRAPPER dblink_fdw OPTIONS (dbname 'andina_inventarios');
-CREATE SERVER srv_ventas      FOREIGN DATA WRAPPER dblink_fdw OPTIONS (dbname 'andina_ventas');
+-- esquema privado: solo el dueno puede ver las conexiones (llevan clave)
+CREATE SCHEMA remoto;
+REVOKE ALL ON SCHEMA remoto FROM PUBLIC;
 
--- con que usuario se conecta a cada una
-CREATE USER MAPPING FOR CURRENT_USER SERVER srv_catalogo    OPTIONS (user 'postgres');
-CREATE USER MAPPING FOR CURRENT_USER SERVER srv_identidad   OPTIONS (user 'postgres');
-CREATE USER MAPPING FOR CURRENT_USER SERVER srv_compras     OPTIONS (user 'postgres');
-CREATE USER MAPPING FOR CURRENT_USER SERVER srv_inventarios OPTIONS (user 'postgres');
-CREATE USER MAPPING FOR CURRENT_USER SERVER srv_ventas      OPTIONS (user 'postgres');
+-- una fila por servicio con su cadena de conexion
+CREATE TABLE remoto.servidores (
+    nombre   VARCHAR(20) PRIMARY KEY,
+    conexion TEXT        NOT NULL
+);
 
--- opcional: host y contrasena, si se pasan con psql -v (asi no quedan en el repo)
-\if :{?dblink_host}
-ALTER SERVER srv_catalogo    OPTIONS (ADD host :'dblink_host');
-ALTER SERVER srv_identidad   OPTIONS (ADD host :'dblink_host');
-ALTER SERVER srv_compras     OPTIONS (ADD host :'dblink_host');
-ALTER SERVER srv_inventarios OPTIONS (ADD host :'dblink_host');
-ALTER SERVER srv_ventas      OPTIONS (ADD host :'dblink_host');
-\endif
+-- la clave solo se agrega si existe (en local las instancias no piden)
+INSERT INTO remoto.servidores (nombre, conexion) VALUES
+    ('catalogo', 'host=' || :'catalogo_host' || ' port=' || :'catalogo_port' || ' dbname=' || :'catalogo_db'
+         || ' user=' || :'catalogo_user' || ' sslmode=' || :'sslmode'
+         || CASE WHEN :'catalogo_password' <> '' THEN ' password=' || :'catalogo_password' ELSE '' END),
+    ('identidad', 'host=' || :'identidad_host' || ' port=' || :'identidad_port' || ' dbname=' || :'identidad_db'
+         || ' user=' || :'identidad_user' || ' sslmode=' || :'sslmode'
+         || CASE WHEN :'identidad_password' <> '' THEN ' password=' || :'identidad_password' ELSE '' END),
+    ('compras', 'host=' || :'compras_host' || ' port=' || :'compras_port' || ' dbname=' || :'compras_db'
+         || ' user=' || :'compras_user' || ' sslmode=' || :'sslmode'
+         || CASE WHEN :'compras_password' <> '' THEN ' password=' || :'compras_password' ELSE '' END),
+    ('inventarios', 'host=' || :'inventarios_host' || ' port=' || :'inventarios_port' || ' dbname=' || :'inventarios_db'
+         || ' user=' || :'inventarios_user' || ' sslmode=' || :'sslmode'
+         || CASE WHEN :'inventarios_password' <> '' THEN ' password=' || :'inventarios_password' ELSE '' END),
+    ('ventas', 'host=' || :'ventas_host' || ' port=' || :'ventas_port' || ' dbname=' || :'ventas_db'
+         || ' user=' || :'ventas_user' || ' sslmode=' || :'sslmode'
+         || CASE WHEN :'ventas_password' <> '' THEN ' password=' || :'ventas_password' ELSE '' END);
 
-\if :{?dblink_password}
-ALTER USER MAPPING FOR CURRENT_USER SERVER srv_catalogo    OPTIONS (ADD password :'dblink_password');
-ALTER USER MAPPING FOR CURRENT_USER SERVER srv_identidad   OPTIONS (ADD password :'dblink_password');
-ALTER USER MAPPING FOR CURRENT_USER SERVER srv_compras     OPTIONS (ADD password :'dblink_password');
-ALTER USER MAPPING FOR CURRENT_USER SERVER srv_inventarios OPTIONS (ADD password :'dblink_password');
-ALTER USER MAPPING FOR CURRENT_USER SERVER srv_ventas      OPTIONS (ADD password :'dblink_password');
-\endif
+-- remoto.servidor('catalogo') devuelve la conexion de catalogo, para
+-- usarla asi: dblink(remoto.servidor('catalogo'), 'SELECT ...')
+CREATE FUNCTION remoto.servidor(p_nombre TEXT) RETURNS TEXT
+LANGUAGE sql STABLE
+AS 'SELECT conexion FROM remoto.servidores WHERE nombre = p_nombre';
+
+REVOKE EXECUTE ON FUNCTION remoto.servidor(TEXT) FROM PUBLIC;

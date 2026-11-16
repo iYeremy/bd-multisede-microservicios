@@ -17,56 +17,56 @@ SELECT DATE '2026-10-15' AS fecha_corte,
 -- los 4 inventarios en uno. fragmento = de que base y tabla viene cada fila
 CREATE MATERIALIZED VIEW reportes.vista_inventario_consolidado AS
 SELECT 'andina_inventarios.inv_bogota' AS fragmento, i.*
-FROM dblink('srv_inventarios', 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_bogota')
+FROM dblink(remoto.servidor('inventarios'), 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_bogota')
      AS i(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER, existencia_actual INTEGER, stock_minimo INTEGER, fecha_actualizacion TIMESTAMP)
 UNION ALL
 SELECT 'andina_inventarios.inv_medellin' AS fragmento, i.*
-FROM dblink('srv_inventarios', 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_medellin')
+FROM dblink(remoto.servidor('inventarios'), 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_medellin')
      AS i(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER, existencia_actual INTEGER, stock_minimo INTEGER, fecha_actualizacion TIMESTAMP)
 UNION ALL
 SELECT 'andina_inventarios.inv_cali' AS fragmento, i.*
-FROM dblink('srv_inventarios', 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_cali')
+FROM dblink(remoto.servidor('inventarios'), 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_cali')
      AS i(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER, existencia_actual INTEGER, stock_minimo INTEGER, fecha_actualizacion TIMESTAMP)
 UNION ALL
 SELECT 'andina_inventarios.inv_cedi' AS fragmento, i.*
-FROM dblink('srv_inventarios', 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_cedi')
+FROM dblink(remoto.servidor('inventarios'), 'SELECT id_sede, id_almacen, id_producto, existencia_actual, stock_minimo, fecha_actualizacion FROM inventarios.inv_cedi')
      AS i(id_sede INTEGER, id_almacen INTEGER, id_producto INTEGER, existencia_actual INTEGER, stock_minimo INTEGER, fecha_actualizacion TIMESTAMP)
 WITH NO DATA;
 
 -- lo mismo para pedidos y detalles
 CREATE MATERIALIZED VIEW reportes.vista_pedidos_consolidado AS
 SELECT 'andina_ventas.ped_bogota' AS fragmento, p.*
-FROM dblink('srv_ventas', 'SELECT id_sede, id_pedido, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado FROM ventas.ped_bogota')
+FROM dblink(remoto.servidor('ventas'), 'SELECT id_sede, id_pedido, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado FROM ventas.ped_bogota')
      AS p(id_sede INTEGER, id_pedido INTEGER, id_almacen INTEGER, id_cliente INTEGER, id_empleado INTEGER, fecha_pedido DATE, estado VARCHAR(10), total_registrado NUMERIC(14,2))
 UNION ALL
 SELECT 'andina_ventas.ped_medellin' AS fragmento, p.*
-FROM dblink('srv_ventas', 'SELECT id_sede, id_pedido, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado FROM ventas.ped_medellin')
+FROM dblink(remoto.servidor('ventas'), 'SELECT id_sede, id_pedido, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado FROM ventas.ped_medellin')
      AS p(id_sede INTEGER, id_pedido INTEGER, id_almacen INTEGER, id_cliente INTEGER, id_empleado INTEGER, fecha_pedido DATE, estado VARCHAR(10), total_registrado NUMERIC(14,2))
 UNION ALL
 SELECT 'andina_ventas.ped_cali' AS fragmento, p.*
-FROM dblink('srv_ventas', 'SELECT id_sede, id_pedido, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado FROM ventas.ped_cali')
+FROM dblink(remoto.servidor('ventas'), 'SELECT id_sede, id_pedido, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado FROM ventas.ped_cali')
      AS p(id_sede INTEGER, id_pedido INTEGER, id_almacen INTEGER, id_cliente INTEGER, id_empleado INTEGER, fecha_pedido DATE, estado VARCHAR(10), total_registrado NUMERIC(14,2))
 UNION ALL
 SELECT 'andina_ventas.ped_cedi' AS fragmento, p.*
-FROM dblink('srv_ventas', 'SELECT id_sede, id_pedido, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado FROM ventas.ped_cedi')
+FROM dblink(remoto.servidor('ventas'), 'SELECT id_sede, id_pedido, id_almacen, id_cliente, id_empleado, fecha_pedido, estado, total_registrado FROM ventas.ped_cedi')
      AS p(id_sede INTEGER, id_pedido INTEGER, id_almacen INTEGER, id_cliente INTEGER, id_empleado INTEGER, fecha_pedido DATE, estado VARCHAR(10), total_registrado NUMERIC(14,2))
 WITH NO DATA;
 
 CREATE MATERIALIZED VIEW reportes.vista_detalle_pedido_consolidado AS
 SELECT 'andina_ventas.det_ped_bogota' AS fragmento, d.*
-FROM dblink('srv_ventas', 'SELECT id_sede, id_pedido, id_producto, cantidad, precio_unitario FROM ventas.det_ped_bogota')
+FROM dblink(remoto.servidor('ventas'), 'SELECT id_sede, id_pedido, id_producto, cantidad, precio_unitario FROM ventas.det_ped_bogota')
      AS d(id_sede INTEGER, id_pedido INTEGER, id_producto INTEGER, cantidad INTEGER, precio_unitario NUMERIC(14,2))
 UNION ALL
 SELECT 'andina_ventas.det_ped_medellin' AS fragmento, d.*
-FROM dblink('srv_ventas', 'SELECT id_sede, id_pedido, id_producto, cantidad, precio_unitario FROM ventas.det_ped_medellin')
+FROM dblink(remoto.servidor('ventas'), 'SELECT id_sede, id_pedido, id_producto, cantidad, precio_unitario FROM ventas.det_ped_medellin')
      AS d(id_sede INTEGER, id_pedido INTEGER, id_producto INTEGER, cantidad INTEGER, precio_unitario NUMERIC(14,2))
 UNION ALL
 SELECT 'andina_ventas.det_ped_cali' AS fragmento, d.*
-FROM dblink('srv_ventas', 'SELECT id_sede, id_pedido, id_producto, cantidad, precio_unitario FROM ventas.det_ped_cali')
+FROM dblink(remoto.servidor('ventas'), 'SELECT id_sede, id_pedido, id_producto, cantidad, precio_unitario FROM ventas.det_ped_cali')
      AS d(id_sede INTEGER, id_pedido INTEGER, id_producto INTEGER, cantidad INTEGER, precio_unitario NUMERIC(14,2))
 UNION ALL
 SELECT 'andina_ventas.det_ped_cedi' AS fragmento, d.*
-FROM dblink('srv_ventas', 'SELECT id_sede, id_pedido, id_producto, cantidad, precio_unitario FROM ventas.det_ped_cedi')
+FROM dblink(remoto.servidor('ventas'), 'SELECT id_sede, id_pedido, id_producto, cantidad, precio_unitario FROM ventas.det_ped_cedi')
      AS d(id_sede INTEGER, id_pedido INTEGER, id_producto INTEGER, cantidad INTEGER, precio_unitario NUMERIC(14,2))
 WITH NO DATA;
 
@@ -81,13 +81,13 @@ SELECT i.id_sede, s.nombre AS sede,
        i.existencia_actual * p.precio_lista AS valorizacion_estimada,
        i.fragmento
 FROM reportes.vista_inventario_consolidado i
-JOIN dblink('srv_catalogo', 'SELECT id_sede, nombre FROM catalogo.sedes')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_sede, nombre FROM catalogo.sedes')
          AS s(id_sede INTEGER, nombre VARCHAR(60)) ON s.id_sede      = i.id_sede
-JOIN dblink('srv_catalogo', 'SELECT id_almacen, id_sede, nombre FROM catalogo.almacenes')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_almacen, id_sede, nombre FROM catalogo.almacenes')
          AS a(id_almacen INTEGER, id_sede INTEGER, nombre VARCHAR(60)) ON a.id_almacen   = i.id_almacen
-JOIN dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, precio_lista FROM catalogo.productos')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_producto, sku, nombre, id_categoria, precio_lista FROM catalogo.productos')
          AS p(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, precio_lista NUMERIC(14,2)) ON p.id_producto  = i.id_producto
-JOIN dblink('srv_catalogo', 'SELECT id_categoria, nombre FROM catalogo.categorias')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_categoria, nombre FROM catalogo.categorias')
          AS c(id_categoria INTEGER, nombre VARCHAR(60)) ON c.id_categoria = p.id_categoria
 WITH NO DATA;
 
@@ -105,11 +105,11 @@ WITH NO DATA;
 -- 3. productos activos sin inventario en una sede
 CREATE MATERIALIZED VIEW reportes.vista_productos_sin_inventario AS
 SELECT s.id_sede, s.nombre AS sede, p.id_producto, p.sku, p.nombre AS producto, c.nombre AS categoria
-FROM dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, estado FROM catalogo.productos')
+FROM dblink(remoto.servidor('catalogo'), 'SELECT id_producto, sku, nombre, id_categoria, estado FROM catalogo.productos')
          AS p(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, estado VARCHAR(15))
-JOIN dblink('srv_catalogo', 'SELECT id_categoria, nombre, estado FROM catalogo.categorias')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_categoria, nombre, estado FROM catalogo.categorias')
          AS c(id_categoria INTEGER, nombre VARCHAR(60), estado VARCHAR(10)) ON c.id_categoria = p.id_categoria
-CROSS JOIN dblink('srv_catalogo', 'SELECT id_sede, nombre, estado FROM catalogo.sedes')
+CROSS JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_sede, nombre, estado FROM catalogo.sedes')
                AS s(id_sede INTEGER, nombre VARCHAR(60), estado VARCHAR(10))
 WHERE p.estado = 'ACTIVO'
   AND NOT EXISTS (SELECT 1
@@ -125,7 +125,7 @@ SELECT p.id_sede, s.nombre AS sede,
        COUNT(*)                                  AS pedidos,
        SUM(p.total_registrado)                   AS total_vendido
 FROM reportes.vista_pedidos_consolidado p
-JOIN dblink('srv_catalogo', 'SELECT id_sede, nombre, estado FROM catalogo.sedes')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_sede, nombre, estado FROM catalogo.sedes')
          AS s(id_sede INTEGER, nombre VARCHAR(60), estado VARCHAR(10)) ON s.id_sede = p.id_sede
 WHERE p.estado IN ('CONFIRMADO', 'ENTREGADO')
 GROUP BY p.id_sede, s.nombre, date_trunc('month', p.fecha_pedido)
@@ -141,11 +141,11 @@ SELECT p.id_sede, s.nombre AS sede, p.id_pedido, p.fecha_pedido,
        p.total_registrado
 FROM reportes.vista_pedidos_consolidado p
 CROSS JOIN reportes.parametros pr
-JOIN dblink('srv_catalogo', 'SELECT id_sede, nombre, estado FROM catalogo.sedes')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_sede, nombre, estado FROM catalogo.sedes')
          AS s(id_sede INTEGER, nombre VARCHAR(60), estado VARCHAR(10))  ON s.id_sede      = p.id_sede
-JOIN dblink('srv_catalogo', 'SELECT id_cliente, nombre_completo, estado FROM catalogo.clientes')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_cliente, nombre_completo, estado FROM catalogo.clientes')
          AS cl(id_cliente INTEGER, nombre_completo VARCHAR(120), estado VARCHAR(10)) ON cl.id_cliente  = p.id_cliente
-JOIN dblink('srv_identidad', 'SELECT id_empleado, id_sede, nombre_completo, estado FROM identidad.empleados')
+JOIN dblink(remoto.servidor('identidad'), 'SELECT id_empleado, id_sede, nombre_completo, estado FROM identidad.empleados')
          AS e(id_empleado INTEGER, id_sede INTEGER, nombre_completo VARCHAR(120), estado VARCHAR(10))  ON e.id_empleado  = p.id_empleado
 WHERE p.estado = 'PENDIENTE'
 WITH NO DATA;
@@ -158,12 +158,12 @@ SELECT p.id_sede, s.nombre AS sede, p.id_pedido, p.fecha_pedido, p.estado,
        COALESCE(pg.pagado, 0)                      AS pagos_confirmados,
        p.total_registrado - COALESCE(pg.pagado, 0) AS saldo_pendiente
 FROM reportes.vista_pedidos_consolidado p
-JOIN dblink('srv_catalogo', 'SELECT id_sede, nombre, estado FROM catalogo.sedes')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_sede, nombre, estado FROM catalogo.sedes')
          AS s(id_sede INTEGER, nombre VARCHAR(60), estado VARCHAR(10))  ON s.id_sede     = p.id_sede
-JOIN dblink('srv_catalogo', 'SELECT id_cliente, nombre_completo, estado FROM catalogo.clientes')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_cliente, nombre_completo, estado FROM catalogo.clientes')
          AS cl(id_cliente INTEGER, nombre_completo VARCHAR(120), estado VARCHAR(10)) ON cl.id_cliente = p.id_cliente
 LEFT JOIN (SELECT id_sede, id_pedido, SUM(valor) AS pagado
-           FROM dblink('srv_ventas', 'SELECT id_sede, id_pedido, valor, estado FROM ventas.pagos')
+           FROM dblink(remoto.servidor('ventas'), 'SELECT id_sede, id_pedido, valor, estado FROM ventas.pagos')
                     AS pagos(id_sede INTEGER, id_pedido INTEGER, valor NUMERIC(14,2), estado VARCHAR(10))
            WHERE estado = 'CONFIRMADO'
            GROUP BY id_sede, id_pedido) pg
@@ -180,20 +180,20 @@ SELECT oc.id_orden_compra, oc.fecha_orden, oc.fecha_estimada, oc.estado,
        d.cantidad_solicitada,
        COALESCE(r.recibida, 0)                         AS cantidad_recibida,
        d.cantidad_solicitada - COALESCE(r.recibida, 0) AS cantidad_pendiente
-FROM dblink('srv_compras', 'SELECT id_orden_compra, id_proveedor, id_almacen_destino, fecha_orden, fecha_estimada, estado FROM compras.ordenes_compra')
+FROM dblink(remoto.servidor('compras'), 'SELECT id_orden_compra, id_proveedor, id_almacen_destino, fecha_orden, fecha_estimada, estado FROM compras.ordenes_compra')
          AS oc(id_orden_compra INTEGER, id_proveedor INTEGER, id_almacen_destino INTEGER, fecha_orden DATE, fecha_estimada DATE, estado VARCHAR(10))
-JOIN dblink('srv_compras', 'SELECT id_orden_compra, id_producto, cantidad_solicitada FROM compras.detalle_orden_compra')
+JOIN dblink(remoto.servidor('compras'), 'SELECT id_orden_compra, id_producto, cantidad_solicitada FROM compras.detalle_orden_compra')
          AS d(id_orden_compra INTEGER, id_producto INTEGER, cantidad_solicitada INTEGER) ON d.id_orden_compra = oc.id_orden_compra
-JOIN dblink('srv_catalogo', 'SELECT id_proveedor, razon_social, estado FROM catalogo.proveedores')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_proveedor, razon_social, estado FROM catalogo.proveedores')
          AS pv(id_proveedor INTEGER, razon_social VARCHAR(100), estado VARCHAR(10)) ON pv.id_proveedor = oc.id_proveedor
-JOIN dblink('srv_catalogo', 'SELECT id_almacen, nombre, estado FROM catalogo.almacenes')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_almacen, nombre, estado FROM catalogo.almacenes')
          AS a(id_almacen INTEGER, nombre VARCHAR(60), estado VARCHAR(10))  ON a.id_almacen    = oc.id_almacen_destino
-JOIN dblink('srv_catalogo', 'SELECT id_producto, nombre, estado FROM catalogo.productos')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_producto, nombre, estado FROM catalogo.productos')
          AS p(id_producto INTEGER, nombre VARCHAR(100), estado VARCHAR(15))  ON p.id_producto   = d.id_producto
 LEFT JOIN (SELECT rc.id_orden_compra, dr.id_producto, SUM(dr.cantidad_recibida) AS recibida
-           FROM dblink('srv_compras', 'SELECT id_recepcion, id_orden_compra, estado FROM compras.recepciones_compra')
+           FROM dblink(remoto.servidor('compras'), 'SELECT id_recepcion, id_orden_compra, estado FROM compras.recepciones_compra')
                     AS rc(id_recepcion INTEGER, id_orden_compra INTEGER, estado VARCHAR(10))
-           JOIN dblink('srv_compras', 'SELECT id_recepcion, id_producto, cantidad_recibida FROM compras.detalle_recepcion')
+           JOIN dblink(remoto.servidor('compras'), 'SELECT id_recepcion, id_producto, cantidad_recibida FROM compras.detalle_recepcion')
                     AS dr(id_recepcion INTEGER, id_producto INTEGER, cantidad_recibida INTEGER) ON dr.id_recepcion = rc.id_recepcion
            WHERE rc.estado = 'REGISTRADA'
            GROUP BY rc.id_orden_compra, dr.id_producto) r
@@ -210,20 +210,20 @@ SELECT t.id_transferencia,
        t.fecha_solicitud, t.fecha_despacho,
        pr.fecha_corte - t.fecha_despacho AS dias_en_transito,
        dt.id_producto, p.nombre AS producto, dt.cantidad_enviada
-FROM dblink('srv_inventarios', 'SELECT id_transferencia, id_almacen_origen, id_almacen_destino, fecha_solicitud, fecha_despacho, fecha_recepcion, estado FROM inventarios.transferencias')
+FROM dblink(remoto.servidor('inventarios'), 'SELECT id_transferencia, id_almacen_origen, id_almacen_destino, fecha_solicitud, fecha_despacho, fecha_recepcion, estado FROM inventarios.transferencias')
          AS t(id_transferencia INTEGER, id_almacen_origen INTEGER, id_almacen_destino INTEGER, fecha_solicitud DATE, fecha_despacho DATE, fecha_recepcion DATE, estado VARCHAR(10))
 CROSS JOIN reportes.parametros pr
-JOIN dblink('srv_inventarios', 'SELECT id_transferencia, id_producto, cantidad_enviada FROM inventarios.detalle_transferencia')
+JOIN dblink(remoto.servidor('inventarios'), 'SELECT id_transferencia, id_producto, cantidad_enviada FROM inventarios.detalle_transferencia')
          AS dt(id_transferencia INTEGER, id_producto INTEGER, cantidad_enviada INTEGER) ON dt.id_transferencia = t.id_transferencia
-JOIN dblink('srv_catalogo', 'SELECT id_almacen, id_sede, nombre, estado FROM catalogo.almacenes')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_almacen, id_sede, nombre, estado FROM catalogo.almacenes')
          AS ao(id_almacen INTEGER, id_sede INTEGER, nombre VARCHAR(60), estado VARCHAR(10)) ON ao.id_almacen = t.id_almacen_origen
-JOIN dblink('srv_catalogo', 'SELECT id_sede, nombre, estado FROM catalogo.sedes')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_sede, nombre, estado FROM catalogo.sedes')
          AS so(id_sede INTEGER, nombre VARCHAR(60), estado VARCHAR(10)) ON so.id_sede    = ao.id_sede
-JOIN dblink('srv_catalogo', 'SELECT id_almacen, id_sede, nombre, estado FROM catalogo.almacenes')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_almacen, id_sede, nombre, estado FROM catalogo.almacenes')
          AS ad(id_almacen INTEGER, id_sede INTEGER, nombre VARCHAR(60), estado VARCHAR(10)) ON ad.id_almacen = t.id_almacen_destino
-JOIN dblink('srv_catalogo', 'SELECT id_sede, nombre, estado FROM catalogo.sedes')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_sede, nombre, estado FROM catalogo.sedes')
          AS sd(id_sede INTEGER, nombre VARCHAR(60), estado VARCHAR(10)) ON sd.id_sede    = ad.id_sede
-JOIN dblink('srv_catalogo', 'SELECT id_producto, nombre, estado FROM catalogo.productos')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_producto, nombre, estado FROM catalogo.productos')
          AS p(id_producto INTEGER, nombre VARCHAR(100), estado VARCHAR(15))  ON p.id_producto = dt.id_producto
 WHERE t.estado = 'DESPACHADA'
   AND t.fecha_recepcion IS NULL
@@ -240,9 +240,9 @@ WITH vendidas AS (
     GROUP BY d.id_producto
 ), devueltas AS (
     SELECT dd.id_producto, SUM(dd.cantidad) AS unidades_devueltas
-    FROM dblink('srv_ventas', 'SELECT id_devolucion, id_sede, id_pedido, estado FROM ventas.devoluciones')
+    FROM dblink(remoto.servidor('ventas'), 'SELECT id_devolucion, id_sede, id_pedido, estado FROM ventas.devoluciones')
              AS dv(id_devolucion INTEGER, id_sede INTEGER, id_pedido INTEGER, estado VARCHAR(10))
-    JOIN dblink('srv_ventas', 'SELECT id_devolucion, id_producto, cantidad FROM ventas.detalle_devolucion')
+    JOIN dblink(remoto.servidor('ventas'), 'SELECT id_devolucion, id_producto, cantidad FROM ventas.detalle_devolucion')
              AS dd(id_devolucion INTEGER, id_producto INTEGER, cantidad INTEGER) ON dd.id_devolucion = dv.id_devolucion
     WHERE dv.estado = 'APROBADA'
     GROUP BY dd.id_producto
@@ -252,9 +252,9 @@ SELECT p.id_producto, p.sku, p.nombre AS producto, c.nombre AS categoria,
        COALESCE(dv.unidades_devueltas, 0) AS unidades_devueltas,
        round(100.0 * COALESCE(dv.unidades_devueltas, 0) / v.unidades_vendidas, 2) AS porcentaje_devolucion
 FROM vendidas v
-JOIN dblink('srv_catalogo', 'SELECT id_producto, sku, nombre, id_categoria, estado FROM catalogo.productos')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_producto, sku, nombre, id_categoria, estado FROM catalogo.productos')
          AS p(id_producto INTEGER, sku VARCHAR(20), nombre VARCHAR(100), id_categoria INTEGER, estado VARCHAR(15)) ON p.id_producto  = v.id_producto
-JOIN dblink('srv_catalogo', 'SELECT id_categoria, nombre, estado FROM catalogo.categorias')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_categoria, nombre, estado FROM catalogo.categorias')
          AS c(id_categoria INTEGER, nombre VARCHAR(60), estado VARCHAR(10)) ON c.id_categoria = p.id_categoria
 LEFT JOIN devueltas dv ON dv.id_producto = v.id_producto
 WITH NO DATA;
@@ -270,7 +270,7 @@ WITH inv AS (
 ), activos AS (
     SELECT i.id_sede, COUNT(DISTINCT i.id_producto) AS productos_activos
     FROM reportes.vista_inventario_consolidado i
-    JOIN dblink('srv_catalogo', 'SELECT id_producto, nombre, estado FROM catalogo.productos')
+    JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_producto, nombre, estado FROM catalogo.productos')
              AS p(id_producto INTEGER, nombre VARCHAR(100), estado VARCHAR(15)) ON p.id_producto = i.id_producto
     WHERE p.estado = 'ACTIVO'
     GROUP BY i.id_sede
@@ -285,27 +285,27 @@ WITH inv AS (
     SELECT a.id_sede,
            COUNT(DISTINCT oc.id_orden_compra)                 AS ordenes_compra,
            SUM(d.cantidad_solicitada * d.costo_unitario)      AS valor_compras
-    FROM dblink('srv_compras', 'SELECT id_orden_compra, id_almacen_destino, estado FROM compras.ordenes_compra')
+    FROM dblink(remoto.servidor('compras'), 'SELECT id_orden_compra, id_almacen_destino, estado FROM compras.ordenes_compra')
              AS oc(id_orden_compra INTEGER, id_almacen_destino INTEGER, estado VARCHAR(10))
-    JOIN dblink('srv_compras', 'SELECT id_orden_compra, id_producto, cantidad_solicitada, costo_unitario FROM compras.detalle_orden_compra')
+    JOIN dblink(remoto.servidor('compras'), 'SELECT id_orden_compra, id_producto, cantidad_solicitada, costo_unitario FROM compras.detalle_orden_compra')
              AS d(id_orden_compra INTEGER, id_producto INTEGER, cantidad_solicitada INTEGER, costo_unitario NUMERIC(14,2)) ON d.id_orden_compra = oc.id_orden_compra
-    JOIN dblink('srv_catalogo', 'SELECT id_almacen, id_sede, nombre, estado FROM catalogo.almacenes')
+    JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_almacen, id_sede, nombre, estado FROM catalogo.almacenes')
              AS a(id_almacen INTEGER, id_sede INTEGER, nombre VARCHAR(60), estado VARCHAR(10)) ON a.id_almacen = oc.id_almacen_destino
     WHERE oc.estado <> 'CANCELADA'
     GROUP BY a.id_sede
 ), tr_sal AS (
     SELECT a.id_sede, COUNT(*) AS transferencias_enviadas
-    FROM dblink('srv_inventarios', 'SELECT id_almacen_origen, id_almacen_destino, estado FROM inventarios.transferencias')
+    FROM dblink(remoto.servidor('inventarios'), 'SELECT id_almacen_origen, id_almacen_destino, estado FROM inventarios.transferencias')
              AS t(id_almacen_origen INTEGER, id_almacen_destino INTEGER, estado VARCHAR(10))
-    JOIN dblink('srv_catalogo', 'SELECT id_almacen, id_sede, nombre, estado FROM catalogo.almacenes')
+    JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_almacen, id_sede, nombre, estado FROM catalogo.almacenes')
              AS a(id_almacen INTEGER, id_sede INTEGER, nombre VARCHAR(60), estado VARCHAR(10)) ON a.id_almacen = t.id_almacen_origen
     WHERE t.estado <> 'CANCELADA'
     GROUP BY a.id_sede
 ), tr_ent AS (
     SELECT a.id_sede, COUNT(*) AS transferencias_recibidas
-    FROM dblink('srv_inventarios', 'SELECT id_almacen_origen, id_almacen_destino, estado FROM inventarios.transferencias')
+    FROM dblink(remoto.servidor('inventarios'), 'SELECT id_almacen_origen, id_almacen_destino, estado FROM inventarios.transferencias')
              AS t(id_almacen_origen INTEGER, id_almacen_destino INTEGER, estado VARCHAR(10))
-    JOIN dblink('srv_catalogo', 'SELECT id_almacen, id_sede, nombre, estado FROM catalogo.almacenes')
+    JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_almacen, id_sede, nombre, estado FROM catalogo.almacenes')
              AS a(id_almacen INTEGER, id_sede INTEGER, nombre VARCHAR(60), estado VARCHAR(10)) ON a.id_almacen = t.id_almacen_destino
     WHERE t.estado = 'RECIBIDA'
     GROUP BY a.id_sede
@@ -321,7 +321,7 @@ SELECT s.id_sede, s.nombre AS sede, s.tipo_sede,
        COALESCE(com.valor_compras, 0)             AS valor_compras,
        COALESCE(ts.transferencias_enviadas, 0)    AS transferencias_enviadas,
        COALESCE(te.transferencias_recibidas, 0)   AS transferencias_recibidas
-FROM dblink('srv_catalogo', 'SELECT id_sede, nombre, tipo_sede, estado FROM catalogo.sedes')
+FROM dblink(remoto.servidor('catalogo'), 'SELECT id_sede, nombre, tipo_sede, estado FROM catalogo.sedes')
          AS s(id_sede INTEGER, nombre VARCHAR(60), tipo_sede VARCHAR(15), estado VARCHAR(10))
 LEFT JOIN activos ac ON ac.id_sede  = s.id_sede
 LEFT JOIN inv        ON inv.id_sede = s.id_sede

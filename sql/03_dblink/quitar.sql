@@ -1,5 +1,6 @@
 -- 03_dblink/quitar.sql
--- quita dblink de la base actual (y con CASCADE, sus servidores srv_*).
--- lo usan los datos de prueba al terminar. ver README.md.
+-- quita dblink y las conexiones guardadas de la base actual. lo usan los
+-- datos de prueba al terminar. ver README.md.
 
-DROP EXTENSION dblink CASCADE;
+DROP SCHEMA remoto CASCADE;
+DROP EXTENSION dblink;

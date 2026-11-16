@@ -9,12 +9,12 @@ SELECT setseed(0.2026);
 
 -- precios
 CREATE TEMP TABLE tmp_productos AS
-SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, precio_lista FROM catalogo.productos')
+SELECT * FROM dblink(remoto.servidor('catalogo'), 'SELECT id_producto, precio_lista FROM catalogo.productos')
          AS t(id_producto INTEGER, precio_lista NUMERIC(14,2));
 
 -- que hay en cada almacen (el UNION ALL se hace alla, en andina_inventarios)
 CREATE TEMP TABLE tmp_inv AS
-SELECT * FROM dblink('srv_inventarios',
+SELECT * FROM dblink(remoto.servidor('inventarios'),
          'SELECT id_sede, id_almacen, id_producto FROM inventarios.inv_bogota
           UNION ALL SELECT id_sede, id_almacen, id_producto FROM inventarios.inv_medellin
           UNION ALL SELECT id_sede, id_almacen, id_producto FROM inventarios.inv_cali

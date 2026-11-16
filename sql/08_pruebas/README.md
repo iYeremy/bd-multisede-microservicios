@@ -1,8 +1,8 @@
 # 08_pruebas: las pruebas de verificación
 
 `pruebas.sql` tiene las pruebas mínimas de la sección 11 del enunciado, más algunas extra. El script
-hace sus propios `\c`: las pruebas van **agrupadas por base**, porque cada una tiene que correr donde
-está lo que prueba. Por eso los números no van en orden (la prueba 9, de permisos, está repartida en
+hace sus propios `\c :conn_<servicio>` (ver `00_config/`): las pruebas van **agrupadas por
+instancia**, porque cada una tiene que correr donde está lo que prueba. Por eso los números no van en orden (la prueba 9, de permisos, está repartida en
 varias bases).
 
 ## Cómo funcionan
@@ -17,7 +17,7 @@ varias bases).
   Al final las deja como estaban.
 - **`BEGIN ... ROLLBACK` por base:** lo que las pruebas insertan o cambian se deshace al final, así el
   script se puede correr las veces que sea sin ensuciar los datos. Hay uno por base porque una
-  transacción no puede abarcar dos bases.
+  transacción no puede abarcar dos bases (y aquí ni siquiera dos servidores).
 - **`SET ROLE usuario` / `RESET ROLE`:** la sesión actúa como ese usuario, con sus permisos, sin tener
   que reconectarse. `RESET ROLE` vuelve a ser postgres.
 - **`RETURNING`:** un `INSERT` o `UPDATE` que además muestra lo que guardó.
@@ -39,8 +39,8 @@ varias bases).
 | 7b | reportes | Función de ventana: participación de cada sede | Resultado con % |
 | 8 | inventarios | Bogotá vs Medellín con `EXCEPT` e `INTERSECT` | Cuántos productos tiene solo una, solo la otra, o las dos |
 | 9.1 | reportes | Gerencia lee el reporte corporativo | Permitido |
-| 9.1b | reportes | Gerencia intenta usar `dblink` | ERROR: permiso denegado para la función dblink |
-| 9.2 | ventas | Gerencia inserta un pago | ERROR: permiso denegado |
+| 9.1b | reportes | Gerencia intenta usar `dblink` con las conexiones guardadas | ERROR: permiso denegado para el esquema remoto |
+| 9.2 | ventas | Actuar como gerencia en la instancia de ventas | ERROR: el rol no existe (gerencia solo existe en la instancia de reportes) |
 | 9.3 | ventas | `vendedor_bogota` crea un pedido en su fragmento | Permitido (el `DEFAULT` pone la sede y el IDENTITY el número) |
 | 9.4 | ventas | `vendedor_bogota` lee los pedidos de Cali | ERROR: permiso denegado |
 | 9.5 | catálogo | `vendedor_bogota` cambia un precio | ERROR: permiso denegado (ventas no toca catálogo, RN-39) |
@@ -51,7 +51,7 @@ varias bases).
 | 10 | reportes | El reporte corporativo no duplica ventas ni cantidades | Cada total del reporte = el mismo total sacado de la fuente. Después, el contraejemplo: con un solo `JOIN` el valor sale inflado |
 | extra | reportes | Ids sin FK que apuntan a algo que no existe (huérfanos) | Las 13 filas en 0 |
 | 11 | ventas | Desde ventas, leer `catalogo.productos` y `andina_catalogo.catalogo.productos` | ERROR "la relación no existe" y ERROR "cross-database references are not implemented" |
-| 11.3 | ventas | A qué base puede entrar cada rol (`has_database_privilege`) | Coincide con la matriz de `06_roles/README.md` |
+| 11.3 | reportes | Qué usuarios existen y pueden entrar en cada instancia (se le pregunta a cada una por `dblink`) | Coincide con la matriz de `06_roles/README.md` |
 | 12 | ventas / reportes | Vistas materializadas y consistencia eventual | Ver abajo |
 
 ## Prueba extra: referencias sin FK
@@ -68,6 +68,11 @@ Conectados a `andina_ventas`, las tablas de catálogo **no existen**: están en 
 otra base (`andina_catalogo.catalogo.productos`) da "cross-database references are not implemented":
 PostgreSQL no deja ir a otra base sin `dblink`, y ventas no lo tiene (se lo quitó al terminar sus
 datos de prueba).
+
+Además, como cada servicio está en **su propia instancia**, los usuarios de un servicio ni siquiera
+existen en las demás: `svc_ventas` no puede conectarse a la instancia de catálogo porque ahí no hay
+ningún usuario con ese nombre. La 11.3 lo muestra: lista, instancia por instancia, qué usuarios
+existen y pueden entrar.
 
 ## Prueba 12: el reporte no cambia hasta el REFRESH
 

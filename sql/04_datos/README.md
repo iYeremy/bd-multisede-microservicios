@@ -42,7 +42,7 @@ Como esos datos están en otra base, se traen con **dblink** (ver `03_dblink/`) 
 \ir ../03_dblink/servidores.sql          -- instala dblink en esta base
 
 CREATE TEMP TABLE tmp_productos AS
-SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, precio_lista FROM catalogo.productos')
+SELECT * FROM dblink(remoto.servidor('catalogo'), 'SELECT id_producto, precio_lista FROM catalogo.productos')
          AS t(id_producto INTEGER, precio_lista NUMERIC(14,2));
 ...
 \ir ../03_dblink/quitar.sql              -- al final, se quita

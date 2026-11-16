@@ -1,31 +1,14 @@
 El paginador no se usará.
+>> catalogo
 Ahora está conectado a la base de datos «postgres» con el usuario «postgres».
 SET
->> bases
-DROP DATABASE
-DROP DATABASE
-DROP DATABASE
-DROP DATABASE
-DROP DATABASE
-DROP DATABASE
 DROP DATABASE
 DROP ROLE
 DROP ROLE
 DROP ROLE
 CREATE DATABASE
-CREATE DATABASE
-CREATE DATABASE
-CREATE DATABASE
-CREATE DATABASE
-CREATE DATABASE
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
 COMMENT
 REVOKE
->> catalogo
 Ahora está conectado a la base de datos «andina_catalogo» con el usuario «postgres».
 CREATE SCHEMA
 COMMENT
@@ -50,7 +33,38 @@ INSERT 0 80
 INSERT 0 10
 INSERT 0 120
 INSERT 0 100
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
 >> identidad
+Ahora está conectado a la base de datos «postgres» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5442».
+SET
+DROP DATABASE
+DROP ROLE
+DROP ROLE
+DROP ROLE
+CREATE DATABASE
+COMMENT
+REVOKE
 Ahora está conectado a la base de datos «andina_identidad» con el usuario «postgres».
 CREATE SCHEMA
 COMMENT
@@ -68,7 +82,28 @@ COMMENT
 INSERT 0 20
 INSERT 0 12
 INSERT 0 60
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
 >> compras
+Ahora está conectado a la base de datos «postgres» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5443».
+SET
+DROP DATABASE
+DROP ROLE
+DROP ROLE
+DROP ROLE
+CREATE DATABASE
+COMMENT
+REVOKE
 Ahora está conectado a la base de datos «andina_compras» con el usuario «postgres».
 CREATE SCHEMA
 COMMENT
@@ -86,16 +121,12 @@ COMMENT
 (1 fila)
 
 CREATE EXTENSION
-CREATE SERVER
-CREATE SERVER
-CREATE SERVER
-CREATE SERVER
-CREATE SERVER
-CREATE USER MAPPING
-CREATE USER MAPPING
-CREATE USER MAPPING
-CREATE USER MAPPING
-CREATE USER MAPPING
+CREATE SCHEMA
+REVOKE
+CREATE TABLE
+INSERT 0 5
+CREATE FUNCTION
+REVOKE
 SELECT 120
 SELECT 60
 ALTER TABLE
@@ -106,19 +137,34 @@ SELECT 70
 INSERT 0 70
 INSERT 0 193
 DROP TABLE
-psql:sql/03_dblink/quitar.sql:5: NOTICE:  drop cascades to 10 other objects
-DETALLE:  drop cascades to server srv_catalogo
-drop cascades to user mapping for postgres on server srv_catalogo
-drop cascades to server srv_identidad
-drop cascades to user mapping for postgres on server srv_identidad
-drop cascades to server srv_compras
-drop cascades to user mapping for postgres on server srv_compras
-drop cascades to server srv_inventarios
-drop cascades to user mapping for postgres on server srv_inventarios
-drop cascades to server srv_ventas
-drop cascades to user mapping for postgres on server srv_ventas
+psql:sql/03_dblink/quitar.sql:5: NOTICE:  drop cascades to 2 other objects
+DETALLE:  drop cascades to table remoto.servidores
+drop cascades to function remoto.servidor(text)
+DROP SCHEMA
 DROP EXTENSION
->> inventarios (fragmentos por sede)
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+>> inventarios
+Ahora está conectado a la base de datos «postgres» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5444».
+SET
+DROP DATABASE
+DROP ROLE
+DROP ROLE
+DROP ROLE
+CREATE DATABASE
+COMMENT
+REVOKE
 Ahora está conectado a la base de datos «andina_inventarios» con el usuario «postgres».
 CREATE SCHEMA
 COMMENT
@@ -140,16 +186,12 @@ COMMENT
 (1 fila)
 
 CREATE EXTENSION
-CREATE SERVER
-CREATE SERVER
-CREATE SERVER
-CREATE SERVER
-CREATE SERVER
-CREATE USER MAPPING
-CREATE USER MAPPING
-CREATE USER MAPPING
-CREATE USER MAPPING
-CREATE USER MAPPING
+CREATE SCHEMA
+REVOKE
+CREATE TABLE
+INSERT 0 5
+CREATE FUNCTION
+REVOKE
 SELECT 5
 SELECT 80
 SELECT 304
@@ -163,19 +205,38 @@ INSERT 0 25
 INSERT 0 75
 UPDATE 4
 DROP TABLE
-psql:sql/03_dblink/quitar.sql:5: NOTICE:  drop cascades to 10 other objects
-DETALLE:  drop cascades to server srv_catalogo
-drop cascades to user mapping for postgres on server srv_catalogo
-drop cascades to server srv_identidad
-drop cascades to user mapping for postgres on server srv_identidad
-drop cascades to server srv_compras
-drop cascades to user mapping for postgres on server srv_compras
-drop cascades to server srv_inventarios
-drop cascades to user mapping for postgres on server srv_inventarios
-drop cascades to server srv_ventas
-drop cascades to user mapping for postgres on server srv_ventas
+psql:sql/03_dblink/quitar.sql:5: NOTICE:  drop cascades to 2 other objects
+DETALLE:  drop cascades to table remoto.servidores
+drop cascades to function remoto.servidor(text)
+DROP SCHEMA
 DROP EXTENSION
->> ventas (fragmentos por sede)
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+>> ventas
+Ahora está conectado a la base de datos «postgres» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5445».
+SET
+DROP DATABASE
+DROP ROLE
+DROP ROLE
+DROP ROLE
+CREATE DATABASE
+COMMENT
+REVOKE
 Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
 CREATE SCHEMA
 COMMENT
@@ -207,16 +268,12 @@ COMMENT
 (1 fila)
 
 CREATE EXTENSION
-CREATE SERVER
-CREATE SERVER
-CREATE SERVER
-CREATE SERVER
-CREATE SERVER
-CREATE USER MAPPING
-CREATE USER MAPPING
-CREATE USER MAPPING
-CREATE USER MAPPING
-CREATE USER MAPPING
+CREATE SCHEMA
+REVOKE
+CREATE TABLE
+INSERT 0 5
+CREATE FUNCTION
+REVOKE
 SELECT 80
 SELECT 304
 SELECT 300
@@ -239,31 +296,47 @@ SELECT 22
 INSERT 0 22
 INSERT 0 29
 DROP TABLE
-psql:sql/03_dblink/quitar.sql:5: NOTICE:  drop cascades to 10 other objects
-DETALLE:  drop cascades to server srv_catalogo
-drop cascades to user mapping for postgres on server srv_catalogo
-drop cascades to server srv_identidad
-drop cascades to user mapping for postgres on server srv_identidad
-drop cascades to server srv_compras
-drop cascades to user mapping for postgres on server srv_compras
-drop cascades to server srv_inventarios
-drop cascades to user mapping for postgres on server srv_inventarios
-drop cascades to server srv_ventas
-drop cascades to user mapping for postgres on server srv_ventas
+psql:sql/03_dblink/quitar.sql:5: NOTICE:  drop cascades to 2 other objects
+DETALLE:  drop cascades to table remoto.servidores
+drop cascades to function remoto.servidor(text)
+DROP SCHEMA
 DROP EXTENSION
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+CREATE ROLE
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+REVOKE
+GRANT
+GRANT
 >> reportes
+Ahora está conectado a la base de datos «postgres» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5446».
+SET
+DROP DATABASE
+DROP ROLE
+DROP ROLE
+DROP ROLE
+CREATE DATABASE
+COMMENT
+REVOKE
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
 CREATE EXTENSION
-CREATE SERVER
-CREATE SERVER
-CREATE SERVER
-CREATE SERVER
-CREATE SERVER
-CREATE USER MAPPING
-CREATE USER MAPPING
-CREATE USER MAPPING
-CREATE USER MAPPING
-CREATE USER MAPPING
+CREATE SCHEMA
+REVOKE
+CREATE TABLE
+INSERT 0 5
+CREATE FUNCTION
+REVOKE
 CREATE SCHEMA
 COMMENT
 CREATE VIEW
@@ -313,10 +386,9 @@ REFRESH MATERIALIZED VIEW
 COMMIT
    reportes_actualizados_en    
 -------------------------------
- 2026-11-11 13:42:18.379094-05
+ 2026-11-16 00:25:47.173251-05
 (1 fila)
 
->> roles y permisos
 CREATE ROLE
 CREATE ROLE
 CREATE ROLE
@@ -329,64 +401,8 @@ CREATE ROLE
 CREATE ROLE
 CREATE ROLE
 CREATE ROLE
-CREATE ROLE
-CREATE ROLE
-CREATE ROLE
-CREATE ROLE
-CREATE ROLE
-CREATE ROLE
-CREATE ROLE
-CREATE ROLE
 GRANT
 GRANT
-GRANT
-GRANT
-GRANT
-GRANT
-GRANT
-GRANT
-GRANT
-GRANT
-GRANT
-GRANT
-Ahora está conectado a la base de datos «andina_catalogo» con el usuario «postgres».
-GRANT
-GRANT
-GRANT
-GRANT
-GRANT
-GRANT
-GRANT
-Ahora está conectado a la base de datos «andina_identidad» con el usuario «postgres».
-GRANT
-GRANT
-GRANT
-GRANT
-GRANT
-Ahora está conectado a la base de datos «andina_compras» con el usuario «postgres».
-GRANT
-GRANT
-GRANT
-GRANT
-Ahora está conectado a la base de datos «andina_inventarios» con el usuario «postgres».
-GRANT
-GRANT
-GRANT
-GRANT
-GRANT
-GRANT
-GRANT
-Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
-GRANT
-GRANT
-GRANT
-GRANT
-GRANT
-REVOKE
-GRANT
-GRANT
-Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
-REVOKE
 GRANT
 GRANT
 GRANT
@@ -723,11 +739,11 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
  Sede Medellín | Almacén Medellín        | LIM-014 | Toallas de cocina x3         |                 1 |           20 |       19 | BAJO MINIMO
  Sede Bogotá   | Almacén Bogotá          | PAP-012 | Colores x24                  |                 7 |           25 |       18 | BAJO MINIMO
  Sede Cali     | Almacén Cali            | ASE-007 | Talco para pies 120 g        |                11 |           29 |       18 | BAJO MINIMO
- Sede Cali     | Almacén Cali            | ALI-009 | Atún en lata 170 g           |                 9 |           26 |       17 | BAJO MINIMO
  Sede Cali     | Almacén Cali            | ALI-001 | Arroz blanco 1 kg            |                 0 |           17 |       17 | SIN EXISTENCIA
+ Sede Cali     | Almacén Cali            | ALI-009 | Atún en lata 170 g           |                 9 |           26 |       17 | BAJO MINIMO
  Sede Bogotá   | Almacén Bogotá          | LIM-010 | Trapero de algodón           |                 2 |           17 |       15 | BAJO MINIMO
- Sede Cali     | Almacén Cali            | LIM-009 | Escoba plástica              |                 7 |           22 |       15 | BAJO MINIMO
  Sede Cali     | Almacén Cali            | BEB-006 | Té helado limón 500 ml       |                 0 |           15 |       15 | SIN EXISTENCIA
+ Sede Cali     | Almacén Cali            | LIM-009 | Escoba plástica              |                 7 |           22 |       15 | BAJO MINIMO
  CEDI Funza    | Bodega general CEDI     | ALI-002 | Azúcar refinada 1 kg         |                37 |           51 |       14 | BAJO MINIMO
  Sede Bogotá   | Almacén Bogotá          | LIM-003 | Blanqueador 1 L              |                10 |           24 |       14 | BAJO MINIMO
  Sede Cali     | Almacén Cali            | LIM-001 | Detergente en polvo 1 kg     |                 8 |           21 |       13 | BAJO MINIMO
@@ -735,14 +751,14 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
  Sede Cali     | Almacén Cali            | ASE-001 | Jabón de tocador x3          |                 7 |           18 |       11 | BAJO MINIMO
  Sede Medellín | Almacén Medellín        | ASE-015 | Toallas higiénicas x10       |                 0 |           11 |       11 | SIN EXISTENCIA
  Sede Medellín | Almacén Medellín        | BEB-016 | Vino tinto 750 ml            |                 0 |           11 |       11 | SIN EXISTENCIA
- Sede Medellín | Almacén Medellín        | PAP-003 | Bolígrafo negro x12          |                 9 |           19 |       10 | BAJO MINIMO
  Sede Medellín | Almacén Medellín        | PAP-001 | Cuaderno cuadriculado 100 h  |                 1 |           11 |       10 | BAJO MINIMO
- Sede Bogotá   | Almacén Bogotá          | ASE-014 | Protector solar 120 ml       |                 1 |           10 |        9 | BAJO MINIMO
+ Sede Medellín | Almacén Medellín        | PAP-003 | Bolígrafo negro x12          |                 9 |           19 |       10 | BAJO MINIMO
  Sede Bogotá   | Almacén Bogotá          | ALI-011 | Sal refinada 1 kg            |                 3 |           12 |        9 | BAJO MINIMO
+ Sede Bogotá   | Almacén Bogotá          | ASE-014 | Protector solar 120 ml       |                 1 |           10 |        9 | BAJO MINIMO
  Sede Bogotá   | Almacén Bogotá          | ALI-006 | Fríjol rojo 500 g            |                 3 |           11 |        8 | BAJO MINIMO
+ Sede Cali     | Almacén Cali            | ASE-002 | Shampoo 400 ml               |                 2 |           10 |        8 | BAJO MINIMO
  Sede Cali     | Almacén Cali            | ASE-009 | Toallas húmedas x50          |                13 |           21 |        8 | BAJO MINIMO
  Sede Cali     | Almacén Cali            | PAP-009 | Cinta adhesiva transparente  |                14 |           22 |        8 | BAJO MINIMO
- Sede Cali     | Almacén Cali            | ASE-002 | Shampoo 400 ml               |                 2 |           10 |        8 | BAJO MINIMO
  CEDI Funza    | Bodega de despacho CEDI | ALI-015 | Salsa de tomate 400 g        |                 3 |           10 |        7 | BAJO MINIMO
  Sede Bogotá   | Almacén Bogotá          | ALI-012 | Avena en hojuelas 500 g      |                12 |           19 |        7 | BAJO MINIMO
  Sede Medellín | Almacén Medellín        | BEB-010 | Leche entera 1 L             |                16 |           23 |        7 | BAJO MINIMO
@@ -908,8 +924,8 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
          31 | Juan Herrera Rodríguez            |               3 | CEDI Funza, Sede Bogotá, Sede Cali                |     1301450.00
           6 | Paula Ortiz Martínez              |               3 | CEDI Funza, Sede Bogotá, Sede Cali                |     1106225.00
          14 | Daniela Martínez Gómez            |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |      974605.00
-         81 | Carlos Ramírez Ortiz              |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |      900030.00
          43 | Andrés Rojas Ramírez              |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |      900030.00
+         81 | Carlos Ramírez Ortiz              |               3 | CEDI Funza, Sede Bogotá, Sede Medellín            |      900030.00
          48 | Laura Sánchez Martínez            |               3 | Sede Bogotá, Sede Cali, Sede Medellín             |      847910.00
          38 | Natalia Jiménez Rojas             |               3 | CEDI Funza, Sede Cali, Sede Medellín              |      838770.00
          51 | Juan Jiménez García               |               3 | Sede Bogotá, Sede Cali, Sede Medellín             |      726440.00
@@ -988,8 +1004,8 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
  Sede Cali     |        68 | CONFIRMADO | Distribuidora La Esperanza S.A.S. |   396800.00 |         198400.00 |       198400.00
  Sede Bogotá   |        97 | CONFIRMADO | Laura Sánchez Martínez            |   372600.00 |         186300.00 |       186300.00
  Sede Medellín |        33 | PENDIENTE  | David Rodríguez Ramírez           |   180120.00 |                 0 |       180120.00
- Sede Medellín |        79 | PENDIENTE  | Daniela García Pérez              |   163000.00 |                 0 |       163000.00
  Sede Bogotá   |        67 | PENDIENTE  | Luisa Vargas Pérez                |   163000.00 |                 0 |       163000.00
+ Sede Medellín |        79 | PENDIENTE  | Daniela García Pérez              |   163000.00 |                 0 |       163000.00
  Sede Medellín |         2 | CONFIRMADO | Luisa Sánchez Herrera             |   322335.00 |         161167.50 |       161167.50
  Sede Cali     |        12 | PENDIENTE  | Paula Rodríguez Rojas             |   208430.00 |          62529.00 |       145901.00
  Sede Medellín |        31 | CONFIRMADO | Carlos Sánchez Jiménez            |   277115.00 |         138557.50 |       138557.50
@@ -1023,8 +1039,8 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
  CEDI Funza    |        26 | CONFIRMADO | Andrés Rojas Ramírez              |    41040.00 |          20520.00 |        20520.00
  Sede Medellín |        78 | CONFIRMADO | David Rodríguez Ramírez           |    38400.00 |          19200.00 |        19200.00
  Sede Medellín |        45 | CONFIRMADO | Jorge Mendoza Rodríguez           |    32775.00 |          16387.50 |        16387.50
- Sede Bogotá   |        76 | PENDIENTE  | David Ortiz Ortiz                 |    15900.00 |                 0 |        15900.00
  Sede Bogotá   |        66 | CONFIRMADO | Luisa Ramírez Mendoza             |    31800.00 |          15900.00 |        15900.00
+ Sede Bogotá   |        76 | PENDIENTE  | David Ortiz Ortiz                 |    15900.00 |                 0 |        15900.00
  Sede Bogotá   |        72 | PENDIENTE  | Minimercado La 80 S.A.S.          |    18000.00 |           5400.00 |        12600.00
  Sede Medellín |        72 | PENDIENTE  | Carlos López Ramírez              |    12400.00 |                 0 |        12400.00
  Sede Cali     |        67 | PENDIENTE  | Andrés Rojas Ramírez              |     5400.00 |                 0 |         5400.00
@@ -1231,13 +1247,13 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
  Sede Bogotá   |        67 | 2026-08-17   |              59 | Luisa Vargas Pérez           | Diana Patiño Leal      |        163000.00
  Sede Bogotá   |        72 | 2026-08-22   |              54 | Minimercado La 80 S.A.S.     | Diana Patiño Leal      |         18000.00
  Sede Bogotá   |        73 | 2026-08-23   |              53 | Natalia Jiménez Rojas        | Julián Cárdenas Mora   |        119500.00
- Sede Bogotá   |        77 | 2026-08-27   |              49 | Natalia Ruiz Herrera         | Óscar Beltrán Niño     |         78600.00
  Sede Bogotá   |        76 | 2026-08-27   |              49 | David Ortiz Ortiz            | Óscar Beltrán Niño     |         15900.00
+ Sede Bogotá   |        77 | 2026-08-27   |              49 | Natalia Ruiz Herrera         | Óscar Beltrán Niño     |         78600.00
  Sede Bogotá   |        80 | 2026-08-28   |              48 | Sofía Vargas Gómez           | Óscar Beltrán Niño     |         83600.00
  Sede Cali     |        57 | 2026-09-19   |              26 | Luisa Torres Gómez           | Yolanda Ibarra Paz     |         36500.00
  Sede Cali     |        60 | 2026-09-21   |              24 | Carlos García Vargas         | Yolanda Ibarra Paz     |         43500.00
- CEDI Funza    |        44 | 2026-09-24   |              21 | Felipe García Ortiz          | Gloria Barrera Pinzón  |        483700.00
  CEDI Funza    |        43 | 2026-09-24   |              21 | Andrés Rojas Ramírez         | Gloria Barrera Pinzón  |        830200.00
+ CEDI Funza    |        44 | 2026-09-24   |              21 | Felipe García Ortiz          | Gloria Barrera Pinzón  |        483700.00
  Sede Bogotá   |        92 | 2026-09-25   |              20 | Felipe López Jiménez         | Julián Cárdenas Mora   |         87600.00
 (22 filas)
 
@@ -1264,9 +1280,9 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
  Distribuidora La Sabana Ltda.    |             6 |                 5 |                  2 |                  0.60
  Higiene Total S.A.S.             |             6 |                 4 |                  2 |                  0.50
  Papelera Nacional S.A.S.         |             6 |                 4 |                  3 |                  0.25
- Químicos del Caribe S.A.         |             6 |                 5 |                  5 |                  0.00
  Alimentos del Valle S.A.S.       |             6 |                 4 |                  4 |                  0.00
  Lácteos de la Montaña S.A.S.     |             6 |                 4 |                  4 |                  0.00
+ Químicos del Caribe S.A.         |             6 |                 5 |                  5 |                  0.00
 (10 filas)
 
 
@@ -1512,8 +1528,8 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
  Alimentos           | Fríjol rojo 500 g            |       45 |         0 |           0.00 |                     2.62
  Alimentos           | Galletas de soda x6          |       44 |         0 |           0.00 |                     2.62
  Alimentos           | Café molido 500 g            |       34 |         0 |           0.00 |                     2.62
- Alimentos           | Salsa de tomate 400 g        |       20 |         0 |           0.00 |                     2.62
  Alimentos           | Aceite vegetal 1 L           |       20 |         0 |           0.00 |                     2.62
+ Alimentos           | Salsa de tomate 400 g        |       20 |         0 |           0.00 |                     2.62
  Alimentos           | Lenteja 500 g                |        1 |         0 |           0.00 |                     2.62
  Aseo personal       | Toallas húmedas x50          |       18 |         3 |          16.67 |                     1.46
  Aseo personal       | Protector solar 120 ml       |       45 |         2 |           4.44 |                     1.46
@@ -1538,8 +1554,8 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
  Bebidas             | Cerveza lager six pack       |       51 |         0 |           0.00 |                     1.77
  Bebidas             | Agua con gas 600 ml          |       49 |         0 |           0.00 |                     1.77
  Bebidas             | Leche entera 1 L             |       43 |         0 |           0.00 |                     1.77
- Bebidas             | Malta 330 ml                 |       31 |         0 |           0.00 |                     1.77
  Bebidas             | Bebida energizante 250 ml    |       31 |         0 |           0.00 |                     1.77
+ Bebidas             | Malta 330 ml                 |       31 |         0 |           0.00 |                     1.77
  Bebidas             | Jugo de naranja 1 L          |       23 |         0 |           0.00 |                     1.77
  Bebidas             | Café listo para tomar 250 ml |       15 |         0 |           0.00 |                     1.77
  Limpieza del hogar  | Ambientador en aerosol       |       65 |         4 |           6.15 |                     1.03
@@ -1557,13 +1573,13 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
  Limpieza del hogar  | Desinfectante multiusos 1 L  |       10 |         0 |           0.00 |                     1.03
  Papelería y oficina | Bolígrafo negro x12          |       72 |         0 |           0.00 |                     0.00
  Papelería y oficina | Cinta adhesiva transparente  |       70 |         0 |           0.00 |                     0.00
- Papelería y oficina | Calculadora básica           |       65 |         0 |           0.00 |                     0.00
  Papelería y oficina | Borrador de nata x5          |       65 |         0 |           0.00 |                     0.00
+ Papelería y oficina | Calculadora básica           |       65 |         0 |           0.00 |                     0.00
  Papelería y oficina | Cuaderno cuadriculado 100 h  |       52 |         0 |           0.00 |                     0.00
  Papelería y oficina | Notas adhesivas x5           |       50 |         0 |           0.00 |                     0.00
  Papelería y oficina | Lápiz grafito x12            |       45 |         0 |           0.00 |                     0.00
- Papelería y oficina | Pegante en barra 40 g        |       44 |         0 |           0.00 |                     0.00
  Papelería y oficina | Colores x24                  |       44 |         0 |           0.00 |                     0.00
+ Papelería y oficina | Pegante en barra 40 g        |       44 |         0 |           0.00 |                     0.00
  Papelería y oficina | Marcador permanente x4       |       41 |         0 |           0.00 |                     0.00
  Papelería y oficina | Resma papel carta            |       37 |         0 |           0.00 |                     0.00
  Papelería y oficina | Resaltador x4                |       17 |         0 |           0.00 |                     0.00
@@ -1679,7 +1695,7 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
 (4 filas)
 
 >> pruebas
-Ahora está conectado a la base de datos «andina_catalogo» con el usuario «postgres».
+Ahora está conectado a la base de datos «andina_catalogo» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5441».
 BEGIN
 
 === Prueba 1. Crear un producto valido y consultarlo ===
@@ -1704,7 +1720,7 @@ SET
 psql:sql/08_pruebas/pruebas.sql:38: ERROR:  permission denied for table productos
 RESET
 ROLLBACK
-Ahora está conectado a la base de datos «andina_compras» con el usuario «postgres».
+Ahora está conectado a la base de datos «andina_compras» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5443».
 BEGIN
 
 === Prueba 3. Cantidad negativa (CHECK) -> esperado: ERROR viola la restriccion check ===
@@ -1715,7 +1731,7 @@ SET
 psql:sql/08_pruebas/pruebas.sql:55: ERROR:  permission denied for table ordenes_compra
 RESET
 ROLLBACK
-Ahora está conectado a la base de datos «andina_inventarios» con el usuario «postgres».
+Ahora está conectado a la base de datos «andina_inventarios» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5444».
 BEGIN
 
 --- 3b. Existencia negativa (CHECK) -> esperado: ERROR viola la restriccion check ---
@@ -1724,7 +1740,7 @@ DETALLE:  Failing row contains (1, 1, 1, -1, 13, 2026-10-15 18:00:00).
 
 --- 4b. Una fila de otra sede no entra en el fragmento de Bogota -> esperado: ERROR viola la restriccion check ---
 psql:sql/08_pruebas/pruebas.sql:72: ERROR:  new row for relation "inv_bogota" violates check constraint "inv_bogota_id_sede_check"
-DETALLE:  Failing row contains (2, 2, 1, 10, 5, 2026-11-11 13:42:19.498461).
+DETALLE:  Failing row contains (2, 2, 1, 10, 5, 2026-11-16 00:25:48.195342).
 
 === Prueba 5. Los fragmentos de dos sedes contienen registros distintos ===
  fragmento  | filas | sede_min | sede_max 
@@ -1758,7 +1774,7 @@ UPDATE 1
 psql:sql/08_pruebas/pruebas.sql:107: ERROR:  permission denied for table inv_bogota
 RESET
 ROLLBACK
-Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
+Ahora está conectado a la base de datos «andina_ventas» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5445».
 BEGIN
 
 --- 4c. Detalle de un pedido que no existe (FK compuesta) -> esperado: ERROR viola la llave foranea ---
@@ -1772,12 +1788,8 @@ DETALLE:  Key (id_sede, id_pedido)=(1, 99999) is not present in table "ped_bogot
  ped_cali   |      70 | 2026-05-01 | 2026-10-12
 (2 filas)
 
---- 9.2 gerente_general: INSERT en ventas.pagos (DENEGADO) -> esperado: ERROR permiso denegado ---
-SET
-psql:sql/08_pruebas/pruebas.sql:134: ERROR:  permission denied for schema ventas
-LÍNEA 1: INSERT INTO ventas.pagos (id_sede, id_pedido, fecha_pago, va...
-                     ^
-RESET
+--- 9.2 gerente_general en la instancia de ventas (DENEGADO) -> esperado: ERROR el rol no existe ---
+psql:sql/08_pruebas/pruebas.sql:133: ERROR:  role "gerente_general" does not exist
 --- 9.3 vendedor_bogota: registra un pedido en el fragmento de su sede (PERMITIDO) ---
 SET
  id_sede | id_pedido |  estado   | total_registrado 
@@ -1788,12 +1800,12 @@ SET
 INSERT 0 1
 INSERT 0 1
 --- 9.4 vendedor_bogota: consulta pedidos de Cali (DENEGADO) -> esperado: ERROR permiso denegado ---
-psql:sql/08_pruebas/pruebas.sql:148: ERROR:  permission denied for table ped_cali
+psql:sql/08_pruebas/pruebas.sql:146: ERROR:  permission denied for table ped_cali
 --- 9.6 vendedor_bogota: borra un pago (DENEGADO por el REVOKE DELETE) -> esperado: ERROR permiso denegado ---
-psql:sql/08_pruebas/pruebas.sql:151: ERROR:  permission denied for table pagos
+psql:sql/08_pruebas/pruebas.sql:149: ERROR:  permission denied for table pagos
 RESET
 ROLLBACK
-Ahora está conectado a la base de datos «andina_identidad» con el usuario «postgres».
+Ahora está conectado a la base de datos «andina_identidad» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5442».
 BEGIN
 --- 9.8 auditor_interno: lee todo, pero leer password_hash -> esperado: ERROR permiso denegado ---
 SET
@@ -1804,10 +1816,10 @@ SET
  inventario_bogota | INVENTARIO    | ACTIVO
 (3 filas)
 
-psql:sql/08_pruebas/pruebas.sql:165: ERROR:  permission denied for table usuarios
+psql:sql/08_pruebas/pruebas.sql:163: ERROR:  permission denied for table usuarios
 RESET
 ROLLBACK
-Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
+Ahora está conectado a la base de datos «andina_reportes» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5446».
 BEGIN
 === Prueba 6. La vista consolidada reune los fragmentos de las 4 sedes ===
             fragmento            | id_sede | filas 
@@ -1854,8 +1866,10 @@ SET
  CEDI Funza    |  19348085.00 |                  7
 (4 filas)
 
---- 9.1b gerente_general: usar dblink para leer ventas (DENEGADO) -> esperado: ERROR permiso denegado para la funcion dblink ---
-psql:sql/08_pruebas/pruebas.sql:219: ERROR:  permission denied for function dblink
+--- 9.1b gerente_general: usar dblink para leer ventas (DENEGADO) -> esperado: ERROR permiso denegado para el esquema remoto ---
+psql:sql/08_pruebas/pruebas.sql:218: ERROR:  permission denied for schema remoto
+LÍNEA 1: SELECT * FROM dblink(remoto.servidor('ventas'), 'SELECT COUN...
+                              ^
 RESET
 
 === Prueba 10. El reporte corporativo no duplica ventas ni cantidades ===
@@ -1895,26 +1909,26 @@ RESET
 ROLLBACK
 
 === Prueba 11. Cada servicio solo ve su propia base ===
-Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
+Ahora está conectado a la base de datos «andina_ventas» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5445».
 --- 11.1 desde andina_ventas: leer catalogo.productos -> esperado: ERROR la relacion no existe ---
-psql:sql/08_pruebas/pruebas.sql:336: ERROR:  relation "catalogo.productos" does not exist
+psql:sql/08_pruebas/pruebas.sql:335: ERROR:  relation "catalogo.productos" does not exist
 LÍNEA 1: SELECT COUNT(*) FROM catalogo.productos;
                               ^
 --- 11.2 nombrando la otra base (base.esquema.tabla) -> esperado: ERROR no estan implementadas las referencias entre bases ---
-psql:sql/08_pruebas/pruebas.sql:340: ERROR:  cross-database references are not implemented: "andina_catalogo.catalogo.productos"
+psql:sql/08_pruebas/pruebas.sql:339: ERROR:  cross-database references are not implemented: "andina_catalogo.catalogo.productos"
 LÍNEA 1: SELECT COUNT(*) FROM andina_catalogo.catalogo.productos;
                               ^
---- 11.3 a que base puede entrar cada rol (has_database_privilege) ---
-       rol       | catalogo | identidad | compras | inventarios | ventas | reportes 
------------------+----------+-----------+---------+-------------+--------+----------
- auditor_interno | t        | t         | t       | t           | t      | t
- compras_cedi    | t        | f         | t       | f           | f      | t
- gerente_general | f        | f         | f       | f           | f      | t
- inventario_cedi | t        | f         | f       | t           | f      | t
- svc_reportes    | f        | f         | f       | f           | f      | t
- svc_ventas      | f        | f         | f       | f           | t      | f
- vendedor_bogota | t        | f         | f       | f           | t      | f
-(7 filas)
+--- 11.3 que usuarios existen y pueden entrar en cada instancia ---
+Ahora está conectado a la base de datos «andina_reportes» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5446».
+  instancia  |                                                           usuarios                                                            
+-------------+-------------------------------------------------------------------------------------------------------------------------------
+ catalogo    | admin_andina, auditor_interno, compras_cedi, inventario_bogota, inventario_cedi, svc_catalogo, vendedor_bogota, vendedor_cali
+ identidad   | admin_andina, auditor_interno, svc_identidad
+ compras     | admin_andina, auditor_interno, compras_cedi, svc_compras
+ inventarios | admin_andina, auditor_interno, inventario_bogota, inventario_cedi, svc_inventarios
+ ventas      | admin_andina, auditor_interno, svc_ventas, vendedor_bogota, vendedor_cali
+ reportes    | admin_andina, auditor_interno, compras_cedi, gerente_general, inventario_bogota, inventario_cedi, svc_reportes
+(6 filas)
 
 
 === Prueba 12. Vistas materializadas: el reporte no cambia hasta el REFRESH ===
@@ -1926,7 +1940,7 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «po
 (1 fila)
 
 --- 12.2 se registra un pedido nuevo en andina_ventas (queda guardado) ---
-Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
+Ahora está conectado a la base de datos «andina_ventas» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5445».
 INSERT 0 1
  pedidos_bogota_en_ventas 
 --------------------------
@@ -1934,7 +1948,7 @@ INSERT 0 1
 (1 fila)
 
 --- 12.3 el reporte todavia NO lo ve: sigue con el ultimo REFRESH ---
-Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
+Ahora está conectado a la base de datos «andina_reportes» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5446».
  pedidos_bogota_en_reporte 
 ---------------------------
                        100
@@ -1959,7 +1973,7 @@ REFRESH MATERIALIZED VIEW
 COMMIT
    reportes_actualizados_en    
 -------------------------------
- 2026-11-11 13:42:19.735244-05
+ 2026-11-16 00:25:48.482431-05
 (1 fila)
 
 --- 12.5 ahora el reporte si lo ve (uno mas que en 12.1) ---
@@ -1969,9 +1983,9 @@ COMMIT
 (1 fila)
 
 --- 12.6 limpieza: se borra el pedido de prueba y se refrescan los reportes otra vez ---
-Ahora está conectado a la base de datos «andina_ventas» con el usuario «postgres».
+Ahora está conectado a la base de datos «andina_ventas» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5445».
 DELETE 1
-Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».
+Ahora está conectado a la base de datos «andina_reportes» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5446».
 BEGIN
 REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
@@ -1990,7 +2004,7 @@ REFRESH MATERIALIZED VIEW
 COMMIT
    reportes_actualizados_en    
 -------------------------------
- 2026-11-11 13:42:20.192146-05
+ 2026-11-16 00:25:48.889702-05
 (1 fila)
 
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».

@@ -8,7 +8,7 @@ SELECT setseed(0.2026);
 \ir ../03_dblink/servidores.sql
 
 CREATE TEMP TABLE tmp_producto_proveedor AS
-SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto, id_proveedor, costo_referencia FROM catalogo.producto_proveedor')
+SELECT * FROM dblink(remoto.servidor('catalogo'), 'SELECT id_producto, id_proveedor, costo_referencia FROM catalogo.producto_proveedor')
          AS t(id_producto INTEGER, id_proveedor INTEGER, costo_referencia NUMERIC(14,2));
 
 -- 60 ordenes, casi todas al CEDI. los proveedores 3 y 7 siempre se retrasan

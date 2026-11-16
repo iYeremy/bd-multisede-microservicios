@@ -1,8 +1,23 @@
 # 06_roles: roles, usuarios y permisos
 
-`roles.sql` crea los roles y da los permisos (sección 8 del enunciado). Va **al final** de la
-creación, porque `GRANT ... ON ALL TABLES` solo alcanza a las tablas que ya existen. El script hace
-sus propios `\c`, uno por base.
+Roles y permisos (sección 8 del enunciado). Como cada microservicio tiene **su propia instancia** de
+PostgreSQL, y los roles son de cada instancia, hay **un archivo por instancia**:
+
+| Archivo | Instancia | Usuarios que crea |
+|---|---|---|
+| `catalogo.sql` | catálogo | admin, auditor, inventario (Bogotá y CEDI), compras, vendedores (Bogotá y Cali), `svc_catalogo` |
+| `identidad.sql` | identidad | admin, auditor, `svc_identidad` |
+| `compras.sql` | compras | admin, auditor, compras, `svc_compras` |
+| `inventarios.sql` | inventarios | admin, auditor, inventario (Bogotá y CEDI), `svc_inventarios` |
+| `ventas.sql` | ventas | admin, auditor, vendedores (Bogotá y Cali), `svc_ventas` |
+| `reportes.sql` | reportes | admin, auditor, gerente, inventario (Bogotá y CEDI), compras, `svc_reportes` |
+
+Cada instancia crea **solo los roles que usa**. Por ejemplo, `gerente_general` solo existe en la de
+reportes: en ventas ni siquiera hay un usuario con ese nombre (prueba 9.2). Algunos, como el
+administrador y el auditor, se repiten en varias instancias, con la misma contraseña de ejemplo.
+
+Cada archivo va **al final** de su instancia, porque `GRANT ... ON ALL TABLES` solo alcanza a las
+tablas que ya existen.
 
 ## Tres tipos de rol
 
@@ -26,17 +41,16 @@ tabla de **su** sede) se le da a cada usuario.
 
 ## Dos niveles de permiso
 
-Los roles son de todo el servidor, pero los permisos se dan **base por base**:
-
-1. **`GRANT CONNECT ON DATABASE`:** a qué bases puede entrar cada rol. `01_bases/bases.sql` ya le
-   quitó `CONNECT` a `PUBLIC`, así que sin esto nadie entra.
-2. **Dentro de cada base:** `GRANT USAGE ON SCHEMA` (poder "entrar" al esquema; sin esto los permisos
-   de tabla no sirven) y luego `SELECT`, `INSERT`, `UPDATE`… sobre las tablas. Por eso el script hace
-   un `\c` a cada base: un `GRANT` sobre tablas solo funciona conectado a la base donde están.
+1. **`GRANT CONNECT ON DATABASE`:** quién puede entrar a la base. `01_bases/crear.sql` ya le quitó
+   `CONNECT` a `PUBLIC`, así que sin esto nadie entra.
+2. **Dentro de la base:** `GRANT USAGE ON SCHEMA` (poder "entrar" al esquema; sin esto los permisos
+   de tabla no sirven) y luego `SELECT`, `INSERT`, `UPDATE`… sobre las tablas.
 
 `ALL TABLES` incluye las vistas (también las materializadas).
 
 ## A qué base entra cada rol
+
+Cada rol solo existe en las instancias que tienen una x:
 
 | Rol | catálogo | identidad | compras | inventarios | ventas | reportes |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -46,7 +60,7 @@ Los roles son de todo el servidor, pero los permisos se dan **base por base**:
 | rol_compras | x | | x | | | x |
 | rol_vendedor | x | | | | x | |
 | rol_auditor | x | x | x | x | x | x |
-| svc_\<servicio\> | solo la base de su servicio |||||
+| svc_\<servicio\> | solo la instancia de su servicio |||||
 
 ## Qué puede hacer dentro (matriz de permisos)
 
@@ -88,10 +102,9 @@ S = SELECT, I = INSERT, U = UPDATE, D = DELETE.
 
 - **Solo vistas.** Las vistas materializadas guardan su resultado, así que leerlas solo pide permiso
   sobre la vista: gerencia ve los reportes sin poder tocar las otras bases.
-- **`REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC`:** por defecto cualquiera puede
-  ejecutar las funciones de `dblink` (están en el esquema `public`). Se le quita a todos, así solo
-  postgres va a las otras bases. El `REFRESH` corre con los permisos del **dueño** de la vista
-  (postgres), por eso sigue funcionando. La prueba 9.1b muestra a gerencia intentándolo.
+- **Gerencia no puede usar `dblink`:** las conexiones a las otras instancias están en el esquema
+  privado `remoto` (ver `03_dblink/`). El `REFRESH` corre con los permisos del **dueño** de la vista,
+  que sí puede usarlas. La prueba 9.1b muestra a gerencia intentándolo.
 - **`GRANT MAINTAIN`** (PostgreSQL 17 o superior): el permiso para hacer `REFRESH` de una vista
   materializada sin ser su dueño. Se le da a `svc_reportes`, para que el backend pueda refrescar los
   reportes cada X minutos. Por esto el proyecto pide PostgreSQL 17 o superior.
@@ -109,3 +122,19 @@ RESET ROLE;
 `SET ROLE` hace que la sesión actúe como ese usuario, sin reconectarse. Ojo: no revisa `CONNECT`
 (eso se revisa solo al conectarse). Para probar `CONNECT`: `psql -U gerente_general -d andina_ventas`
 da `User does not have CONNECT privilege`.
+
+## Sin superusuario (Neon)
+
+En Neon quien corre los scripts no es superusuario. Para poder probar a los usuarios con `SET ROLE`
+(en `08_pruebas/`), tiene que ser **miembro** de ellos. Por eso, al final de cada archivo:
+
+```sql
+\if :no_superusuario
+GRANT admin_andina, auditor_interno, ... TO CURRENT_USER WITH INHERIT FALSE, SET TRUE;
+\endif
+```
+
+- **`SET TRUE`:** puede hacer `SET ROLE` a esos usuarios.
+- **`INHERIT FALSE`:** no hereda sus permisos (no los necesita).
+- Solo corre si `NO_SUPERUSUARIO=true` en el `.env`. En local no hace falta, porque postgres es
+  superusuario.

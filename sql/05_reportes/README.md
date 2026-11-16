@@ -36,7 +36,7 @@ el `JOIN`, pidiendo solo las columnas que usa:
 
 ```sql
 FROM reportes.vista_inventario_consolidado i
-JOIN dblink('srv_catalogo', 'SELECT id_producto, nombre, precio_lista FROM catalogo.productos')
+JOIN dblink(remoto.servidor('catalogo'), 'SELECT id_producto, nombre, precio_lista FROM catalogo.productos')
      AS p(id_producto INTEGER, nombre VARCHAR(100), precio_lista NUMERIC(14,2))
      ON p.id_producto = i.id_producto
 ```

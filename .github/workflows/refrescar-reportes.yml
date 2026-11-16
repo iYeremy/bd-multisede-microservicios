@@ -1,0 +1,29 @@
+# refresca las vistas materializadas de reportes cada 15 minutos cuando la
+# base esta en neon (alla no hay un servidor propio donde poner cron).
+#
+# para activarlo, en github: settings > secrets and variables > actions
+#   - secret   REPORTES_URL     = la conexion del proyecto andina-reportes
+#                                 (postgresql://usuario:clave@host/andina_reportes?sslmode=require)
+#   - variable REFRESCO_ACTIVO  = true
+# mientras REFRESCO_ACTIVO no sea true, el trabajo no corre.
+# tambien se puede correr a mano: actions > refrescar reportes > run workflow.
+
+name: refrescar reportes
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  refrescar:
+    if: vars.REFRESCO_ACTIVO == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: instalar psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: refrescar las vistas
+        env:
+          REPORTES_URL: ${{ secrets.REPORTES_URL }}
+        run: psql "$REPORTES_URL" -X -f sql/05_reportes/refrescar.sql

@@ -3,3 +3,9 @@ logs/
 
 tests/
 
+
+# datos de las instancias locales de postgresql
+.instancias/
+
+# configuracion con datos de conexion (solo se suben los .example)
+config/*.env

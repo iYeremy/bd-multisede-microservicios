@@ -8,11 +8,11 @@ SELECT setseed(0.2026);
 \ir ../03_dblink/servidores.sql
 
 CREATE TEMP TABLE tmp_almacenes AS
-SELECT * FROM dblink('srv_catalogo', 'SELECT id_almacen, id_sede FROM catalogo.almacenes')
+SELECT * FROM dblink(remoto.servidor('catalogo'), 'SELECT id_almacen, id_sede FROM catalogo.almacenes')
          AS t(id_almacen INTEGER, id_sede INTEGER);
 
 CREATE TEMP TABLE tmp_productos AS
-SELECT * FROM dblink('srv_catalogo', 'SELECT id_producto FROM catalogo.productos')
+SELECT * FROM dblink(remoto.servidor('catalogo'), 'SELECT id_producto FROM catalogo.productos')
          AS t(id_producto INTEGER);
 
 -- existencias: todas las parejas almacen-producto (CROSS JOIN), salvo los
