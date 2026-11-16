@@ -1,10 +1,13 @@
 package plataforma
 
 import (
+	"bytes"
 	"context"
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -43,26 +46,104 @@ type ErrServicioCaido struct{ Servicio string }
 
 func (e ErrServicioCaido) Error() string { return "servicio " + e.Servicio + " no disponible" }
 
-// Get llama GET a url y decodifica el json de la respuesta en destino.
-// requestID se pasa para seguir la operacion en los logs (puede ir vacio).
-func (c *ClienteInterno) Get(ctx context.Context, servicio, url, requestID string, destino any) (int, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+// ErrRespuesta es una respuesta con codigo de error (4xx o 5xx) del otro servicio.
+type ErrRespuesta struct {
+	Servicio string
+	Codigo   int
+	Mensaje  string
+}
+
+func (e ErrRespuesta) Error() string {
+	return fmt.Sprintf("%s respondio %d: %s", e.Servicio, e.Codigo, e.Mensaje)
+}
+
+// Opcion cambia algo de la peticion antes de mandarla.
+type Opcion func(*http.Request)
+
+// ConEncabezado agrega un encabezado a la llamada.
+func ConEncabezado(nombre, valor string) Opcion {
+	return func(r *http.Request) { r.Header.Set(nombre, valor) }
+}
+
+// Get llama GET a la ruta del servicio y decodifica el json en destino.
+// las lecturas se reintentan UNA vez si el servicio no respondio: leer dos
+// veces no hace dano. requestID sigue la operacion en los logs (puede ir vacio).
+//
+//	var p []Producto
+//	err := cli.Get(ctx, "catalogo", "/interno/productos?ids=1,2", reqID, &p)
+func (c *ClienteInterno) Get(ctx context.Context, servicio, ruta, requestID string, destino any, ops ...Opcion) error {
+	err := c.hacer(ctx, http.MethodGet, servicio, ruta, requestID, nil, destino, ops)
+	if _, caido := err.(ErrServicioCaido); caido && ctx.Err() == nil {
+		slog.Warn("reintentando", "servicio", servicio, "ruta", ruta)
+		err = c.hacer(ctx, http.MethodGet, servicio, ruta, requestID, nil, destino, ops)
+	}
+	return err
+}
+
+// Post manda cuerpo como json. las escrituras NO se reintentan: si la
+// primera si llego pero la respuesta se perdio, se duplicaria el registro.
+func (c *ClienteInterno) Post(ctx context.Context, servicio, ruta, requestID string, cuerpo, destino any, ops ...Opcion) error {
+	return c.hacer(ctx, http.MethodPost, servicio, ruta, requestID, cuerpo, destino, ops)
+}
+
+func (c *ClienteInterno) hacer(ctx context.Context, metodo, servicio, ruta, requestID string, cuerpo, destino any, ops []Opcion) error {
+	var body io.Reader
+	if cuerpo != nil {
+		b, err := json.Marshal(cuerpo)
+		if err != nil {
+			return err
+		}
+		body = bytes.NewReader(b)
+	}
+	req, err := http.NewRequestWithContext(ctx, metodo, URLServicio(servicio)+ruta, body)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	req.Header.Set(HeaderToken, c.token)
+	req.Header.Set("Content-Type", "application/json")
 	if requestID != "" {
 		req.Header.Set(HeaderRequestID, requestID)
 	}
+	for _, op := range ops {
+		op(req)
+	}
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return 0, ErrServicioCaido{Servicio: servicio}
+		return ErrServicioCaido{Servicio: servicio}
 	}
 	defer resp.Body.Close()
-	if destino != nil && resp.StatusCode < 300 {
+
+	if resp.StatusCode >= 400 {
+		var e struct {
+			Error string `json:"error"`
+		}
+		json.NewDecoder(resp.Body).Decode(&e)
+		// un 503 del otro servicio (por ejemplo, sin base) tambien cuenta como caido
+		if resp.StatusCode == http.StatusServiceUnavailable {
+			return ErrServicioCaido{Servicio: servicio}
+		}
+		return ErrRespuesta{Servicio: servicio, Codigo: resp.StatusCode, Mensaje: e.Error}
+	}
+	if destino != nil {
 		if err := json.NewDecoder(resp.Body).Decode(destino); err != nil {
-			return resp.StatusCode, fmt.Errorf("respuesta invalida de %s: %w", servicio, err)
+			return fmt.Errorf("respuesta invalida de %s: %w", servicio, err)
 		}
 	}
-	return resp.StatusCode, nil
+	return nil
+}
+
+// Auditar registra un acceso en identidad (POST /interno/auditoria). corre
+// en segundo plano: si identidad no responde, la operacion principal NO se
+// revierte, solo queda el aviso en el log.
+func (c *ClienteInterno) Auditar(r *http.Request, u Usuario, accion, objeto string) {
+	reqID := r.Header.Get(HeaderRequestID)
+	go func() {
+		// contexto propio: la peticion original ya pudo haber terminado
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		cuerpo := map[string]any{"id_usuario": u.ID, "accion": accion, "objeto": objeto}
+		if err := c.Post(ctx, "identidad", "/interno/auditoria", reqID, cuerpo, nil); err != nil {
+			slog.Warn("no se pudo registrar la auditoria", "accion", accion, "objeto", objeto, "error", err)
+		}
+	}()
 }

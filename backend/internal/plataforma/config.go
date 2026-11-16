@@ -100,8 +100,10 @@ func ConfigDe(servicio string) (Config, error) {
 	}
 
 	return Config{
-		Nombre:       servicio,
-		Direccion:    "127.0.0.1:" + Var("PUERTO_"+S, puerto),
+		Nombre: servicio,
+		// ESCUCHAR_EN: 127.0.0.1 en una maquina (nadie de afuera llega), o
+		// 0.0.0.0 en docker, donde cada servicio esta en su propio contenedor
+		Direccion:    Var("ESCUCHAR_EN", "127.0.0.1") + ":" + Var("PUERTO_"+S, puerto),
 		DBURL:        u.String(),
 		TokenInterno: token,
 	}, nil
