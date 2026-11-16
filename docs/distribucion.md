@@ -13,23 +13,29 @@ sede y cómo se vuelven a juntar para los reportes. Responde punto por punto lo 
 
 ---
 
-## 1. Servicios y bases
+## 1. Servicios, instancias y bases
 
-Hay seis microservicios, y cada uno es **el único que escribe en su base**.
+Hay seis microservicios. Cada uno tiene **su propia instancia de PostgreSQL** (un servidor aparte,
+con sus propios usuarios) y en ella **su base**. Cada uno es el único que escribe en ella.
 
-| Microservicio | Base | Qué guarda |
-| --- | --- | --- |
-| Catálogo y Terceros | `andina_catalogo` | sedes, almacenes, categorías, productos, proveedores, clientes |
-| Identidad y Accesos | `andina_identidad` | empleados, usuarios, auditoría de accesos |
-| Compras y Abastecimiento | `andina_compras` | órdenes de compra y recepciones |
-| Inventarios y Transferencias | `andina_inventarios` | existencias **por sede** y transferencias |
-| Ventas y Pagos | `andina_ventas` | pedidos **por sede**, pagos y devoluciones |
-| Reportes Corporativos | `andina_reportes` | ninguna tabla: solo vistas de integración |
+| Microservicio | Base | Instancia local | Qué guarda |
+| --- | --- | --- | --- |
+| Catálogo y Terceros | `andina_catalogo` | `localhost:5441` | sedes, almacenes, categorías, productos, proveedores, clientes |
+| Identidad y Accesos | `andina_identidad` | `localhost:5442` | empleados, usuarios, auditoría de accesos |
+| Compras y Abastecimiento | `andina_compras` | `localhost:5443` | órdenes de compra y recepciones |
+| Inventarios y Transferencias | `andina_inventarios` | `localhost:5444` | existencias **por sede** y transferencias |
+| Ventas y Pagos | `andina_ventas` | `localhost:5445` | pedidos **por sede**, pagos y devoluciones |
+| Reportes Corporativos | `andina_reportes` | `localhost:5446` | ninguna tabla: solo vistas de integración |
+
+En la nube, cada instancia es un proyecto de Neon (ver [despliegue](despliegue.md)).
 
 - Dentro de cada base hay un **esquema con el nombre del servicio**. Por eso una tabla se escribe
   `ventas.ped_bogota`.
-- **Una consulta no puede leer otra base.** Eso es lo que hace que cada servicio sea dueño de sus
-  datos de verdad. La única excepción es `dblink`, y solo la usa reportes (sección 4).
+- **Una consulta no puede leer otra base**, y menos otra instancia. Eso es lo que hace que cada
+  servicio sea dueño de sus datos de verdad. La única excepción es `dblink`, y solo la usa reportes
+  (sección 4).
+- **Cada instancia tiene solo los usuarios que usa.** Por ejemplo, `svc_ventas` solo existe en la de
+  ventas, y `gerente_general` solo en la de reportes.
 - Cada tabla deja escrito en la base qué servicio es su responsable, con `COMMENT ON TABLE`.
 
 ---
@@ -157,7 +163,7 @@ Como una consulta no puede leer otra base, reportes usa **`dblink`**: una extens
 consulta en otra base y trae el resultado.
 
 ```sql
-FROM dblink('srv_inventarios', 'SELECT id_sede, id_almacen, ... FROM inventarios.inv_cali')
+FROM dblink(remoto.servidor('inventarios'), 'SELECT id_sede, id_almacen, ... FROM inventarios.inv_cali')
      AS i(id_sede INTEGER, id_almacen INTEGER, ...)
 ```
 
@@ -217,9 +223,10 @@ La procedencia también queda guardada en la base, con `COMMENT ON MATERIALIZED 
 - **dblink acopla reportes a los demás servicios:** si catálogo cambia una columna, las vistas de
   reportes se rompen. Es la versión más simple de explicar. La alternativa donde ninguna base se
   conecta a otra (un ETL por CSV) está en la rama `feat/microservicios-reales`.
-- **Las 6 bases están en el mismo servidor PostgreSQL.** Los datos están aislados (ninguna base lee
-  otra sin dblink), pero la infraestructura es compartida. Separarlas en servidores distintos solo
-  cambia a dónde se conecta cada script.
+- **Cada servicio tiene su propia instancia:** si una se cae, las demás siguen funcionando. Reportes
+  sigue mostrando lo último que guardó, y el refresco falla hasta que la instancia vuelva.
+- **Reportes guarda usuario y contraseña de las otras instancias** (en la tabla privada
+  `remoto.servidores`), sacados de la configuración y nunca del repositorio.
 - **Lo que la base no impone sola** (los identificadores compartidos, que el almacén sea de la sede
   de la fila…) se revisa con `NOT EXISTS` en `sql/08_pruebas/`.
 
@@ -228,3 +235,4 @@ La procedencia también queda guardada en la base, con `COMMENT ON MATERIALIZED 
 - [Normalización](normalizacion.md)
 - [`sql/02_tablas/`](../sql/02_tablas/README.md), cómo se crean los fragmentos
 - [`sql/05_reportes/`](../sql/05_reportes/README.md), cómo funcionan las vistas
+- [Despliegue](despliegue.md), cómo se levantan las 6 instancias en local y en Neon

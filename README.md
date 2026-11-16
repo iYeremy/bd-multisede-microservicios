@@ -15,11 +15,15 @@ Proyecto final de Bases de Datos. TL;DR: una empresa con **4 sedes** (Bogotá, M
 
 Necesitas PostgreSQL 17 o superior (probado en la 18), con la extensión `dblink` (viene en el paquete *contrib*), y `psql`:
 
+Cada microservicio corre en **su propia instancia de PostgreSQL** (6 en total). En tu computador se levantan sin Docker:
+
 ```bash
-psql -U postgres -f run_all.sql
+scripts/instancias_locales.sh iniciar        # levanta las 6 instancias (puertos 5441 a 5446)
+cp config/local.env.example config/local.env
+scripts/correr.sh config/local.env           # borra todo, crea todo, corre consultas y pruebas
 ```
 
-Eso borra todo, crea las 6 bases, mete los datos de prueba, crea los reportes (que traen los datos por `dblink`), corre las 20 consultas y las pruebas. Se puede correr las veces que quiera uno, siempre da lo mismo (semilla fija). Si `dblink` no puede conectarse sin contraseña, ver `sql/03_dblink/servidores.sql`.
+Eso crea la base de cada instancia, mete los datos de prueba, crea los reportes (que traen los datos por `dblink`), corre las 20 consultas y las pruebas. Se puede correr las veces que quiera uno, siempre da lo mismo (semilla fija). Para desplegar en la nube (Neon), ver [`docs/despliegue.md`](docs/despliegue.md).
 
 Sí, salen varios `ERROR`: son las pruebas de rechazo (SKU duplicado, permisos denegados, leer otra base…) y es justo lo que se espera. La salida completa está en [`docs/evidencias.txt`](docs/evidencias.txt).
 
@@ -30,15 +34,19 @@ Más detalle en el [manual](docs/manual-ejecucion.md).
 | Ruta | Qué es (cada carpeta tiene su README explicando el código) |
 | --- | --- |
 | `sql/README.md` | **empezar aquí**: el orden, las carpetas y los comandos de psql |
-| `sql/01_bases/` | borrar todo y crear las 6 bases |
+| `scripts/` | `instancias_locales.sh` (levanta las 6 instancias) y `correr.sh` (corre los scripts con la configuración de un ambiente) |
+| `config/` | plantillas con la conexión de cada instancia (`local.env.example`, `neon.env.example`) |
+| `sql/00_config/` | lee la configuración y arma la conexión de cada servicio |
+| `sql/01_bases/` | borrar y crear la base de cada instancia |
 | `sql/02_tablas/` | las tablas, un archivo por microservicio (con la fragmentación por sede) |
 | `sql/03_dblink/` | instalar y quitar `dblink` para consultar otra base |
 | `sql/04_datos/` | datos de prueba de cada servicio: 300 pedidos, 80 productos, 100 clientes… Totalmente generadas con IA :) |
 | `sql/05_reportes/` | vistas materializadas de reportes y `refrescar.sql` (lo que se programa cada X minutos) |
-| `sql/06_roles/` | roles, usuarios y permisos, con la matriz de permisos |
+| `sql/06_roles/` | roles, usuarios y permisos, un archivo por instancia, con la matriz de permisos |
 | `sql/07_consultas/` | las 20 consultas que pide el enunciado |
 | `sql/08_pruebas/` | pruebas de restricciones, fragmentos, permisos y aislamiento entre bases (todo con ROLLBACK, no ensucia nada) |
 | `docs/enunciado.pdf` | Todo el contexto y requisitos que se nos dio para el proyecto |
+| `docs/despliegue.md` | **una instancia por servicio**: cómo correrlo en local y en Neon |
 | `docs/distribucion.md` | **bases, servicios, fragmentos por sede y vistas de integración** (entregable 5) |
 | `docs/` | reglas de negocio, normalización, diccionario, manual, evidencias, diagramas |
 

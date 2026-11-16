@@ -129,7 +129,7 @@ Los siguientes supuestos resuelven lo que el enunciado deja abierto; si alguno c
 
 ### 4.2 Técnicos
 
-- **S-07.** Se usa PostgreSQL 18 con una base de datos por microservicio. Las seis bases pueden estar en el mismo servidor o en servidores distintos; cada servicio solo tiene permiso para conectarse a la suya.
+- **S-07.** Se usa PostgreSQL 18 con **una instancia por microservicio**, cada una con su base y sus propios roles. En local son 6 procesos de PostgreSQL en puertos distintos; en la nube, 6 proyectos de Neon. Cada servicio solo puede conectarse a su instancia.
 - **S-08.** La fragmentación se implementa con tablas físicas separadas, una por sede (por ejemplo `inventarios.inv_cali`), cada una con `CHECK (id_sede = n)`. Cada fragmento se puede consultar por separado, y una vista `UNION ALL` los reúne para los reportes.
 - **S-09.** Las claves foráneas solo se declaran dentro de una misma base, porque PostgreSQL no permite una FK hacia otra base. Las relaciones entre microservicios se manejan con identificadores compartidos: los valida el servicio dueño del dato y se revisan con `NOT EXISTS` desde reportes, con `dblink`.
 - **S-10.** No hay triggers. Las consecuencias entre servicios (por ejemplo, que una recepción aumente el inventario) se resuelven entre servicios por HTTP en el backend; en los datos de prueba ya se cargan coherentes.

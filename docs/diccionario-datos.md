@@ -4,7 +4,7 @@ Proyecto final de Bases de Datos · Comercializadora Andina S.A.S.
 
 Este documento cubre la parte de diccionario de datos del entregable 4. Se generó a partir de los scripts de `sql/02_tablas/` (las tablas) y `sql/05_reportes/vistas.sql` (las vistas), que son la fuente de verdad, y se verificó contra el catálogo de PostgreSQL: columnas, tipos, nulos, defaults, PK, FK, UNIQUE y CHECK coinciden en las 31 tablas.
 
-Cada microservicio tiene su **propia base de datos** (`andina_<servicio>`) y dentro de ella un esquema con el nombre del servicio. Por eso cada tabla se nombra `esquema.tabla` (por ejemplo `ventas.ped_bogota`), igual en su base y en las consultas por `dblink` de `andina_reportes`.
+Cada microservicio tiene su **propia instancia de PostgreSQL** con su base (`andina_<servicio>`), y dentro de ella un esquema con el nombre del servicio. Por eso cada tabla se nombra `esquema.tabla` (por ejemplo `ventas.ped_bogota`), igual en su base y en las consultas por `dblink` de `andina_reportes`.
 
 ## Convenciones
 
@@ -356,7 +356,7 @@ Estas reglas están en el modelo, pero no hay una restricción que las haga cump
 
 ## 7. Base `andina_reportes`
 
-Reportes no tiene tablas. Su base tiene la extensión `dblink` (con un servidor remoto registrado por cada base: `srv_catalogo`, `srv_ventas`…) y el esquema `reportes`, con solo vistas (`05_reportes/vistas.sql`). Las de la tabla de abajo son **materializadas**: traen los datos de las otras bases por `dblink`, guardan el resultado y se actualizan con `REFRESH MATERIALIZED VIEW` (`sql/05_reportes/refrescar.sql`). `parametros` es una vista normal.
+Reportes no tiene tablas. Su base tiene la extensión `dblink` (con la conexión a cada una de las otras instancias en el esquema privado `remoto`) y el esquema `reportes`, con solo vistas (`05_reportes/vistas.sql`). Las de la tabla de abajo son **materializadas**: traen los datos de las otras bases por `dblink`, guardan el resultado y se actualizan con `REFRESH MATERIALIZED VIEW` (`sql/05_reportes/refrescar.sql`). `parametros` es una vista normal.
 
 
 ### Vistas del esquema `reportes`
