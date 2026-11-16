@@ -4,7 +4,6 @@
 package main
 
 import (
-	"flag"
 	"log/slog"
 	"os"
 
@@ -15,9 +14,7 @@ import (
 func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)).With("servicio", "gateway"))
 
-	rutaEnv := flag.String("config", plataforma.Var("CONFIG", "config/local.env"), "archivo .env con la configuracion")
-	flag.Parse()
-	if err := plataforma.CargarEnv(*rutaEnv); err != nil {
+	if err := plataforma.LeerConfig(); err != nil {
 		slog.Error("no se pudo arrancar", "error", err)
 		os.Exit(1)
 	}

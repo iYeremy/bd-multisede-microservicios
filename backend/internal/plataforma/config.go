@@ -5,6 +5,7 @@ package plataforma
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"net/url"
 	"os"
@@ -39,6 +40,23 @@ func CargarEnv(ruta string) error {
 		}
 	}
 	return sc.Err()
+}
+
+// LeerConfig carga la configuracion al arrancar un programa. dos formas:
+//   - en tu pc: un archivo .env (por defecto config/local.env, o -config otro.env)
+//   - en docker: CONFIG= (vacio) y todo llega como variables de entorno,
+//     que es como se configura un contenedor. no se lee ningun archivo.
+func LeerConfig() error {
+	porDefecto := "config/local.env"
+	if v, existe := os.LookupEnv("CONFIG"); existe {
+		porDefecto = v
+	}
+	ruta := flag.String("config", porDefecto, "archivo .env con la configuracion (vacio: solo variables de entorno)")
+	flag.Parse()
+	if *ruta == "" {
+		return nil
+	}
+	return CargarEnv(*ruta)
 }
 
 // Var devuelve una variable de entorno, o porDefecto si no existe o esta vacia.

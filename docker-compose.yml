@@ -1,0 +1,126 @@
+# docker-compose.yml
+# todo el sistema en contenedores: 6 instancias de postgresql (una por
+# servicio), un contenedor "init" que crea las bases, y los 7 programas
+# del backend. ver notas o backend/README.md.
+#
+#   cp config/docker.env.example config/docker.env
+#   docker compose up --build -d        construir y arrancar todo
+#   docker compose ps                   que esta corriendo
+#   docker compose logs -f ventas       ver el log de un servicio
+#   docker compose stop catalogo        apagar uno (para ver los fallos)
+#   docker compose down                 apagar todo (los datos quedan)
+#   docker compose down -v              apagar todo y BORRAR los datos
+#
+# solo el gateway se publica hacia afuera (puerto 8080). las bases se
+# publican solo en 127.0.0.1 (para entrar con psql desde tu pc); los
+# servicios de go no se publican: solo se alcanzan dentro de la red.
+
+name: andina
+
+# x-...: bloques que se repiten. & les pone nombre y <<: * los copia
+x-postgres: &postgres
+  image: postgres:18
+  env_file: config/docker.env
+  restart: unless-stopped
+  healthcheck:
+    # "listo" = acepta conexiones. el init espera a que las 6 lo esten
+    test: ["CMD-SHELL", "pg_isready -U postgres"]
+    interval: 3s
+    timeout: 3s
+    retries: 20
+
+x-servicio: &servicio
+  env_file: config/docker.env
+  restart: unless-stopped
+  depends_on:
+    init:
+      condition: service_completed_successfully
+
+services:
+  # ---------------- las 6 instancias de postgresql ----------------
+  db-catalogo:
+    <<: *postgres
+    ports: ["127.0.0.1:6441:5432"]
+    volumes: [db-catalogo:/var/lib/postgresql]
+  db-identidad:
+    <<: *postgres
+    ports: ["127.0.0.1:6442:5432"]
+    volumes: [db-identidad:/var/lib/postgresql]
+  db-compras:
+    <<: *postgres
+    ports: ["127.0.0.1:6443:5432"]
+    volumes: [db-compras:/var/lib/postgresql]
+  db-inventarios:
+    <<: *postgres
+    ports: ["127.0.0.1:6444:5432"]
+    volumes: [db-inventarios:/var/lib/postgresql]
+  db-ventas:
+    <<: *postgres
+    ports: ["127.0.0.1:6445:5432"]
+    volumes: [db-ventas:/var/lib/postgresql]
+  db-reportes:
+    <<: *postgres
+    ports: ["127.0.0.1:6446:5432"]
+    volumes: [db-reportes:/var/lib/postgresql]
+
+  # ---------------- crear las bases (corre una vez y termina) ----------------
+  init:
+    image: postgres:18 # solo por psql y bash
+    env_file: config/docker.env
+    working_dir: /proyecto
+    # el proyecto se monta en solo lectura: el init solo lee los .sql
+    volumes:
+      - ./run_all.sql:/proyecto/run_all.sql:ro
+      - ./sql:/proyecto/sql:ro
+      - ./scripts:/proyecto/scripts:ro
+      - ./config/docker.env:/proyecto/config/docker.env:ro
+    entrypoint: ["bash", "scripts/docker_init.sh"]
+    restart: "no"
+    depends_on:
+      db-catalogo: { condition: service_healthy }
+      db-identidad: { condition: service_healthy }
+      db-compras: { condition: service_healthy }
+      db-inventarios: { condition: service_healthy }
+      db-ventas: { condition: service_healthy }
+      db-reportes: { condition: service_healthy }
+
+  # ---------------- el backend: un contenedor por programa ----------------
+  catalogo:
+    <<: *servicio
+    build: { context: backend, args: { PROGRAMA: catalogo } }
+    image: andina/catalogo
+  identidad:
+    <<: *servicio
+    build: { context: backend, args: { PROGRAMA: identidad } }
+    image: andina/identidad
+  compras:
+    <<: *servicio
+    build: { context: backend, args: { PROGRAMA: compras } }
+    image: andina/compras
+  inventarios:
+    <<: *servicio
+    build: { context: backend, args: { PROGRAMA: inventarios } }
+    image: andina/inventarios
+  ventas:
+    <<: *servicio
+    build: { context: backend, args: { PROGRAMA: ventas } }
+    image: andina/ventas
+  reportes:
+    <<: *servicio
+    build: { context: backend, args: { PROGRAMA: reportes } }
+    image: andina/reportes
+  gateway:
+    <<: *servicio
+    build: { context: backend, args: { PROGRAMA: gateway } }
+    image: andina/gateway
+    ports: ["8080:8080"] # la unica puerta hacia afuera
+
+# los datos de cada instancia viven en un volumen: sobreviven a "down"
+# (pero no a "down -v")
+volumes:
+  db-catalogo:
+  db-identidad:
+  db-compras:
+  db-inventarios:
+  db-ventas:
+  db-reportes:

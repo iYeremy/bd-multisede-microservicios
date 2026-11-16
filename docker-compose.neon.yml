@@ -1,0 +1,57 @@
+# docker-compose.neon.yml
+# solo el backend en contenedores, conectado a las bases de NEON (no
+# levanta postgres: las 6 instancias ya estan en la nube). es lo que se
+# correria en una vm.
+#
+#   scripts/claves_svc.sh config/neon.env          una vez: claves de los svc_*
+#   docker compose -f docker-compose.neon.yml up --build -d
+#
+# config/neon.env necesita TOKEN_INTERNO y las SVC_<SERVICIO>_PASSWORD.
+
+name: andina-neon
+
+x-servicio: &servicio
+  env_file: config/neon.env
+  restart: unless-stopped
+  environment: &urls
+    # en docker cada servicio se llama por el nombre de su contenedor
+    URL_CATALOGO: http://catalogo:8101
+    URL_IDENTIDAD: http://identidad:8102
+    URL_COMPRAS: http://compras:8103
+    URL_INVENTARIOS: http://inventarios:8104
+    URL_VENTAS: http://ventas:8105
+    URL_REPORTES: http://reportes:8106
+
+services:
+  catalogo:
+    <<: *servicio
+    build: { context: backend, args: { PROGRAMA: catalogo } }
+    image: andina/catalogo
+  identidad:
+    <<: *servicio
+    build: { context: backend, args: { PROGRAMA: identidad } }
+    image: andina/identidad
+  compras:
+    <<: *servicio
+    build: { context: backend, args: { PROGRAMA: compras } }
+    image: andina/compras
+  inventarios:
+    <<: *servicio
+    build: { context: backend, args: { PROGRAMA: inventarios } }
+    image: andina/inventarios
+  ventas:
+    <<: *servicio
+    build: { context: backend, args: { PROGRAMA: ventas } }
+    image: andina/ventas
+  reportes:
+    <<: *servicio
+    build: { context: backend, args: { PROGRAMA: reportes } }
+    image: andina/reportes
+  gateway:
+    <<: *servicio
+    build: { context: backend, args: { PROGRAMA: gateway } }
+    image: andina/gateway
+    environment:
+      <<: *urls
+      PUERTO_GATEWAY: "8080" # en la vm se puede publicar como 80:8080
+    ports: ["8080:8080"]

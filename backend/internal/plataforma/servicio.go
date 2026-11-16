@@ -2,7 +2,6 @@ package plataforma
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -29,9 +28,7 @@ func CorrerServicio(nombre string, registrar Registrar) {
 }
 
 func correr(nombre string, registrar Registrar) error {
-	rutaEnv := flag.String("config", Var("CONFIG", "config/local.env"), "archivo .env con la configuracion")
-	flag.Parse()
-	if err := CargarEnv(*rutaEnv); err != nil {
+	if err := LeerConfig(); err != nil {
 		return err
 	}
 

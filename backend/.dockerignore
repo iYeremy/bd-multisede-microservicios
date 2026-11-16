@@ -1,0 +1,4 @@
+# lo que no se manda a docker al construir (mas rapido, y nada sobrante)
+bin/
+logs/
+*.md
