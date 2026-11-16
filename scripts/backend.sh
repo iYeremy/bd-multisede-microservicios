@@ -5,7 +5,9 @@
 # aparte.
 #
 #   scripts/backend.sh iniciar [config/local.env]   compila y arranca todos
-#   scripts/backend.sh detener                      los apaga
+#   scripts/backend.sh detener [programa]           los apaga (o solo uno:
+#                                                   detener catalogo, para
+#                                                   ver que pasa si se cae)
 #   scripts/backend.sh estado                       cuales estan corriendo
 #
 # los ejecutables quedan en backend/bin/ y los logs en backend/logs/
@@ -42,7 +44,7 @@ iniciar() {
 }
 
 detener() {
-    for p in $(programas); do
+    for p in ${1:-$(programas)}; do
         if [ -f "$BIN/$p.pid" ] && kill -0 "$(cat "$BIN/$p.pid")" 2>/dev/null; then
             kill "$(cat "$BIN/$p.pid")" && echo "   $p detenido"
         fi
@@ -62,7 +64,7 @@ estado() {
 
 case "${1:-}" in
     iniciar) iniciar "${2:-}" ;;
-    detener) detener ;;
+    detener) detener "${2:-}" ;;
     estado)  estado ;;
-    *) echo "uso: $0 {iniciar [config/local.env]|detener|estado}"; exit 1 ;;
+    *) echo "uso: $0 {iniciar [config/local.env]|detener [programa]|estado}"; exit 1 ;;
 esac
