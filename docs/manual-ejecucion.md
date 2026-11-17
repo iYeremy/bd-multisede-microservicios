@@ -113,7 +113,7 @@ scripts/correr.sh config/local.env reportes sql/05_reportes/refrescar.sql
 
 Hace `REFRESH MATERIALIZED VIEW` de todas las vistas, en orden y en una transacción: cada vista vuelve a traer los datos por `dblink`. Si una instancia no responde, el refresco falla entero y quedan los reportes anteriores. Al final muestra `reportes.vista_ultima_actualizacion`.
 
-Para que corra solo cada cierto tiempo: en un servidor propio, con `cron`; en Neon, con la tarea de GitHub Actions `.github/workflows/refrescar-reportes.yml` (ver [`despliegue.md`](despliegue.md)).
+Para que corra solo cada cierto tiempo no hace falta `cron`: con el backend encendido, el servicio de reportes refresca las vistas cada `REFRESCO_MINUTOS` (ver [`backend/README.md`](../backend/README.md)).
 
 ## 5. Usuarios de prueba
 

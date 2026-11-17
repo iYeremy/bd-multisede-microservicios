@@ -28,6 +28,7 @@ type Servicio struct {
 	db       *pgxpool.Pool
 	mu       sync.Mutex // protege sesiones: varias peticiones llegan a la vez
 	sesiones map[string]sesion
+	intentos *intentos // logins fallidos por usuario (ver intentos.go)
 }
 
 type sesion struct {
@@ -36,7 +37,7 @@ type sesion struct {
 }
 
 func nuevo(db *pgxpool.Pool) *Servicio {
-	return &Servicio{db: db, sesiones: map[string]sesion{}}
+	return &Servicio{db: db, sesiones: map[string]sesion{}, intentos: nuevosIntentos()}
 }
 
 // ErrCredenciales: usuario o clave incorrectos, o usuario inactivo. a
@@ -50,6 +51,22 @@ var hashFalso, _ = bcrypt.GenerateFromPassword([]byte("no-existe"), bcrypt.Defau
 // Login revisa usuario y clave. si estan bien, abre una sesion y devuelve
 // su token (un numero al azar que el navegador guarda en una cookie).
 func (s *Servicio) Login(ctx context.Context, nombre, clave string) (string, plataforma.Usuario, error) {
+	var u plataforma.Usuario
+	// bloqueado: ni se mira la clave (si no, se podria seguir probando)
+	if _, bloq := s.intentos.bloqueado(nombre); bloq {
+		return "", u, ErrBloqueado
+	}
+	token, u, err := s.revisarClave(ctx, nombre, clave)
+	switch {
+	case errors.Is(err, ErrCredenciales):
+		s.intentos.fallo(nombre)
+	case err == nil:
+		s.intentos.exito(nombre)
+	}
+	return token, u, err
+}
+
+func (s *Servicio) revisarClave(ctx context.Context, nombre, clave string) (string, plataforma.Usuario, error) {
 	var u plataforma.Usuario
 	var hash, estadoUsuario, estadoEmpleado string
 	err := s.db.QueryRow(ctx, `
@@ -162,6 +179,7 @@ func (s *Servicio) limpiar(ctx context.Context) {
 				}
 			}
 			s.mu.Unlock()
+			s.intentos.limpiar()
 		}
 	}
 }

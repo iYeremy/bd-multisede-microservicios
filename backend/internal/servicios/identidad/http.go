@@ -54,6 +54,13 @@ func (s *Servicio) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token, u, err := s.Login(r.Context(), datos.Usuario, datos.Password)
+	if errors.Is(err, ErrBloqueado) {
+		// 429 Too Many Requests; Retry-After: en cuantos segundos reintentar
+		falta, _ := s.intentos.bloqueado(datos.Usuario)
+		w.Header().Set("Retry-After", strconv.Itoa(int(falta.Seconds())+1))
+		plataforma.ResponderError(w, http.StatusTooManyRequests, err.Error())
+		return
+	}
 	if errors.Is(err, ErrCredenciales) {
 		plataforma.ResponderError(w, http.StatusUnauthorized, err.Error())
 		return

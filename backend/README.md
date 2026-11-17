@@ -49,7 +49,7 @@ alguien entra, identidad lo cambia por **bcrypt**.
 
 | Método | Ruta | Roles | Qué hace |
 | --- | --- | --- | --- |
-| POST | `/api/identidad/login` | todos | `{"usuario","password"}`, deja la cookie `sesion` |
+| POST | `/api/identidad/login` | todos | `{"usuario","password"}`, deja la cookie `sesion`. 5 claves malas seguidas bloquean ese usuario 15 min (`429`) |
 | POST | `/api/identidad/logout` | todos | cierra la sesión |
 | GET | `/api/identidad/yo` | todos | quién soy |
 | GET | `/api/identidad/auditoria` | AUDITOR, ADMIN | últimos accesos |

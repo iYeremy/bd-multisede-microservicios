@@ -44,3 +44,48 @@ func TestSesionVence(t *testing.T) {
 		t.Error("un token inventado no deberia valer")
 	}
 }
+
+func TestIntentosBloquean(t *testing.T) {
+	in := nuevosIntentos()
+	ahora := time.Now()
+	in.ahora = func() time.Time { return ahora }
+
+	for range maxFallos - 1 {
+		in.fallo("Vendedor_Cali")
+	}
+	if _, bloq := in.bloqueado("vendedor_cali"); bloq {
+		t.Fatal("con menos de maxFallos no deberia bloquear")
+	}
+	in.fallo("vendedor_cali ") // mayusculas y espacios cuentan como el mismo usuario
+	if _, bloq := in.bloqueado("vendedor_cali"); !bloq {
+		t.Fatal("al llegar a maxFallos deberia bloquear")
+	}
+	if _, bloq := in.bloqueado("vendedor_bogota"); bloq {
+		t.Error("el bloqueo es por usuario, no deberia afectar a otro")
+	}
+
+	ahora = ahora.Add(tiempoBloqueo + time.Second)
+	if _, bloq := in.bloqueado("vendedor_cali"); bloq {
+		t.Error("pasado el tiempo de bloqueo deberia poder entrar")
+	}
+
+	// un login bueno borra la racha
+	in.fallo("compras_cedi")
+	in.exito("compras_cedi")
+	for range maxFallos - 1 {
+		in.fallo("compras_cedi")
+	}
+	if _, bloq := in.bloqueado("compras_cedi"); bloq {
+		t.Error("el exito deberia haber reiniciado la cuenta")
+	}
+
+	// fallos muy separados no se acumulan
+	in.fallo("auditor_interno")
+	ahora = ahora.Add(ventanaFallos + time.Second)
+	for range maxFallos - 1 {
+		in.fallo("auditor_interno")
+	}
+	if _, bloq := in.bloqueado("auditor_interno"); bloq {
+		t.Error("un fallo viejo no deberia contar")
+	}
+}

@@ -41,6 +41,10 @@ echo "== login y sesion"
 revisar "sin sesion no se entra"                            401 "$G/api/catalogo/productos"
 revisar "clave mala"                                        401 -X POST "$G/api/identidad/login" -d '{"usuario":"vendedor_cali","password":"x"}'
 revisar "login bien"                                        200 -X POST "$G/api/identidad/login" -d '{"usuario":"vendedor_cali","password":"vendedor_cali2026"}'
+# 5 claves malas seguidas bloquean a ese usuario 15 min (con un usuario que
+# no existe, para no dejar bloqueada ninguna cuenta de verdad)
+for i in 1 2 3 4 5; do curl -s -o /dev/null -X POST "$G/api/identidad/login" -d '{"usuario":"no_existe","password":"x"}'; done
+revisar "5 claves malas: el usuario queda bloqueado"         429 -X POST "$G/api/identidad/login" -d '{"usuario":"no_existe","password":"x"}'
 for u in admin_andina gerente_general inventario_cali compras_cedi vendedor_cali vendedor_bogota auditor_interno; do login "$u"; done
 como vendedor_cali "quien soy"                              200 "$G/api/identidad/yo"
 como vendedor_cali "un header falso no da permisos"         403 -H 'X-Usuario-Rol: ADMINISTRADOR' "$G/api/identidad/auditoria"

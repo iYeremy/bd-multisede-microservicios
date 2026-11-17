@@ -113,18 +113,15 @@ Los puertos son 5441 a 5446, para no chocar con el PostgreSQL normal del sistema
 | No se puede quitar el permiso de usar `dblink` | Sus funciones son del superusuario interno | No hace falta: las conexiones están en un esquema privado, y sin contraseña `dblink` no deja conectarse a quien no es superusuario |
 | Conexión cifrada | Neon solo acepta SSL | `SSLMODE=require` |
 | Las bases "se duermen" | Tras 5 minutos sin uso se apagan | La primera consulta tarda un poco más. No afecta los resultados |
-| No hay `cron` en el servidor | El servidor no es nuestro | `.github/workflows/refrescar-reportes.yml`: GitHub Actions refresca los reportes cada 15 minutos (ver abajo) |
+| No hay `cron` en el servidor | El servidor no es nuestro | El servicio de reportes del backend refresca las vistas solo, cada `REFRESCO_MINUTOS` (ver abajo) |
 
 ### El refresco de los reportes en Neon
 
-`.github/workflows/refrescar-reportes.yml` corre `sql/05_reportes/refrescar.sql` cada 15 minutos.
-Para activarlo, en GitHub, en **Settings → Secrets and variables → Actions**:
-- el **secret** `REPORTES_URL`, con la conexión de `andina-reportes`
-  (`postgresql://usuario:clave@host/andina_reportes?sslmode=require`);
-- la **variable** `REFRESCO_ACTIVO` en `true`.
-
-Mientras `REFRESCO_ACTIVO` no esté en `true`, no corre. Cuando exista el backend, el refresco lo
-hará el servicio de reportes y esto se puede apagar.
+Lo hace el **servicio de reportes** del backend: mientras está encendido, refresca todas las vistas
+cada `REFRESCO_MINUTOS` (5 por defecto), y el administrador puede forzarlo con
+`POST /api/reportes/refrescar`. Con el backend apagado no se refresca nada, y así Neon puede
+dormirse (no gasta horas de cómputo). A mano, sin backend:
+`scripts/correr.sh config/neon.env reportes sql/05_reportes/refrescar.sql`.
 
 > **Probado en local y en Neon:** las dos dan exactamente los mismos resultados en las 20 consultas
 > y en todas las pruebas (`docs/evidencias.txt` y `docs/evidencias-neon.txt`, con los hosts de Neon
