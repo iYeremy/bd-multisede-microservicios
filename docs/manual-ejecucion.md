@@ -8,6 +8,7 @@ Proyecto final de Bases de Datos · Comercializadora Andina S.A.S.
 - `psql`. Los scripts usan comandos propios de psql (`\c`, `\ir`, `\getenv`, `\if`, `\gset`, `\echo`, `\set`), así que **no se pueden ejecutar desde pgAdmin** (ver sección 4.3).
 - `bash`, para los scripts de `scripts/`.
 - En local, nada más: `scripts/instancias_locales.sh` crea y arranca las instancias (no hace falta Docker). En la nube, una cuenta de [Neon](https://neon.com) (ver [`despliegue.md`](despliegue.md)).
+- Para el backend: **Go 1.27** o superior, o **Docker** con `docker compose` (con Docker no hace falta ni Go ni PostgreSQL instalados). Para las pruebas del backend, `curl` y `python3`.
 
 ## 2. Estructura
 
@@ -25,12 +26,23 @@ Cada microservicio tiene **su propia instancia de PostgreSQL**, y en ella su bas
 ```
 proyecto/
 ├── run_all.sql             ejecuta todo en orden, instancia por instancia
+├── docker-compose.yml      todo en contenedores: 6 postgres + init + backend
+├── docker-compose.neon.yml solo el backend, contra Neon
 ├── scripts/
 │   ├── instancias_locales.sh   levanta, apaga o borra las 6 instancias locales
-│   └── correr.sh               corre los scripts con la configuración de un ambiente
+│   ├── correr.sh               corre los scripts con la configuración de un ambiente
+│   ├── claves_svc.sh           pone la contraseña de los svc_* en cada instancia
+│   ├── docker_init.sh          lo que corre el contenedor init (crear las bases)
+│   ├── backend.sh              compila, arranca y apaga el backend
+│   └── probar_backend.sh       31 pruebas del backend, por el gateway
 ├── config/
 │   ├── local.env.example   conexión a las instancias locales (copiar como local.env)
-│   └── neon.env.example    conexión a Neon (copiar como neon.env; nunca subirlo)
+│   ├── neon.env.example    conexión a Neon (copiar como neon.env; nunca subirlo)
+│   └── docker.env.example  todo en docker (copiar como docker.env)
+├── backend/                el backend en Go (ver backend/README.md)
+│   ├── cmd/                el main de cada programa: gateway y los 6 servicios
+│   ├── internal/           plataforma (lo compartido), gateway y servicios/<servicio>
+│   └── Dockerfile          una receta para los 7 programas
 ├── sql/                    cada carpeta tiene su README con la explicación
 │   ├── README.md           índice: orden, carpetas, comandos de psql
 │   ├── 00_config/          lee la configuración y arma la conexión de cada servicio
@@ -45,6 +57,8 @@ proyecto/
 └── docs/
     ├── enunciado.pdf             requisitos del proyecto
     ├── evidencias.txt            salida completa de run_all.sql
+    ├── evidencias-neon.txt       lo mismo, en Neon
+    ├── evidencias-backend.txt    pruebas del backend: local, docker y contra neon
     ├── despliegue.md             una instancia por servicio: local y Neon
     └── diagramas/                arquitectura, E-R, relacional y los de diccionario y normalización
 ```
@@ -155,7 +169,37 @@ SELECT fragmento, COUNT(*) FROM reportes.vista_inventario_consolidado GROUP BY f
 SELECT * FROM reportes.vista_reporte_corporativo;
 ```
 
-## 7. Problemas frecuentes
+## 7. El backend
+
+Con las instancias encendidas y cargadas (sección 3):
+
+```bash
+scripts/backend.sh iniciar          # compila y arranca los 7 programas (logs en backend/logs/)
+scripts/probar_backend.sh           # 31 pruebas de punta a punta
+scripts/backend.sh estado
+scripts/backend.sh detener catalogo # apagar uno, para ver qué pasa si se cae
+scripts/backend.sh detener          # apagar todos
+```
+
+O todo en Docker:
+
+```bash
+cp config/docker.env.example config/docker.env    # y cambiar las claves
+docker compose up --build -d                       # la primera vez carga las bases (contenedor init)
+scripts/probar_backend.sh
+docker compose down
+```
+
+Todo entra por el gateway, en `http://localhost:8080`. Los usuarios de la aplicación son los 12 de `identidad.usuarios`, con clave `<usuario>2026` (por ejemplo `vendedor_cali` / `vendedor_cali2026`). No son los usuarios de PostgreSQL de la sección 5: la aplicación siempre entra a la base con los `svc_*`, y los permisos de cada persona los revisa el backend según su rol.
+
+```bash
+curl -c cookie -X POST localhost:8080/api/identidad/login -d '{"usuario":"vendedor_cali","password":"vendedor_cali2026"}'
+curl -b cookie localhost:8080/api/ventas/pedidos
+```
+
+Las rutas y los roles están en [`backend/README.md`](../backend/README.md); contra Neon, ver [`despliegue.md`](despliegue.md) (sección 5).
+
+## 8. Problemas frecuentes
 
 | Síntoma | Causa y solución |
 | --- | --- |
@@ -166,4 +210,8 @@ SELECT * FROM reportes.vista_reporte_corporativo;
 | `permission denied to create database` o `… to create role` | El usuario del `.env` no tiene permiso para crear bases o roles. En local es `postgres`; en Neon, el dueño del proyecto. |
 | `relation "catalogo.productos" does not exist` | Se está en la instancia equivocada: cada tabla vive en la de su servicio (en reportes se lee con `dblink`). Revisar con `SELECT current_database(), current_setting('port');`. |
 | Error en `\ir` | Ejecutar con `correr.sh`; `\ir` resuelve las rutas respecto al propio archivo. |
+| `backend.sh`: un servicio sale `apagado` justo después de iniciar | No pudo arrancar; el motivo está en `backend/logs/<servicio>.log` (casi siempre: las instancias apagadas o falta una variable en el `.env`). |
+| `/salud` dice `sin base de datos` | El servicio corre pero no llega a su instancia: está apagada, o la contraseña del `svc_*` no coincide (`scripts/claves_svc.sh`). En Neon, puede estar despertando: esperar unos segundos. |
+| `429` en el login | 5 claves malas seguidas para ese usuario: queda bloqueado 15 minutos (o hasta reiniciar identidad). |
+| `docker compose up` falla en `init` | `docker compose logs init`. Si se cambió `docker.env` después de la primera vez, las bases ya existen con las claves viejas: `docker compose down -v` y volver a subir. |
 | Las fechas de las consultas no cambian con el día | Es intencional: la fecha de corte es fija (2026-10-15) en `reportes.parametros`. |

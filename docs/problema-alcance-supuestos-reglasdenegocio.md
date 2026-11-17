@@ -30,7 +30,7 @@ Se diseña e implementa un sistema de **microservicios** sobre PostgreSQL. Cada 
 
 Los inventarios y los pedidos de venta se fragmentan horizontalmente por sede dentro de la base de su servicio. Reportes Corporativos trae los datos de las otras bases con **`dblink`** y los guarda en **vistas materializadas** que se refrescan cada X minutos. Es la única base que se conecta a otras; los servicios no lo hacen.
 
-Cada servicio tendrá un backend propio que expone su información por HTTP, y la solución se desplegará en la nube.
+Cada servicio tiene un backend propio (un programa en Go) que expone su información por HTTP, detrás de un gateway que valida la sesión. La solución se despliega en la nube: las bases en Neon y el backend en contenedores Docker.
 
 ## 2. Objetivos
 
@@ -52,7 +52,7 @@ Diseñar e implementar en PostgreSQL la capa de datos de un sistema comercial mu
 
 ## 3. Alcance
 
-El proyecto cubre el diseño y la implementación en PostgreSQL de las bases de datos de cada microservicio, el backend que las usa y su despliegue en la nube. La primera parte, ya terminada, es toda la capa de datos: bases, tablas, datos, `dblink` hacia reportes, vistas materializadas, roles, consultas y pruebas.
+El proyecto cubre el diseño y la implementación en PostgreSQL de las bases de datos de cada microservicio, el backend que las usa y su despliegue en la nube. Ya está terminada la capa de datos (bases, tablas, datos, `dblink` hacia reportes, vistas materializadas, roles, consultas y pruebas) y el backend (gateway y 6 servicios, probados en local, en Docker y contra Neon). Falta el front y subir el backend a un servidor en la nube.
 
 ### 3.1 Sedes y almacenes
 
@@ -93,7 +93,7 @@ Se fragmentan dos conjuntos operacionales por sede: los **inventarios** y los **
 
 ### 3.5 Excluido
 
-- Docker como requisito: está permitido, pero no se califica. Los scripts funcionan igual en un contenedor.
+- Docker como requisito: está permitido, pero no se califica. Igual se usa: `docker-compose.yml` levanta las 6 instancias y el backend, y `docker-compose.neon.yml` solo el backend contra Neon.
 - Triggers, políticas RLS y pruebas de concurrencia, bloqueo o reversión de transacciones.
 - Actualización en tiempo real de los reportes: las vistas materializadas se refrescan cada X minutos.
 - Conciliación automática de movimientos de inventario.
@@ -132,10 +132,10 @@ Los siguientes supuestos resuelven lo que el enunciado deja abierto; si alguno c
 - **S-07.** Se usa PostgreSQL 18 con **una instancia por microservicio**, cada una con su base y sus propios roles. En local son 6 procesos de PostgreSQL en puertos distintos; en la nube, 6 proyectos de Neon. Cada servicio solo puede conectarse a su instancia.
 - **S-08.** La fragmentación se implementa con tablas físicas separadas, una por sede (por ejemplo `inventarios.inv_cali`), cada una con `CHECK (id_sede = n)`. Cada fragmento se puede consultar por separado, y una vista `UNION ALL` los reúne para los reportes.
 - **S-09.** Las claves foráneas solo se declaran dentro de una misma base, porque PostgreSQL no permite una FK hacia otra base. Las relaciones entre microservicios se manejan con identificadores compartidos: los valida el servicio dueño del dato y se revisan con `NOT EXISTS` desde reportes, con `dblink`.
-- **S-10.** No hay triggers. Las consecuencias entre servicios (por ejemplo, que una recepción aumente el inventario) se resuelven entre servicios por HTTP en el backend; en los datos de prueba ya se cargan coherentes.
+- **S-10.** No hay triggers. Las consecuencias entre servicios (por ejemplo, que una recepción aumente el inventario) se resuelven entre servicios por HTTP en el backend; en los datos de prueba ya se cargan coherentes. Por ahora el backend solo escribe pedidos (ventas le pide a catálogo el cliente, los productos y los precios); recepciones, transferencias y pagos solo se consultan.
 - **S-11.** Los valores monetarios usan `NUMERIC(14,2)` y las cantidades `INTEGER`. Los productos se manejan en unidades enteras.
-- **S-12.** En los datos de prueba las contraseñas son un hash de ejemplo (`md5`). El inicio de sesión real lo hará el backend de Identidad y Accesos, con un algoritmo de hash seguro.
-- **S-18.** Los reportes usan `dblink`: desde `andina_reportes` se consultan las otras bases y el resultado se guarda en vistas materializadas, que se refrescan cada X minutos (con cron; con el backend lo hará el servicio de reportes). Entre un refresco y otro, los reportes pueden ir atrasados (consistencia eventual). `dblink` acopla reportes a las tablas de los demás servicios; la alternativa sin acople (ETL por CSV) está en la rama `feat/microservicios-reales`.
+- **S-12.** En los datos de prueba las contraseñas son un hash de ejemplo (`md5`). El inicio de sesión lo hace el backend de Identidad y Accesos: la primera vez que cada usuario entra, cambia su `md5` por `bcrypt`.
+- **S-18.** Los reportes usan `dblink`: desde `andina_reportes` se consultan las otras bases y el resultado se guarda en vistas materializadas, que se refrescan cada X minutos (lo hace el servicio de reportes del backend, cada `REFRESCO_MINUTOS`). Entre un refresco y otro, los reportes pueden ir atrasados (consistencia eventual). `dblink` acopla reportes a las tablas de los demás servicios; la alternativa sin acople (ETL por CSV) está en la rama `feat/microservicios-reales`.
 
 ### 4.3 De datos y consultas
 

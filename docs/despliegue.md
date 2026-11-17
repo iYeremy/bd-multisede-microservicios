@@ -27,7 +27,8 @@ Los datos de conexión de las 6 instancias van en un archivo `.env`:
 | --- | --- | --- |
 | `config/local.env.example` | Plantilla para las instancias locales | Sí |
 | `config/neon.env.example` | Plantilla para Neon | Sí |
-| `config/local.env`, `config/neon.env` | Las copias con los datos reales | **No** (están en `.gitignore`) |
+| `config/docker.env.example` | Plantilla para todo en Docker | Sí |
+| `config/local.env`, `config/neon.env`, `config/docker.env` | Las copias con los datos reales | **No** (están en `.gitignore`) |
 
 Cada servicio tiene 4 datos: `HOST`, `PORT`, `USER` y `PASSWORD`. Por ejemplo:
 
@@ -42,6 +43,9 @@ Hay además 3 datos generales:
 - `ADMIN_DB`: la base desde la que se crean las demás (`postgres` en local, `neondb` en Neon).
 - `SSLMODE`: `disable` en local, `require` en Neon.
 - `NO_SUPERUSUARIO`: `true` en Neon, donde no eres superusuario.
+
+El backend lee el mismo archivo y usa unos datos más: `TOKEN_INTERNO`, `SVC_<SERVICIO>_PASSWORD`,
+`PUERTO_GATEWAY` y `REFRESCO_MINUTOS` (ver la sección 5). Los valores van sin comillas ni espacios.
 
 **Las contraseñas nunca van en el repositorio**, solo en tu archivo `.env`.
 
@@ -63,8 +67,8 @@ sus roles.
 
 ## 3. En tu computador
 
-No hace falta Docker: `scripts/instancias_locales.sh` levanta 6 PostgreSQL como procesos
-normales, cada uno en su puerto. Solo escuchan en `localhost` y entran sin contraseña (es solo
+No hace falta Docker (aunque también se puede, ver la sección 5):
+`scripts/instancias_locales.sh` levanta 6 PostgreSQL como procesos normales, cada uno en su puerto. Solo escuchan en `localhost` y entran sin contraseña (es solo
 para desarrollar).
 
 ```bash
@@ -129,7 +133,75 @@ dormirse (no gasta horas de cómputo). A mano, sin backend:
 
 ---
 
-## 5. Qué cambió respecto a una sola instancia
+## 5. El backend
+
+El backend (`backend/`, en Go) son 7 programas: el **gateway** y un programa por microservicio.
+Cada servicio se conecta **solo a su instancia**, con su usuario `svc_<servicio>`, y le pide a los
+demás lo que necesita por HTTP. Lo único que se publica hacia afuera es el gateway (puerto 8080).
+El detalle de las rutas y de las reglas está en [`backend/README.md`](../backend/README.md).
+
+Hay tres formas de correrlo, y las tres pasan las mismas 31 pruebas de
+`scripts/probar_backend.sh` ([`evidencias-backend.txt`](evidencias-backend.txt)):
+
+| Forma | Bases | Programas | Comando |
+| --- | --- | --- | --- |
+| Local | `instancias_locales.sh` (5441–5446) | procesos sueltos | `scripts/backend.sh iniciar` |
+| Docker | 6 contenedores `postgres:18` | 7 contenedores | `docker compose up --build -d` |
+| Docker + Neon | los 6 proyectos de Neon | 7 contenedores | `docker compose -f docker-compose.neon.yml up --build -d` |
+
+### Las contraseñas de los `svc_*`
+
+Los scripts SQL crean los `svc_*` **sin contraseña**. Las contraseñas van en el `.env`
+(`SVC_VENTAS_PASSWORD`…), junto con `TOKEN_INTERNO` (la clave que usan los servicios entre ellos),
+y se ponen en cada instancia con:
+
+```bash
+scripts/claves_svc.sh config/neon.env     # ALTER ROLE svc_<servicio> PASSWORD ... en cada instancia
+```
+
+Hay que correrlo otra vez cada vez que se rehacen las bases con `correr.sh`, porque este borra y
+vuelve a crear los usuarios. En Docker no hace falta: el contenedor `init` lo hace solo.
+
+### En Docker
+
+- `docker-compose.yml`: 6 contenedores de PostgreSQL (uno por servicio, con su volumen), un
+  contenedor `init` que corre `run_all.sql` y `claves_svc.sh` la primera vez, y los 7 programas.
+  Las bases se publican solo en `127.0.0.1:6441`–`6446`, para entrar con psql; los servicios no se
+  publican. La configuración va en `config/docker.env` (copiar de `docker.env.example`).
+- `docker-compose.neon.yml`: solo los 7 programas, con `config/neon.env`. Es lo que correría en
+  un servidor en la nube: las bases ya están en Neon.
+- Una sola receta (`backend/Dockerfile`) sirve para los 7 programas: compila el que se le pida
+  (`PROGRAMA`) y lo deja en una imagen mínima, sin shell, que corre sin ser root.
+
+```bash
+docker compose ps                  # qué está corriendo
+docker compose logs -f ventas      # el log de un servicio
+docker compose stop catalogo       # apagar uno, para ver los fallos
+docker compose down                # apagar todo (los datos quedan; con -v se borran)
+```
+
+### Neon y las horas gratis
+
+Neon apaga cada proyecto a los **5 minutos sin conexiones**, y el plan gratis solo cuenta las horas
+en que está encendido. El backend tiene conexiones abiertas todo el tiempo y refresca los reportes
+cada `REFRESCO_MINUTOS`, así que **mientras el backend está encendido, Neon no se duerme**. Por
+eso se enciende solo para probar o presentar, y al terminar:
+
+```bash
+docker compose -f docker-compose.neon.yml down    # se cierran las conexiones; Neon se duerme solo
+```
+
+La primera petición después de un rato tarda unos segundos más, mientras Neon despierta.
+`probar_backend.sh` espera a que `/salud` responda antes de empezar.
+
+Antes de presentar conviene volver a dejar los datos como al principio (las pruebas crean
+pedidos):
+
+```bash
+scripts/correr.sh config/neon.env && scripts/claves_svc.sh config/neon.env
+```
+
+## 6. Qué cambió respecto a una sola instancia
 
 | Parte | Antes (6 bases en un servidor) | Ahora (6 instancias) |
 | --- | --- | --- |
@@ -143,11 +215,16 @@ dormirse (no gasta horas de cómputo). A mano, sin backend:
 Lo que **no** cambió: las tablas, los datos, las vistas, las 20 consultas y sus resultados (dan
 exactamente lo mismo).
 
-## 6. Seguridad
+## 7. Seguridad
 
 - **Las contraseñas solo viven en `config/*.env`**, que git ignora.
-- **Los usuarios `svc_*` se crean sin contraseña.** Al desplegar se les pone una, con
-  `ALTER ROLE svc_ventas PASSWORD '...'` en su instancia, para que el backend se conecte.
+- **Los usuarios `svc_*` se crean sin contraseña.** Al desplegar se les pone una con
+  `scripts/claves_svc.sh` (sección 5), sacada del `.env`, para que el backend se conecte.
+- **Solo el gateway está expuesto.** Los servicios no publican puerto; sus rutas `/interno`
+  además piden `TOKEN_INTERNO`, y el gateway nunca las reenvía.
+- **Las claves de la aplicación van con bcrypt.** Los datos de prueba traen MD5; identidad lo
+  cambia por bcrypt la primera vez que cada usuario entra. 5 claves malas seguidas bloquean al
+  usuario 15 minutos.
 - **`dblink` se conecta con el usuario dueño de cada instancia**, guardado en la tabla privada `remoto.servidores` de la base de reportes. Funciona, pero lo más seguro
   sería un usuario de **solo lectura** en cada instancia, solo para reportes. Queda como mejora.
 - **Las instancias locales entran sin contraseña** (`trust`), pero solo escuchan en `localhost`.

@@ -21,7 +21,7 @@ navegador ─► gateway :8080 ─┬─► identidad   :8102 ─► instancia i
 scripts/instancias_locales.sh iniciar        # las 6 instancias de PostgreSQL
 scripts/correr.sh config/local.env           # crea las bases y carga los datos
 scripts/backend.sh iniciar                   # compila y arranca los 7 programas
-scripts/probar_backend.sh                    # 30 pruebas de punta a punta
+scripts/probar_backend.sh                    # 31 pruebas de punta a punta
 scripts/backend.sh detener catalogo          # apagar uno, para ver los fallos
 scripts/backend.sh detener                   # apagar todos
 ```
@@ -35,7 +35,15 @@ docker compose stop catalogo                 # apagar uno
 docker compose down                          # apagar todo (los datos quedan; -v los borra)
 ```
 
-**Backend en Docker contra Neon:** `docker-compose.neon.yml` (ver el comentario del archivo).
+**Backend en Docker contra Neon (las bases ya están en Neon):**
+```bash
+scripts/claves_svc.sh config/neon.env        # contraseñas de los svc_* (tras cada correr.sh)
+docker compose -f docker-compose.neon.yml up --build -d
+scripts/probar_backend.sh
+docker compose -f docker-compose.neon.yml down   # SIEMPRE al terminar: si no, Neon no se duerme
+```
+
+Las salidas de las tres formas están en [`docs/evidencias-backend.txt`](../docs/evidencias-backend.txt).
 
 **Pruebas de Go:** `cd backend && go test ./...`
 
@@ -98,3 +106,12 @@ la sesión.
 | la instancia de un servicio | Ese servicio responde `503 La base de datos no responde`; se reconecta solo cuando vuelve. |
 | una instancia, durante el refresco | El refresco falla entero (una transacción) y los reportes quedan con los datos anteriores. |
 | cualquiera | `/salud` lo muestra como `caido` o `sin base de datos`. |
+
+## Lo que no hace (todavía)
+
+- Solo escribe **pedidos**. Pagos, recepciones, transferencias y cambios de estado solo se leen.
+- Las **sesiones** y el bloqueo de login viven en la memoria de identidad: si se reinicia, todos
+  vuelven a iniciar sesión. Con varias copias de identidad habría que guardarlas en una base o en
+  Redis.
+- No hay **HTTPS** propio: en un servidor iría un proxy delante (Caddy, nginx) y
+  `COOKIE_SEGURA=true`.
