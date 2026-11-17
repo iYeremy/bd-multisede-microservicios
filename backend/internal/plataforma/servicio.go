@@ -64,9 +64,16 @@ func correr(nombre string, registrar Registrar) error {
 func ConectarDB(url string) (*pgxpool.Pool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	db, err := pgxpool.New(ctx, url)
+	cfg, err := pgxpool.ParseConfig(url)
 	if err != nil {
 		return nil, fmt.Errorf("configuracion de la base invalida: %w", err)
+	}
+	// siempre 2 conexiones abiertas: abrir una nueva cuesta (tcp + tls +
+	// clave), y con neon son varios viajes. asi ninguna peticion lo paga
+	cfg.MinConns = 2
+	db, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("no se pudo crear el pool: %w", err)
 	}
 	if err := db.Ping(ctx); err != nil {
 		db.Close()

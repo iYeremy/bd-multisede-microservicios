@@ -172,16 +172,18 @@ func (s *Servicio) Crear(ctx context.Context, np NuevoPedido) (Pedido, error) {
 		if err != nil {
 			return err
 		}
+		// las lineas van en un Batch: pgx manda todos los INSERT en UN solo
+		// viaje a la base, en vez de uno por linea. con la base lejos (neon)
+		// cada viaje cuesta ~150 ms, asi que esto importa
+		lote := &pgx.Batch{}
 		for _, l := range np.Lineas {
-			_, err := tx.Exec(ctx, `
+			lote.Queue(`
 				INSERT INTO `+f.detalle.Sanitize()+` (id_sede, id_pedido, id_producto, cantidad, precio_unitario)
 				VALUES ($1, $2, $3, $4, $5::numeric / 100)`,
 				np.Sede, p.IDPedido, l.IDProducto, l.Cantidad, l.PrecioUnitarioCentavos)
-			if err != nil {
-				return err // BeginFunc hace ROLLBACK
-			}
 		}
-		return nil // BeginFunc hace COMMIT
+		// Close lee todas las respuestas y devuelve el primer error
+		return tx.SendBatch(ctx, lote).Close() // error: ROLLBACK; nil: COMMIT
 	})
 	return p, err
 }

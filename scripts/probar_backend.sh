@@ -28,6 +28,13 @@ login() { curl -s -c "$TMP/$1" -o /dev/null -X POST "$G/api/identidad/login" -d 
 como() { local u="$1"; shift; revisar "$1" "$2" -b "$TMP/$u" "${@:3}"; }
 
 echo "== gateway en $G"
+# esperar a que los seis servicios esten listos (hasta 60 s): recien
+# arrancados, o con neon despertando una base dormida, tardan unos segundos
+for i in $(seq 1 30); do
+    [ "$(curl -s -o /dev/null -w '%{http_code}' "$G/salud")" = "200" ] && break
+    [ "$i" = 1 ] && echo "  (esperando a que todos los servicios esten listos...)"
+    sleep 2
+done
 revisar "los seis servicios responden (/salud)"            200 "$G/salud"
 
 echo "== login y sesion"
