@@ -1320,3 +1320,5 @@ El resultado final no consiste únicamente en un conjunto de tablas. Debe inclui
 
 La solución debe cumplir el alcance académico definido en el enunciado, sin requerir el despliegue de microservicios independientes ni de interfaces de usuario.
 
+> **Reemplazado (noviembre de 2026):** esto ya no aplica. Se pidieron microservicios reales, con backend y despliegue en la nube: cada microservicio tiene su propia instancia de PostgreSQL y su propio programa en Go, hay un front servido por el gateway, y está desplegado (bases en Neon y backend en una VM de Azure). Ver [`conclusiones.md`](conclusiones.md), sección 2.
+

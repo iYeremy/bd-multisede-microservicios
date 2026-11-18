@@ -59,6 +59,9 @@ proyecto/
     ├── evidencias.txt            salida completa de run_all.sql
     ├── evidencias-neon.txt       lo mismo, en Neon
     ├── evidencias-backend.txt    pruebas del backend: local, docker y contra neon
+    ├── matriz-pruebas.md         cada prueba: lo esperado y lo obtenido
+    ├── analisis-resultados.md    interpretación de las 20 consultas y de la distribución
+    ├── conclusiones.md           cumplimiento, limitaciones y extensiones
     ├── despliegue.md             una instancia por servicio: local y Neon
     └── diagramas/                arquitectura, E-R, relacional y los de diccionario y normalización
 ```

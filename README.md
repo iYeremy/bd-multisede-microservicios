@@ -73,6 +73,9 @@ Y `docker-compose.neon.yml` levanta solo el backend, conectado a las bases de Ne
 | `docs/enunciado.pdf` | Todo el contexto y requisitos que se nos dio para el proyecto |
 | `docs/despliegue.md` | **una instancia por servicio**: cómo correrlo en local, en Docker y en Neon |
 | `docs/distribucion.md` | **bases, servicios, fragmentos por sede y vistas de integración** (entregable 5) |
+| `docs/analisis-resultados.md` | qué dicen las 20 consultas y por qué se distribuyó así (entregable 14) |
+| `docs/matriz-pruebas.md` | cada prueba con lo esperado y lo obtenido (entregable 13) |
+| `docs/conclusiones.md` | cumplimiento de los requisitos, limitaciones y extensiones (entregable 16) |
 | `docs/` | reglas de negocio, normalización, diccionario, manual, evidencias, diagramas |
 
 ## Proceso
@@ -83,7 +86,7 @@ Y `docker-compose.neon.yml` levanta solo el backend, conectado a las bases de Ne
 - [x] Reportes con `dblink` y vistas materializadas que se refrescan cada X minutos
 - [ ] Diagrama de despliegue y ajustes del relacional
 - [x] Normalización y diccionario de datos
-- [ ] Análisis de resultados, conclusiones y matriz de pruebas para el informe
+- [x] Análisis de resultados, conclusiones y matriz de pruebas (`docs/analisis-resultados.md`, `docs/conclusiones.md`, `docs/matriz-pruebas.md`)
 - [x] Backend en Go (un proceso por microservicio + gateway), con Docker, probado en local y contra Neon
 - [x] Front: una página en JavaScript plano que sirve el gateway (`backend/web/`)
 - [x] Desplegar en la nube: bases en Neon, backend en una VM de Azure (`scripts/servidor.sh`)
