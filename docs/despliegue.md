@@ -260,6 +260,23 @@ no se duerme y gasta las horas gratis del mes.
 
 Contra la VM, las 31 pruebas pasan desde Bogotá en ~35 s (cada petición va Bogotá → Chile → Ohio).
 
+### Velocidad y la ruta de red
+
+Desde dentro de la VM, el gateway responde en ~1 ms; lo lento es el camino. Se midió que la ruta
+Bogotá → Chile Central a veces pierde paquetes, y una descarga puede quedarse varios segundos
+esperando el reenvío. Para notarlo menos:
+
+- **gzip:** el gateway comprime todo lo que es texto (el front y el JSON de la API), así viajan de 3
+  a 9 veces menos bytes (`app.js`: 52 KB → 16 KB).
+- **ETag:** si un archivo del front no cambió, el navegador no lo vuelve a bajar (responde `304`).
+- **Actualizar sin compilar en la VM:** `servidor.sh actualizar` compila en el PC (segundos) y sube
+  solo los binarios; la VM arma cada imagen con `backend/Dockerfile.binario`, que solo copia el
+  programa. Compilar allá, con su CPU limitada, tardaba ~10 minutos.
+
+**Alternativa si hiciera falta:** un túnel de Cloudflare (`cloudflared`). El navegador se conecta a
+Cloudflare cerca de Bogotá y Cloudflare lleva el tráfico a la VM por su red, que suele tener mejor
+ruta. Además da HTTPS sin certificado propio y no hace falta abrir el puerto 80.
+
 ## 7. Qué cambió respecto a una sola instancia
 
 | Parte | Antes (6 bases en un servidor) | Ahora (6 instancias) |
