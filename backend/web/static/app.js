@@ -960,10 +960,21 @@ const RUTAS = [
   [/^#\/auditoria$/, paginaAuditoria],
 ];
 
+// quien soy y las sedes se piden A LA VEZ (no una despues de la otra): con
+// el servidor lejos, cada peticion son varios cientos de ms
 async function cargarSesion() {
-  estado.usuario = await api("/api/identidad/yo", { sinRedirigir: true });
   if (!estado.sedes.length) {
-    try { estado.sedes = await api("/api/catalogo/sedes", { sinRedirigir: true }); } catch { /* sin catalogo: "Sede N" */ }
+    try { estado.sedes = JSON.parse(sessionStorage.getItem("sedes")) || []; } catch { /* sin storage */ }
+  }
+  const [yo, sedes] = await Promise.all([
+    api("/api/identidad/yo", { sinRedirigir: true }),
+    estado.sedes.length ? estado.sedes
+      : api("/api/catalogo/sedes", { sinRedirigir: true }).catch(() => []), // sin catalogo: "Sede N"
+  ]);
+  estado.usuario = yo;
+  if (sedes.length && !estado.sedes.length) {
+    estado.sedes = sedes;
+    try { sessionStorage.setItem("sedes", JSON.stringify(sedes)); } catch { /* modo privado */ }
   }
 }
 

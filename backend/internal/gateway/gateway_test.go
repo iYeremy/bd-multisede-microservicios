@@ -1,7 +1,9 @@
 package gateway
 
 import (
+	"compress/gzip"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -103,5 +105,52 @@ func TestGatewaySirveElFront(t *testing.T) {
 	}
 	if c := pedir("GET", "/no-existe.js").Code; c != http.StatusNotFound {
 		t.Errorf("un archivo que no existe: %d, se esperaba 404", c)
+	}
+}
+
+func TestGatewayComprimeYUsaCache(t *testing.T) {
+	g, err := Nuevo("token-de-prueba")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := g.Rutas()
+	pedir := func(ruta string, encabezados map[string]string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("GET", ruta, nil)
+		for k, v := range encabezados {
+			req.Header.Set(k, v)
+		}
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec
+	}
+
+	// con gzip: el cuerpo llega comprimido y se puede descomprimir
+	rec := pedir("/app.js", map[string]string{"Accept-Encoding": "gzip"})
+	if rec.Header().Get("Content-Encoding") != "gzip" {
+		t.Fatalf("app.js deberia ir comprimido, encabezados: %v", rec.Header())
+	}
+	zr, err := gzip.NewReader(rec.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plano, _ := io.ReadAll(zr)
+	if !strings.Contains(string(plano), "navegar") {
+		t.Error("el app.js descomprimido no se parece al original")
+	}
+
+	// sin gzip: igual que siempre
+	rec = pedir("/app.js", nil)
+	if rec.Header().Get("Content-Encoding") != "" || !strings.Contains(rec.Body.String(), "navegar") {
+		t.Error("sin Accept-Encoding no deberia comprimir")
+	}
+
+	// cache: con la misma huella, 304 y sin cuerpo
+	huella := rec.Header().Get("ETag")
+	if huella == "" {
+		t.Fatal("app.js deberia tener ETag")
+	}
+	rec = pedir("/app.js", map[string]string{"If-None-Match": huella, "Accept-Encoding": "gzip"})
+	if rec.Code != http.StatusNotModified || rec.Body.Len() != 0 {
+		t.Errorf("con la misma huella: %d y %d bytes, se esperaba 304 sin cuerpo", rec.Code, rec.Body.Len())
 	}
 }

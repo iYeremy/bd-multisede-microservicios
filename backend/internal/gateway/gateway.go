@@ -5,13 +5,17 @@ package gateway
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -93,13 +97,14 @@ func (g *Gateway) Rutas() http.Handler {
 	// "/" atrapa todo lo demas. va sin metodo porque "GET /" chocaria con
 	// "/api/{servicio}/" (ninguno de los dos seria mas especifico)
 	mux.Handle("/", front())
-	return mux
+	return conGzip(mux)
 }
 
 // front sirve los archivos del front. solo GET; lo que no existe da 404
 // (por ejemplo /interno/sesion: el gateway no lo reenvia nunca).
 func front() http.Handler {
 	archivos := http.FileServerFS(web.Archivos())
+	huellas := huellasDe(web.Archivos())
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			plataforma.ResponderError(w, http.StatusMethodNotAllowed, "Metodo no permitido")
@@ -112,8 +117,18 @@ func front() http.Handler {
 			"font-src https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'none'")
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("Referrer-Policy", "same-origin")
-		// sin cache: al actualizar el servidor, el navegador trae lo nuevo
+		// no-cache + ETag: el navegador guarda el archivo, pero antes de usarlo
+		// pregunta "sigue siendo este?" (If-None-Match). si no cambio, el
+		// gateway responde 304 sin cuerpo, y al actualizar el servidor
+		// cambia la huella y el navegador baja lo nuevo
 		h.Set("Cache-Control", "no-cache")
+		ruta := strings.TrimPrefix(r.URL.Path, "/")
+		if ruta == "" {
+			ruta = "index.html"
+		}
+		if huella, ok := huellas[ruta]; ok {
+			h.Set("ETag", huella)
+		}
 		archivos.ServeHTTP(w, r)
 	})
 }
@@ -167,6 +182,25 @@ func (g *Gateway) autenticar(w http.ResponseWriter, r *http.Request) bool {
 	r.Header.Set(plataforma.HeaderUsuarioEmpleado, strconv.Itoa(u.Empleado))
 	r.Header.Set(plataforma.HeaderUsuarioSede, strconv.Itoa(u.Sede))
 	return true
+}
+
+// huellasDe calcula una huella (sha256) de cada archivo del front al
+// arrancar: si el archivo cambia, cambia la huella.
+func huellasDe(archivos fs.FS) map[string]string {
+	huellas := map[string]string{}
+	fs.WalkDir(archivos, ".", func(ruta string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		datos, err := fs.ReadFile(archivos, ruta)
+		if err != nil {
+			return err
+		}
+		suma := sha256.Sum256(datos)
+		huellas[ruta] = `"` + hex.EncodeToString(suma[:8]) + `"`
+		return nil
+	})
+	return huellas
 }
 
 // EstadoServicio es una fila de /salud.
