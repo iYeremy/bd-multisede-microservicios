@@ -80,7 +80,7 @@ func (s *Servicio) ver(w http.ResponseWriter, r *http.Request, u plataforma.Usua
 		return
 	}
 	resp := map[string]any{"vista": v.Nombre, "filas": len(filas), "datos": filas}
-	if sede > 0 && v.porSede {
+	if sede > 0 && v.PorSede {
 		resp["sede"] = sede
 	}
 	if t, err := s.UltimaActualizacion(r.Context()); err == nil {

@@ -21,7 +21,7 @@ import (
 type Vista struct {
 	Nombre      string   `json:"nombre"`
 	Descripcion string   `json:"descripcion"`
-	porSede     bool     // tiene columna id_sede: se puede filtrar por sede
+	PorSede     bool     `json:"por_sede"` // tiene columna id_sede: se puede filtrar por sede
 	roles       []string // ademas de GERENCIA, AUDITOR y ADMINISTRADOR, que ven todas
 }
 
@@ -141,7 +141,7 @@ func (s *Servicio) Leer(ctx context.Context, v Vista, sede, limite int) ([]map[s
 	// para valores). por eso sale de la lista blanca y se escapa con Sanitize
 	sql := "SELECT * FROM " + pgx.Identifier{"reportes", v.Nombre}.Sanitize()
 	args := []any{}
-	if v.porSede && sede > 0 {
+	if v.PorSede && sede > 0 {
 		sql += " WHERE id_sede = $1"
 		args = append(args, sede)
 	}

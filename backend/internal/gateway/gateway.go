@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/iYeremy/bd-multisede-microservicios/backend/internal/plataforma"
+	"github.com/iYeremy/bd-multisede-microservicios/backend/web"
 )
 
 // nombre de la cookie y del encabezado de la sesion (los mismos de identidad;
@@ -82,18 +83,39 @@ func nuevoProxy(servicio string, destino *url.URL) *httputil.ReverseProxy {
 //
 //	/api/<servicio>/...  valida la sesion y lo reenvia a ese servicio
 //	GET /salud           estado de los seis servicios
+//	GET /                el front (backend/web/static, metido en el binario)
 //	/interno/...         nunca se reenvia (no existe en el gateway)
 func (g *Gateway) Rutas() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/{servicio}/", g.reenviar) // /api/reportes/vista_...
 	mux.HandleFunc("/api/{servicio}", g.reenviar)  // /api/reportes (sin barra al final)
 	mux.HandleFunc("GET /salud", g.salud)
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		plataforma.ResponderJSON(w, http.StatusOK, map[string]string{
-			"mensaje": "Comercializadora Andina - gateway. Rutas: /salud y /api/<servicio>/...",
-		})
-	})
+	// "/" atrapa todo lo demas. va sin metodo porque "GET /" chocaria con
+	// "/api/{servicio}/" (ninguno de los dos seria mas especifico)
+	mux.Handle("/", front())
 	return mux
+}
+
+// front sirve los archivos del front. solo GET; lo que no existe da 404
+// (por ejemplo /interno/sesion: el gateway no lo reenvia nunca).
+func front() http.Handler {
+	archivos := http.FileServerFS(web.Archivos())
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			plataforma.ResponderError(w, http.StatusMethodNotAllowed, "Metodo no permitido")
+			return
+		}
+		h := w.Header()
+		// la pagina solo puede cargar sus propios archivos (y la fuente de
+		// google): si alguien lograra meter un <script> en un dato, no corre
+		h.Set("Content-Security-Policy", "default-src 'self'; style-src 'self' https://fonts.googleapis.com; "+
+			"font-src https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'none'")
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("Referrer-Policy", "same-origin")
+		// sin cache: al actualizar el servidor, el navegador trae lo nuevo
+		h.Set("Cache-Control", "no-cache")
+		archivos.ServeHTTP(w, r)
+	})
 }
 
 func (g *Gateway) reenviar(w http.ResponseWriter, r *http.Request) {

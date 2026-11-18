@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/iYeremy/bd-multisede-microservicios/backend/internal/plataforma"
@@ -70,5 +71,37 @@ func TestGatewayValidaSesionYBorraEncabezados(t *testing.T) {
 	h.ServeHTTP(rec, r)
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("/interno por el gateway: %d, se esperaba 404", rec.Code)
+	}
+}
+
+func TestGatewaySirveElFront(t *testing.T) {
+	g, err := Nuevo("token-de-prueba")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := g.Rutas()
+	pedir := func(metodo, ruta string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(metodo, ruta, nil))
+		return rec
+	}
+
+	for _, ruta := range []string{"/", "/app.js", "/estilos.css", "/icono.svg"} {
+		rec := pedir("GET", ruta)
+		if rec.Code != http.StatusOK {
+			t.Errorf("GET %s: %d, se esperaba 200", ruta, rec.Code)
+		}
+		if rec.Header().Get("Content-Security-Policy") == "" {
+			t.Errorf("GET %s: falta la Content-Security-Policy", ruta)
+		}
+	}
+	if !strings.Contains(pedir("GET", "/").Body.String(), "app.js") {
+		t.Error("GET / deberia devolver index.html")
+	}
+	if c := pedir("POST", "/").Code; c != http.StatusMethodNotAllowed {
+		t.Errorf("POST /: %d, se esperaba 405", c)
+	}
+	if c := pedir("GET", "/no-existe.js").Code; c != http.StatusNotFound {
+		t.Errorf("un archivo que no existe: %d, se esperaba 404", c)
 	}
 }
