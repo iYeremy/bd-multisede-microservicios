@@ -43,7 +43,10 @@ scripts/probar_backend.sh
 docker compose -f docker-compose.neon.yml down   # SIEMPRE al terminar: si no, Neon no se duerme
 ```
 
-Las salidas de las tres formas están en [`docs/evidencias-backend.txt`](../docs/evidencias-backend.txt).
+**En la nube (VM de Azure + Neon):** `scripts/servidor.sh iniciar | detener | estado | actualizar`
+(ver `docs/despliegue.md`, sección 6).
+
+Las salidas de todas las formas están en [`docs/evidencias-backend.txt`](../docs/evidencias-backend.txt).
 
 **Pruebas de Go:** `cd backend && go test ./...`
 

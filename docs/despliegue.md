@@ -201,7 +201,66 @@ pedidos):
 scripts/correr.sh config/neon.env && scripts/claves_svc.sh config/neon.env
 ```
 
-## 6. Qué cambió respecto a una sola instancia
+## 6. En la nube: el backend en una VM de Azure
+
+Las bases ya están en Neon; falta dónde corran los 7 programas. Se usa **una VM de Azure con
+Docker**, con la misma `docker-compose.neon.yml` de la sección 5.
+
+```
+navegador ──► :80  VM de Azure (Ubuntu 24.04, Docker)
+                    └─ gateway ─► 6 contenedores ──► 6 proyectos de Neon (sslmode=require)
+```
+
+**¿Correr los 7 programas en una sola máquina rompe los microservicios?** No. Cada servicio sigue
+siendo un programa aparte, con su propia base, que habla con los demás solo por HTTP y se puede
+actualizar solo (`docker compose up -d --build ventas`). Para moverlo a otra máquina basta con
+cambiar `URL_VENTAS`. Lo que se pierde es disponibilidad (si se apaga la VM, se cae todo junto),
+y eso es un tema de infraestructura, no de arquitectura.
+
+### Por qué Azure for Students
+
+| | |
+| --- | --- |
+| Sin tarjeta de crédito | se entra con el correo de la universidad |
+| No puede cobrar | la suscripción tiene **límite de gasto de $0**: si se acaba el crédito (USD 100), se apaga |
+| Gratis | el tamaño `B2ats_v2` tiene 750 horas al mes gratis; solo el disco y la IP pública usan un poco del crédito |
+
+Se probaron también AWS (pide tarjeta y hay acciones que pasan la cuenta a pago), Oracle Cloud
+(pide tarjeta y casi nunca hay máquinas libres) y Render (en el plan gratis los servicios no se
+hablan por una red privada: habría que exponer los 6).
+
+### La VM
+
+| Campo | Valor |
+| --- | --- |
+| Región | **Chile Central**: la suscripción de estudiante solo deja algunas regiones (*Policy → Assignments → Allowed resource deployment regions*); las de EE. UU. no estaban |
+| Tamaño | `Standard_B2ats_v2` (2 vCPU, 1 GiB), con 2 GB de swap para poder compilar |
+| Imagen | Ubuntu Server 24.04 LTS, x64 |
+| Acceso | llave SSH (sin contraseña); puertos abiertos: 22 y 80 |
+| Docker | lo instala `cloud-init` al crear la VM (*Advanced → Custom data*): `docker.io`, `docker-compose-v2` |
+
+En la VM, `~/andina/.env` tiene `PUERTO_PUBLICO=80`, para que el gateway quede en el puerto 80.
+
+### Manejarla desde el PC
+
+`config/servidor.env` (git lo ignora) tiene `SERVIDOR=azureuser@<ip>`, y:
+
+```bash
+scripts/servidor.sh iniciar      # prende el backend; Neon despierta solo
+scripts/servidor.sh estado
+scripts/probar_backend.sh http://<ip>
+scripts/servidor.sh detener      # SIEMPRE al terminar: Neon se duerme a los 5 min
+scripts/servidor.sh actualizar   # copia el último commit, recompila de a una imagen y reinicia
+```
+
+**Por si se olvida apagar:** la región no permite el apagado automático de Azure, así que la VM
+tiene un `cron` (`/etc/cron.d/andina-apagado`) que hace `docker compose down` todos los días a las
+00:00 de Bogotá. Lo que más importa apagar es el backend, no la VM: con el backend prendido, Neon
+no se duerme y gasta las horas gratis del mes.
+
+Contra la VM, las 31 pruebas pasan desde Bogotá en ~35 s (cada petición va Bogotá → Chile → Ohio).
+
+## 7. Qué cambió respecto a una sola instancia
 
 | Parte | Antes (6 bases en un servidor) | Ahora (6 instancias) |
 | --- | --- | --- |
@@ -215,11 +274,14 @@ scripts/correr.sh config/neon.env && scripts/claves_svc.sh config/neon.env
 Lo que **no** cambió: las tablas, los datos, las vistas, las 20 consultas y sus resultados (dan
 exactamente lo mismo).
 
-## 7. Seguridad
+## 8. Seguridad
 
 - **Las contraseñas solo viven en `config/*.env`**, que git ignora.
 - **Los usuarios `svc_*` se crean sin contraseña.** Al desplegar se les pone una con
   `scripts/claves_svc.sh` (sección 5), sacada del `.env`, para que el backend se conecte.
+- **En la VM solo están abiertos el 22 (SSH, solo con llave) y el 80.** Mejor aún: limitar el 22
+  a tu IP en el grupo de seguridad de red de la VM. Sin dominio no hay HTTPS: el tráfico entre el
+  navegador y la VM va sin cifrar (de la VM a Neon sí va cifrado).
 - **Solo el gateway está expuesto.** Los servicios no publican puerto; sus rutas `/interno`
   además piden `TOKEN_INTERNO`, y el gateway nunca las reenvía.
 - **Las claves de la aplicación van con bcrypt.** Los datos de prueba traen MD5; identidad lo

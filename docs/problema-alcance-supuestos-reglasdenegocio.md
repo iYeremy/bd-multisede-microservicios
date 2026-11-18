@@ -30,7 +30,7 @@ Se diseña e implementa un sistema de **microservicios** sobre PostgreSQL. Cada 
 
 Los inventarios y los pedidos de venta se fragmentan horizontalmente por sede dentro de la base de su servicio. Reportes Corporativos trae los datos de las otras bases con **`dblink`** y los guarda en **vistas materializadas** que se refrescan cada X minutos. Es la única base que se conecta a otras; los servicios no lo hacen.
 
-Cada servicio tiene un backend propio (un programa en Go) que expone su información por HTTP, detrás de un gateway que valida la sesión. La solución se despliega en la nube: las bases en Neon y el backend en contenedores Docker.
+Cada servicio tiene un backend propio (un programa en Go) que expone su información por HTTP, detrás de un gateway que valida la sesión. La solución se despliega en la nube: las bases en Neon y el backend en contenedores Docker en una VM de Azure.
 
 ## 2. Objetivos
 
@@ -52,7 +52,7 @@ Diseñar e implementar en PostgreSQL la capa de datos de un sistema comercial mu
 
 ## 3. Alcance
 
-El proyecto cubre el diseño y la implementación en PostgreSQL de las bases de datos de cada microservicio, el backend que las usa y su despliegue en la nube. Ya está terminada la capa de datos (bases, tablas, datos, `dblink` hacia reportes, vistas materializadas, roles, consultas y pruebas) y el backend (gateway y 6 servicios, probados en local, en Docker y contra Neon). Falta el front y subir el backend a un servidor en la nube.
+El proyecto cubre el diseño y la implementación en PostgreSQL de las bases de datos de cada microservicio, el backend que las usa y su despliegue en la nube. Ya está terminada la capa de datos (bases, tablas, datos, `dblink` hacia reportes, vistas materializadas, roles, consultas y pruebas) y el backend (gateway y 6 servicios, probados en local, en Docker y contra Neon). El backend también está desplegado: en una VM de Azure, contra las bases en Neon. Falta el front.
 
 ### 3.1 Sedes y almacenes
 

@@ -56,7 +56,7 @@ Y `docker-compose.neon.yml` levanta solo el backend, conectado a las bases de Ne
 | Ruta | Qué es (cada carpeta tiene su README explicando el código) |
 | --- | --- |
 | `sql/README.md` | **empezar aquí**: el orden, las carpetas y los comandos de psql |
-| `scripts/` | `instancias_locales.sh` (levanta las 6 instancias), `correr.sh` (corre los scripts con la configuración de un ambiente), `backend.sh` y `probar_backend.sh` (arrancar y probar el backend), `claves_svc.sh` (contraseñas de los `svc_*`) |
+| `scripts/` | `instancias_locales.sh` (levanta las 6 instancias), `correr.sh` (corre los scripts con la configuración de un ambiente), `backend.sh` y `probar_backend.sh` (arrancar y probar el backend), `servidor.sh` (el backend en la VM de la nube), `claves_svc.sh` (contraseñas de los `svc_*`) |
 | `config/` | plantillas con la conexión de cada instancia (`local.env.example`, `neon.env.example`, `docker.env.example`) |
 | `backend/` | **el backend en Go**: gateway y 6 microservicios, con su `Dockerfile` (ver su README) |
 | `docker-compose.yml` | todo en contenedores: 6 PostgreSQL, un `init` que carga las bases y los 7 programas |
@@ -86,7 +86,7 @@ Y `docker-compose.neon.yml` levanta solo el backend, conectado a las bases de Ne
 - [ ] Análisis de resultados, conclusiones y matriz de pruebas para el informe
 - [x] Backend en Go (un proceso por microservicio + gateway), con Docker, probado en local y contra Neon
 - [ ] Front básico
-- [ ] Desplegar en la nube (AWS u otra opción gratuita)
+- [x] Desplegar en la nube: bases en Neon, backend en una VM de Azure (`scripts/servidor.sh`)
 
 ## Notas
 

@@ -2,13 +2,14 @@ evidencias del backend (go)
 ===========================
 fecha: 2026-11-17 · go 1.27.4 · postgresql 18
 
-hay tres formas de correr el backend, y las tres pasan las mismas pruebas
+hay tres formas de correr el backend (y una cuarta: en la nube), y todas pasan las mismas pruebas
 (scripts/probar_backend.sh: todo entra por el gateway, como un navegador):
 
   1. local: 6 instancias de postgresql como procesos + 7 programas (scripts/backend.sh)
   2. docker: docker-compose.yml (6 postgres + init + 7 contenedores) -> 30/30 el 2026-11-16,
      antes de agregar la prueba del bloqueo de login
   3. docker contra neon: docker-compose.neon.yml (7 contenedores, las bases en neon) -> 31/31
+  4. en la nube: la misma docker-compose.neon.yml en una vm de azure -> 31/31
 
 el pedido de prueba sale con otro numero en cada ambiente (cada base lleva su propia cuenta).
 
@@ -145,3 +146,58 @@ Retry-After: 881
 contra neon cada consulta tarda ~200 ms (ida y vuelta a la region de neon),
 contra ~1 ms en local. si un proyecto de neon estaba dormido, la primera
 consulta tarda unos segundos mas mientras despierta.
+
+
+5. en la nube: vm de azure + neon (scripts/servidor.sh iniciar)
+---------------------------------------------------------------
+vm: azure for students, Standard B2ats_v2 (2 vcpu, 1 gb), ubuntu 24.04, region chile central.
+en la vm solo corren los 7 contenedores (docker-compose.neon.yml, gateway publicado en el 80);
+las bases siguen en los 6 proyectos de neon (us-east-2). la ip publica se oculta como <ip-vm>.
+las pruebas corren desde un pc en bogota, por internet.
+
+$ scripts/probar_backend.sh http://<ip-vm>
+== gateway en http://<ip-vm>
+  ok     los seis servicios responden (/salud)                   200
+== login y sesion
+  ok     sin sesion no se entra                                  401
+  ok     clave mala                                              401
+  ok     login bien                                              200
+  ok     5 claves malas: el usuario queda bloqueado              429
+  ok     quien soy                                               200
+  ok     un header falso no da permisos                          403
+  ok     el auditor ve la auditoria                              200
+== cada rol ve lo suyo
+  ok     vendedor: productos                                     200
+  ok     vendedor: pedidos de su sede                            200
+  ok     vendedor: no ve compras                                 403
+  ok     vendedor: no ve reportes                                403
+  ok     inventario: su fragmento                                200
+  ok     inventario: alertas                                     200
+  ok     inventario: no ve el corporativo                        403
+  ok     compras: ordenes                                        200
+  ok     compras: detalle de una orden                           200
+  ok     gerencia: reporte corporativo                           200
+  ok     gerencia: vista que no existe                           404
+  ok     gerencia: no puede refrescar                            403
+== crear un pedido (vendedor_cali)
+  ok     pedido valido                                           201
+  ok     el pedido 78 se ve en su sede                           200
+  ok     producto descontinuado                                  400
+  ok     cliente que no existe                                   400
+  ok     producto repetido                                       400
+  ok     gerencia no crea pedidos                                403
+== reportes: consistencia eventual
+  ok     refrescar ahora (admin)                                 200
+  ok     el pedido nuevo ya esta en reportes                     200
+  ok     el pedido 78 aparece en vista_pedidos_consolidado
+== cerrar sesion
+  ok     logout                                                  200
+  ok     despues del logout ya no entra                          401
+
+resultado: 31 ok, 0 fallas
+(35 s en total: cada peticion va bogota -> chile -> ohio)
+
+$ curl http://<ip-vm>/salud
+{"servicios":[{"servicio":"catalogo","estado":"ok","ms":258},{"servicio":"identidad","estado":"ok","ms":128},{"servicio":"compras","estado":"ok","ms":258},{"servicio":"inventarios","estado":"ok","ms":264},{"servicio":"ventas","estado":"ok","ms":257},{"servicio":"reportes","estado":"ok","ms":252}]}
+
+puertos desde internet: 80 abierto (gateway); 8080, 8101 (un servicio) y 5432 cerrados.
