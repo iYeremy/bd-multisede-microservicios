@@ -6,7 +6,7 @@ Proyecto final de Bases de Datos. TL;DR: una empresa con **4 sedes** (Bogotá, M
 - **Inventarios y pedidos están partidos por sede**: hay una tabla física por sede (`inv_bogota`, `ped_cali`…), cada una con un `CHECK (id_sede = n)` para que nadie meta filas donde no van.
 - **Reportes** trae los datos de las otras bases con **`dblink`** (una extensión de PostgreSQL que deja consultar otra base) y los guarda en **vistas materializadas**, que se refrescan cada X minutos. Es la versión simple de explicar: rompe un poco el aislamiento entre servicios, porque reportes sí se conecta a las otras bases. La versión sin `dblink` (ETL por CSV) está en la rama `feat/microservicios-reales`.
 - Hay **roles de verdad**: el vendedor de Bogotá no puede ni ver los pedidos de Cali, la gerencia solo entra a la base de reportes, el auditor lee todo pero no toca nada. Cada servicio tiene además su usuario técnico (`svc_ventas`…) que solo entra a su base.
-- Encima hay un **backend en Go**: cada microservicio es su propio programa, se conecta solo a su instancia con su `svc_*`, y le pide a los demás lo que necesita por HTTP. Delante va un **gateway**, la única puerta de entrada, que valida la sesión. Corre como procesos sueltos o en **Docker**, contra las instancias locales o contra Neon. Ver [`backend/README.md`](backend/README.md).
+- Encima hay un **backend en Go**: cada microservicio es su propio programa, se conecta solo a su instancia con su `svc_*`, y le pide a los demás lo que necesita por HTTP. Delante va un **gateway**, la única puerta de entrada, que valida la sesión. Corre como procesos sueltos o en **Docker**, contra las instancias locales o contra Neon. El mismo gateway sirve un **front** en `http://localhost:8080`. Ver [`backend/README.md`](backend/README.md).
 
 ![Arquitectura](docs/diagramas/01_arquitectura/arquitectura-microservicios.drawio.png)
 
@@ -85,7 +85,7 @@ Y `docker-compose.neon.yml` levanta solo el backend, conectado a las bases de Ne
 - [x] Normalización y diccionario de datos
 - [ ] Análisis de resultados, conclusiones y matriz de pruebas para el informe
 - [x] Backend en Go (un proceso por microservicio + gateway), con Docker, probado en local y contra Neon
-- [ ] Front básico
+- [x] Front: una página en JavaScript plano que sirve el gateway (`backend/web/`)
 - [x] Desplegar en la nube: bases en Neon, backend en una VM de Azure (`scripts/servidor.sh`)
 
 ## Notas

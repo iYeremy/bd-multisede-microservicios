@@ -73,6 +73,7 @@ alguien entra, identidad lo cambia por **bcrypt**.
 | GET | `/api/reportes[/{vista}]` | GERENCIA, AUDITOR, ADMIN (+ algunas INVENTARIO y COMPRAS) | las vistas materializadas |
 | POST | `/api/reportes/refrescar` | ADMIN | `REFRESH` ahora |
 | GET | `/salud` | público | estado de los 6 servicios |
+| GET | `/` | público | el front (la página de login y todo lo demás) |
 
 El ADMINISTRADOR puede pedir otra sede con `?sede=N`. Para los demás, la sede **siempre** sale de
 la sesión.
@@ -85,6 +86,7 @@ la sesión.
 | `internal/plataforma/` | Lo que comparten todos (solo "plomería"): config, conexión a la base, JSON, log, roles y llamadas entre servicios. |
 | `internal/gateway/` | Valida la sesión, reenvía `/api/<servicio>/...` y arma `/salud`. |
 | `internal/servicios/<servicio>/` | Un microservicio: `servicio.go` tiene el SQL y `http.go` las rutas. |
+| `web/static/` | El front: `index.html`, `app.js` y `estilos.css`, sin frameworks. `go:embed` los mete dentro del binario del gateway. |
 | `Dockerfile` | Una receta para los 7 programas (`--build-arg PROGRAMA=...`). |
 
 ## Reglas que sigue el código
@@ -109,6 +111,21 @@ la sesión.
 | la instancia de un servicio | Ese servicio responde `503 La base de datos no responde`; se reconecta solo cuando vuelve. |
 | una instancia, durante el refresco | El refresco falla entero (una transacción) y los reportes quedan con los datos anteriores. |
 | cualquiera | `/salud` lo muestra como `caido` o `sin base de datos`. |
+
+## El front
+
+Una sola página (`web/static/`), en JavaScript plano: la parte después del `#` dice qué pantalla
+mostrar (`#/pedidos`, `#/reportes/vista_...`), y cada pantalla le pide sus datos al gateway con
+`fetch`. No hay que compilar nada: el gateway trae los archivos dentro de su binario.
+
+- **No decide permisos.** Solo esconde del menú lo que tu rol no usa. Si entras a mano a
+  `#/reportes` como vendedor, el servicio responde `403` y eso es lo que se ve.
+- **Muestra lo que hay que explicar:** el fragmento de donde salen los datos (`ventas.ped_cali`),
+  la sede y el rol arriba, los avisos cuando catálogo no responde, y de cuándo son los reportes.
+- **Servicios** (`#/estado`): un diagrama navegador → gateway → 6 servicios → 6 bases que se
+  actualiza cada 3 s. Sirve para mostrar en vivo qué pasa al apagar uno.
+- **Seguridad:** todo dato del servidor se escapa antes de ir al HTML, y el gateway manda una
+  `Content-Security-Policy` que no deja correr scripts que no sean los de la página.
 
 ## Lo que no hace (todavía)
 

@@ -190,7 +190,7 @@ scripts/probar_backend.sh
 docker compose down
 ```
 
-Todo entra por el gateway, en `http://localhost:8080`. Los usuarios de la aplicación son los 12 de `identidad.usuarios`, con clave `<usuario>2026` (por ejemplo `vendedor_cali` / `vendedor_cali2026`). No son los usuarios de PostgreSQL de la sección 5: la aplicación siempre entra a la base con los `svc_*`, y los permisos de cada persona los revisa el backend según su rol.
+Todo entra por el gateway, en `http://localhost:8080`: ahí está el front (en el login hay botones con los usuarios de prueba). Los usuarios de la aplicación son los 12 de `identidad.usuarios`, con clave `<usuario>2026` (por ejemplo `vendedor_cali` / `vendedor_cali2026`). No son los usuarios de PostgreSQL de la sección 5: la aplicación siempre entra a la base con los `svc_*`, y los permisos de cada persona los revisa el backend según su rol.
 
 ```bash
 curl -c cookie -X POST localhost:8080/api/identidad/login -d '{"usuario":"vendedor_cali","password":"vendedor_cali2026"}'
