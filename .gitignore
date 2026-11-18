@@ -13,3 +13,6 @@ config/*.env
 # ejecutables del backend
 backend/bin/
 backend/logs/
+
+# .env de docker compose en el servidor (PUERTO_PUBLICO)
+/.env
