@@ -1,0 +1,13 @@
+# backend/Dockerfile.binario
+# como el Dockerfile normal, pero SIN compilar: el programa ya viene
+# compilado desde tu pc (scripts/servidor.sh actualizar). lo usa la vm de la
+# nube, que tiene poca cpu: compilar go alla tarda ~10 min, y en tu pc ~10 s.
+#
+#   docker build -f Dockerfile.binario --build-arg PROGRAMA=ventas -t andina/ventas <carpeta con los binarios>
+FROM gcr.io/distroless/static-debian12:nonroot
+ARG PROGRAMA
+COPY ${PROGRAMA} /programa
+ENV CONFIG="" \
+    ESCUCHAR_EN=0.0.0.0
+USER nonroot
+ENTRYPOINT ["/programa"]

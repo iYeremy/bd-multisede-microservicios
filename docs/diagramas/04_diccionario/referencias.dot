@@ -1,0 +1,23 @@
+// las tres formas en que una tabla apunta a otra
+// para regenerar la imagen: dot -Tpng -Gdpi=150 referencias.dot -o referencias.png
+digraph referencias {
+    rankdir=LR; bgcolor="white"; pad=0.3; nodesep=0.6; ranksep=1.4;
+    node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=12, color="#4a6fa5", fillcolor="#e8eef7", margin="0.2,0.12"];
+    edge [fontname="DejaVu Sans", fontsize=10, color="#333333", fontcolor="#333333"];
+    graph [fontname="DejaVu Sans", fontsize=13];
+
+    subgraph cluster_ventas {
+        label="andina_ventas"; style="rounded,filled"; color="#e07a5f"; fillcolor="#fdf1ec";
+        det [label="det_ped_bogota\n(id_sede, id_pedido, id_producto)"];
+        ped [label="ped_bogota\n(id_sede, id_pedido)"];
+        pag [label="pagos\n(id_sede, id_pedido)"];
+    }
+    subgraph cluster_catalogo {
+        label="andina_catalogo"; style="rounded,filled"; color="#3d8b6e"; fillcolor="#ebf6f1";
+        cli [label="clientes\n(id_cliente)"];
+    }
+
+    det -> ped [label="FK\nmisma base", penwidth=2];
+    pag -> ped [label="ref (sin FK)\nel pedido puede estar en\ncualquiera de los 4 ped_*", style=dashed];
+    ped -> cli [label="ref (sin FK)\notra base: una FK\nno puede cruzar bases", style=dashed];
+}

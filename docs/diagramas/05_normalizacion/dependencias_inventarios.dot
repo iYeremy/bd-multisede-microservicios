@@ -1,0 +1,19 @@
+// inventarios: id_sede depende solo de una parte de la clave (no cumple 2FN)
+// para regenerar la imagen: dot -Tpng -Gdpi=150 dependencias_inventarios.dot -o dependencias_inventarios.png
+digraph inventarios {
+    rankdir=LR; compound=true; bgcolor="white"; pad=0.3; nodesep=0.5; ranksep=1.2;
+    node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=12, color="#4a6fa5", fillcolor="#e8eef7", margin="0.2,0.12"];
+    edge [fontname="DejaVu Sans", fontsize=10, color="#333333", fontcolor="#333333"];
+    graph [fontname="DejaVu Sans", fontsize=12];
+
+    subgraph cluster_k {
+        label="clave candidata: (id_almacen, id_producto)"; style="rounded,filled"; color="#4a6fa5"; fillcolor="#f5f8fc";
+        A [label="id_almacen"];
+        P [label="id_producto"];
+    }
+    X [label="existencia_actual\nstock_minimo\nfecha_actualizacion", fillcolor="#ebf6f1", color="#3d8b6e"];
+    S [label="id_sede", fillcolor="#fdecea", color="#c0392b"];
+
+    P -> X [ltail=cluster_k, label="depende de la\nclave completa"];
+    A -> S [label="depende solo de una\nparte de la clave\n(dependencia parcial)", color="#c0392b", fontcolor="#c0392b", penwidth=2];
+}

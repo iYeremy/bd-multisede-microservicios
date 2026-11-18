@@ -1,0 +1,18 @@
+notas/
+logs/
+
+tests/
+
+
+# datos de las instancias locales de postgresql
+.instancias/
+
+# configuracion con datos de conexion (solo se suben los .example)
+config/*.env
+
+# ejecutables del backend
+backend/bin/
+backend/logs/
+
+# .env de docker compose en el servidor (PUERTO_PUBLICO)
+/.env

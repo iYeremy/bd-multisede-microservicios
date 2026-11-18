@@ -1,6 +1,8 @@
 # Análisis del Proyecto Final de Bases de Datos
 ## Sistema de gestión comercial multisede basado en una arquitectura de microservicios
 
+> **Cambio respecto al enunciado (indicado por el profesor, noviembre de 2026).** Este análisis resume el enunciado original, que acepta una sola base con un esquema por microservicio como "simulación académica" y no exige backend. El profesor pidió después **microservicios reales**: cada microservicio con su propia base de datos, backend obligatorio y despliegue en la nube. Las secciones 9.6 y 16.2 quedan reemplazadas por esa decisión; el diseño actual está en `problema-alcance-supuestos-reglasdenegocio.md` y en `manual-ejecucion.md`.
+
 ## 1. Descripción general del proyecto
 
 ### 1.1. Contexto del problema
@@ -617,6 +619,8 @@ Una única instancia de PostgreSQL con esquemas separados constituye una simulac
 
 Esto no equivale a desplegar microservicios independientes. La documentación debe explicar esta diferencia y representar conceptualmente las interacciones entre los módulos.
 
+> **Reemplazado:** el profesor pidió microservicios reales, con una base de datos por microservicio (ver la nota al inicio).
+
 ---
 
 ## 10. Requisitos de seguridad, usuarios y permisos
@@ -1160,6 +1164,8 @@ Los nombres de referencia propuestos por el documento son:
 
 El esquema `reportes` debe contener únicamente vistas y consultas de integración, sin tablas adicionales de negocio.
 
+> **Reemplazado:** ahora cada microservicio tiene su propia base (`andina_catalogo`, `andina_compras`…), con un esquema del mismo nombre dentro. Como una vista no puede leer otra base, `andina_reportes` usa `dblink` para traer los datos y los guarda en vistas materializadas que se refrescan cada X minutos; sigue sin tener tablas.
+
 La organización definitiva debe conservar la separación por responsabilidades y permitir identificar claramente la propiedad lógica de cada entidad.
 
 ### 16.3. Modelo relacional y diccionario de datos
@@ -1313,4 +1319,6 @@ El proyecto debe demostrar que el modelo relacional conserva la integridad de la
 El resultado final no consiste únicamente en un conjunto de tablas. Debe incluir el análisis del problema, los modelos de datos, la arquitectura documentada, las restricciones, la distribución de los registros, las vistas, las consultas, las pruebas y la interpretación de los resultados.
 
 La solución debe cumplir el alcance académico definido en el enunciado, sin requerir el despliegue de microservicios independientes ni de interfaces de usuario.
+
+> **Reemplazado (noviembre de 2026):** esto ya no aplica. Se pidieron microservicios reales, con backend y despliegue en la nube: cada microservicio tiene su propia instancia de PostgreSQL y su propio programa en Go, hay un front servido por el gateway, y está desplegado (bases en Neon y backend en una VM de Azure). Ver [`conclusiones.md`](conclusiones.md), sección 2.
 
