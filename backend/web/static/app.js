@@ -270,6 +270,27 @@ function poligonos() {
   </svg>`;
 }
 
+// iconos de linea fina (estilo del DESIGN.md: mono, trazo blanco)
+const ICONOS = {
+  pedidos: '<path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/>',
+  inventario: '<path d="M3 7l9-4 9 4-9 4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/>',
+  transferencias: '<path d="M4 8h13l-3-3"/><path d="M20 16H7l3 3"/>',
+  compras: '<path d="M7 3h10v18l-5-3-5 3z"/><path d="M10 8h4M10 12h4"/>',
+  reportes: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  catalogo: '<path d="M3 12 12 3h8v8l-9 9z"/><circle cx="16" cy="8" r="1.4"/>',
+  clientes: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3 3 0 0 1 0 6M18 14c2 .7 3 2.8 3 6"/>',
+  auditoria: '<path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/>',
+  servicios: '<path d="M3 12h4l3-7 4 14 3-7h4"/>',
+  sede: '<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+  navegador: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><circle cx="6.5" cy="6.5" r=".6"/><circle cx="9" cy="6.5" r=".6"/>',
+  gateway: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 3v18M15 12h2"/>',
+  base: '<ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/><path d="M4.5 5.5v13c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-13"/><path d="M4.5 12c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8"/>',
+  identidad: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+  ventas: '<path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/>',
+  inventarios: '<path d="M3 7l9-4 9 4-9 4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/>',
+};
+const icono = (nombre) => `<span class="icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[nombre] || ICONOS.servicios}</svg></span>`;
+
 const marcaSvg = `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
   <rect x="8" y="8" width="16" height="16" rx="4" stroke="#fafafa" stroke-width="2" transform="rotate(12 16 16)"/>
   <rect x="10" y="10" width="12" height="12" rx="3" stroke="#ffb931" stroke-width="1.5" transform="rotate(-18 16 16)"/></svg>`;
@@ -385,30 +406,37 @@ function paginaInicio() {
   const u = estado.usuario;
   const suf = SUFIJO_SEDE[u.id_sede];
   const tarjetas = [
-    { ruta: "#/pedidos", roles: [VEN, ADM], titulo: "Pedidos", texto: `Los pedidos de ${nombreSede(u.id_sede)}, leídos solo de <code>ventas.ped_${suf}</code>.${puede(VEN) ? " Desde aquí se crean pedidos nuevos." : ""}` },
-    { ruta: "#/inventario", roles: [INV, ADM], titulo: "Inventario", texto: `Existencias de tu sede en <code>inventarios.inv_${suf}</code>, con alertas de stock mínimo.` },
-    { ruta: "#/transferencias", roles: [INV, ADM], titulo: "Transferencias", texto: "Traslados de mercancía entre almacenes de las sedes." },
-    { ruta: "#/compras", roles: [COM, ADM], titulo: "Compras", texto: "Órdenes de compra a proveedores: lo pedido, lo recibido y lo pendiente." },
-    { ruta: "#/reportes", roles: [GER, AUD, ADM, INV, COM], titulo: "Reportes", texto: "Vistas materializadas que juntan las 6 bases. Se refrescan cada pocos minutos." },
-    { ruta: "#/catalogo", roles: [ADM, GER, INV, COM, VEN], titulo: "Catálogo", texto: "Los 80 productos, con su categoría y precio de lista." },
-    { ruta: "#/clientes", roles: [ADM, VEN], titulo: "Clientes", texto: "Personas y empresas que compran en las sedes." },
-    { ruta: "#/auditoria", roles: [AUD, ADM], titulo: "Auditoría", texto: "Quién entró, qué consultó y cuándo." },
-    { ruta: "#/estado", titulo: "Servicios", texto: "Los 6 microservicios en vivo: qué responde y cuánto tarda." },
+    { id: "pedidos", ruta: "#/pedidos", roles: [VEN, ADM], titulo: "Pedidos", texto: `Los pedidos de ${esc(nombreSede(u.id_sede))}, leídos solo de <code>ventas.ped_${suf}</code>.${puede(VEN) ? " Desde aquí se crean pedidos nuevos." : ""}` },
+    { id: "inventario", ruta: "#/inventario", roles: [INV, ADM], titulo: "Inventario", texto: `Existencias de tu sede en <code>inventarios.inv_${suf}</code>, con alertas de stock mínimo.` },
+    { id: "transferencias", ruta: "#/transferencias", roles: [INV, ADM], titulo: "Transferencias", texto: "Traslados de mercancía entre almacenes de las sedes." },
+    { id: "compras", ruta: "#/compras", roles: [COM, ADM], titulo: "Compras", texto: "Órdenes de compra a proveedores: lo pedido, lo recibido y lo pendiente." },
+    { id: "reportes", ruta: "#/reportes", roles: [GER, AUD, ADM, INV, COM], titulo: "Reportes", texto: "Vistas materializadas que juntan las 6 bases. Se refrescan cada pocos minutos." },
+    { id: "catalogo", ruta: "#/catalogo", roles: [ADM, GER, INV, COM, VEN], titulo: "Catálogo", texto: "Los 80 productos, con su categoría y precio de lista." },
+    { id: "clientes", ruta: "#/clientes", roles: [ADM, VEN], titulo: "Clientes", texto: "Personas y empresas que compran en las sedes." },
+    { id: "auditoria", ruta: "#/auditoria", roles: [AUD, ADM], titulo: "Auditoría", texto: "Quién entró, qué consultó y cuándo." },
+    { id: "servicios", ruta: "#/estado", titulo: "Servicios", texto: "Los 6 microservicios en vivo: qué responde y cuánto tarda." },
   ].filter((t) => !t.roles || t.roles.includes(u.rol));
 
-  const fragmentos = [VEN, INV].includes(u.rol) || u.rol === ADM
-    ? `<div class="tarjeta ancha"><span class="etiqueta">Tu sede</span>
-        <h3>${esc(nombreSede(u.id_sede))}</h3>
-        <p>Inventarios y pedidos están partidos por sede: hay una tabla física por cada una
-        (<code>ped_bogota</code>, <code>ped_cali</code>…). Tú trabajas sobre
+  const fragmentos = [VEN, INV, ADM].includes(u.rol)
+    ? `<p>Inventarios y pedidos están partidos por sede: una tabla física por cada una. Tú trabajas sobre
         <code>ventas.ped_${suf}</code> e <code>inventarios.inv_${suf}</code>, y la sede sale de tu sesión,
-        no de lo que mande esta página.</p></div>` : "";
+        no de lo que mande esta página.</p>`
+    : `<p>Tu rol trabaja con la información de las cuatro sedes, a través de los reportes corporativos.</p>`;
 
   return {
-    html: `${cabecera(`Hola, ${u.nombre_usuario}`, `${esc(NOMBRE_ROL[u.rol])} · ${esc(nombreSede(u.id_sede))}`)}
-      <div class="mosaico">${fragmentos}
-      ${tarjetas.map((t) => `<div class="tarjeta"><h3>${t.titulo}</h3><p>${t.texto}</p>
-        <a class="flecha" href="${t.ruta}">Abrir</a></div>`).join("")}</div>`,
+    html: `<section class="bienvenida">
+        <div>
+          <span class="etiqueta">${esc(NOMBRE_ROL[u.rol] || u.rol)}</span>
+          <h1>Hola, ${esc(u.nombre_usuario)}</h1>
+          ${fragmentos}
+          <div class="chips"><span class="chip brillo">${esc(nombreSede(u.id_sede))}</span>
+            <span class="chip">${tarjetas.length} módulos</span><span class="chip">sesión de 8 horas</span></div>
+        </div>
+        <div class="poligonos">${poligonos()}</div>
+      </section>
+      <div class="mosaico">
+      ${tarjetas.map((t) => `<a class="tarjeta brilla" href="${t.ruta}">${icono(t.id)}<h3>${t.titulo}</h3><p>${t.texto}</p>
+        <span class="flecha naranja">Abrir</span></a>`).join("")}</div>`,
   };
 }
 
@@ -815,41 +843,101 @@ const QUE_PASA = {
   ventas: "No se ven ni se crean pedidos. Lo demás sigue igual.",
   reportes: "No hay reportes. Los servicios del día a día siguen igual.",
 };
+const PUERTO = { catalogo: 8101, identidad: 8102, compras: 8103, inventarios: 8104, ventas: 8105, reportes: 8106 };
+
+// cuanto tardo /salud desde el navegador (navegador -> gateway -> 6 servicios)
+let msGateway = null;
 
 function pintarServicios() {
-  const cont = document.getElementById("servicios");
+  const cont = document.getElementById("diagrama");
   if (!cont) return;
   const s = estado.salud;
-  if (!s) {
-    cont.innerHTML = mensaje("error", "El gateway no responde", "Sin gateway no se llega a ningún servicio.");
-    return;
-  }
-  cont.innerHTML = s.servicios.map((x) => {
+  const gatewayOk = !!s;
+  const servicios = s ? s.servicios : Object.keys(PUERTO).map((x) => ({ servicio: x, estado: "sin respuesta", ms: 0 }));
+  const bien = servicios.filter((x) => x.estado === "ok").length;
+
+  const rama = (x) => {
     const ok = x.estado === "ok";
-    return `<div class="tarjeta servicio ${ok ? "" : "mal"}"><span class="linea"></span>
-      <span class="etiqueta">${esc(x.servicio)}</span>
-      <span class="dato"><span class="punto ${ok ? "ok" : "mal"}"></span>${esc(x.estado)}</span>
-      <p>${ok ? `${numero(x.ms)} ms hasta su base` : esc(QUE_PASA[x.servicio] || "")}</p></div>`;
-  }).join("");
+    const sinBase = x.estado === "sin base de datos";
+    const caido = !ok && !sinBase;
+    return `<div class="rama">
+      <div class="cable ${gatewayOk ? (caido ? "mal" : "ok") : "mal"}"></div>
+      <div class="nodo ${ok ? "" : "mal"}">
+        <div class="fila">${icono(x.servicio)}
+          <div><div class="nombre">${esc(x.servicio)}</div><div class="detalle">:${PUERTO[x.servicio] || ""}</div></div>
+          <span class="punto ${ok ? "ok" : "mal"} derecha"></span></div>
+        <div class="barra-ms"><span data-ms="${ok ? x.ms : 0}"></span></div>
+        <div class="ms">${ok ? `${numero(x.ms)} ms` : esc(x.estado)}</div>
+      </div>
+      <div class="cable ${ok ? "ok" : caido ? "" : "mal"}"></div>
+      <div class="nodo base ${sinBase ? "mal" : caido ? "apagado" : ""}">
+        ${icono("base")}<div class="nombre">andina_${esc(x.servicio)}</div>
+      </div>
+    </div>`;
+  };
+
+  cont.innerHTML = `
+    <div class="centro">
+      <div class="nodo">${icono("navegador")}<div><div class="nombre">Tu navegador</div>
+        <div class="detalle">${esc(location.host)}</div></div></div>
+      <div class="cable ${gatewayOk ? "ok" : "mal"}"></div>
+      <div class="nodo gateway ${gatewayOk ? "" : "mal"}">${icono("gateway")}
+        <div><div class="nombre">Gateway</div><div class="detalle">valida la sesión y reparte /api/&lt;servicio&gt;</div></div>
+        <div class="derecha"><span class="punto ${gatewayOk ? "ok" : "mal"}"></span>
+          <div class="detalle">${gatewayOk && msGateway !== null ? `${numero(msGateway)} ms` : gatewayOk ? "" : "no responde"}</div></div>
+      </div>
+      <div class="cable ${gatewayOk ? "ok" : "mal"}"></div>
+    </div>
+    <div class="bus"></div>
+    <div class="ramas">${servicios.map(rama).join("")}</div>`;
+
+  // el ancho de las barras se pone por js: la CSP no deja style="" en el html
+  const max = Math.max(1, ...servicios.map((x) => x.ms || 0));
+  cont.querySelectorAll(".barra-ms span").forEach((b) => { b.style.width = `${Math.max(4, (Number(b.dataset.ms) / max) * 100)}%`; });
+
+  document.getElementById("resumen-salud").innerHTML = gatewayOk
+    ? `<span class="chip ${bien === 6 ? "ok" : "mal"}">${bien} de 6 servicios ok</span>
+       <span class="chip">${numero(msGateway ?? 0)} ms la vuelta completa</span>
+       <span class="chip">${s.servicios.length} bases, una por servicio</span>`
+    : `<span class="chip mal">el gateway no responde</span>`;
   const hora = document.getElementById("hora-salud");
   if (hora) hora.textContent = new Date().toLocaleTimeString("es-CO");
 }
 
 function paginaEstado() {
+  const tarjetas = Object.entries(QUE_PASA).map(([nombre, texto]) =>
+    `<div class="tarjeta"><h3>${icono(nombre)}Si se cae ${esc(nombre)}</h3><p>${esc(texto)}</p></div>`).join("");
   return {
     html: cabecera("Servicios",
-      `El gateway le pregunta a los 6 servicios a la vez (<code>GET /salud</code>), y cada uno le hace un ping a su propia base.
-       Se actualiza cada 3 segundos: apaga uno y mira qué pasa.`) +
-      `<div class="servicios" id="servicios"><p class="cargando">Preguntando</p></div>
-      <div class="pie-tabla"><span>Última revisión: <span id="hora-salud">—</span></span>
-        <span>ok · sin base de datos (el servicio corre pero no llega a su base) · caido (no responde)</span></div>`,
+      `El gateway le pregunta a los 6 servicios a la vez (<code>GET /salud</code>), y cada uno le hace un ping
+       a su propia base. Se actualiza cada 3 segundos: apaga uno y mira qué pasa.`) +
+      `<div class="estado-resumen" id="resumen-salud"></div>
+      <section class="diagrama" id="diagrama"><p class="cargando">Preguntando</p></section>
+      <div class="leyenda">
+        <span><span class="punto ok"></span>ok</span>
+        <span><span class="punto mal"></span>sin base de datos: el servicio corre pero no llega a su base</span>
+        <span><span class="punto mal"></span>caido: el servicio no responde</span>
+        <span>Última revisión: <span id="hora-salud">—</span></span>
+      </div>
+      <br><div class="cabecera"><div><h1>¿Y si se cae uno?</h1>
+        <p>Cada servicio es un programa aparte con su propia base: si uno se cae, los demás siguen.</p></div></div>
+      <div class="que-pasa">${tarjetas}</div>`,
     alMontar() {
-      const tic = async () => { await revisarSalud(); pintarServicios(); };
+      const tic = async () => {
+        const t0 = performance.now();
+        await revisarSalud();
+        msGateway = Math.round(performance.now() - t0);
+        pintarServicios();
+      };
       tic();
       estado.reloj = setInterval(tic, 3000);
     },
   };
 }
+
+const PIE = `<footer class="pie"><div class="contenedor">
+  <span class="marca">${marcaSvg}Comercializadora Andina</span>
+  <span>gateway + 6 microservicios en Go · una base PostgreSQL por servicio</span></div></footer>`;
 
 // ------------------------------------------------------------------
 // rutas y navegacion
@@ -915,7 +1003,7 @@ async function navegar() {
     pagina = { html: mensajeError(e) };
   }
   if (turno !== estado.turno) return; // el usuario ya se fue a otra pagina
-  app.innerHTML = pagina.marco === false ? pagina.html : `<main class="contenedor">${pagina.html}</main>`;
+  app.innerHTML = pagina.marco === false ? pagina.html : `<main class="contenedor">${pagina.html}</main>${PIE}`;
   if (camino === "#/login") {
     const e = leerSeguro("error-inicio");
     if (e) document.getElementById("login-mensaje").innerHTML = mensaje("aviso", "No se pudo revisar la sesión", e);
