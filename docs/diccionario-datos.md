@@ -337,6 +337,21 @@ Productos y cantidades de cada devolución.
 | cantidad | INTEGER | No | | | `> 0` | Unidades devueltas. No supera lo vendido (RN-33). |
 | condicion_producto | VARCHAR(10) | No | | | `BUENO`, `AVERIADO` | Estado en que llegó el producto |
 
+### 5.6 Vistas locales por sede: pagos_<sede>, devoluciones_<sede>, detalle_devolucion_<sede>
+
+**Responsable:** Ventas y Pagos. Doce vistas (tres por cada una de las 4 sedes) sobre las tablas de
+5.3, 5.4 y 5.5, que no están fragmentadas. Tienen las mismas columnas que su tabla.
+
+| Vista | Filtra | Para qué |
+|---|---|---|
+| `pagos_<sede>` | `id_sede = n` y el pedido existe en `ped_<sede>` | Que el vendedor solo vea y registre los pagos de su sede |
+| `devoluciones_<sede>` | `id_sede = n` y el pedido existe en `ped_<sede>` | Lo mismo con las devoluciones |
+| `detalle_devolucion_<sede>` | La devolución es de esa sede | Lo mismo con el detalle |
+
+Son **actualizables** (se puede hacer `INSERT` y `UPDATE` sobre ellas) y tienen `WITH CHECK OPTION`:
+una fila que la vista no mostraría (de otra sede, o de un pedido que no está en el fragmento) no se
+puede guardar por ella. El vendedor tiene permiso sobre las vistas de su sede y no sobre las tablas.
+
 ---
 
 ## 6. Reglas que la base de datos no impone

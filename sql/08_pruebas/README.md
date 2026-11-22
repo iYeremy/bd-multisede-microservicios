@@ -44,7 +44,11 @@ varias bases).
 | 9.3 | ventas | `vendedor_bogota` crea un pedido en su fragmento | Permitido (el `DEFAULT` pone la sede y el IDENTITY el número) |
 | 9.4 | ventas | `vendedor_bogota` lee los pedidos de Cali | ERROR: permiso denegado |
 | 9.5 | catálogo | `vendedor_bogota` cambia un precio | ERROR: permiso denegado (ventas no toca catálogo, RN-39) |
-| 9.6 | ventas | `vendedor_bogota` borra un pago | ERROR: permiso denegado (por el `REVOKE DELETE`) |
+| 9.6 | ventas | `vendedor_bogota` borra un pago de su sede (por su vista) | ERROR: permiso denegado (por el `REVOKE DELETE`) |
+| 9.9a | ventas | `vendedor_bogota` lee los pagos por su vista local `pagos_bogota` | Permitido: solo pagos de la sede 1 |
+| 9.9b | ventas | `vendedor_bogota` lee la tabla `pagos` (las 4 sedes) | ERROR: permiso denegado |
+| 9.9c | ventas | `vendedor_bogota` registra un pago de un pedido de Bogotá por la vista | Permitido |
+| 9.9d | ventas | `vendedor_bogota` registra por la vista un pago de un pedido de Cali | ERROR: viola la opción check de la vista |
 | 9.7 | inventarios | `inventario_cedi` actualiza su fragmento y el de Bogotá | El suyo sí; el de Bogotá, ERROR |
 | 9.8 | identidad | El auditor lee usuarios y luego `password_hash` | Lo primero sí; `password_hash`, ERROR |
 | 9.8b | compras | El auditor modifica una orden | ERROR: permiso denegado |

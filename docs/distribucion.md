@@ -11,6 +11,24 @@ sede y cómo se vuelven a juntar para los reportes. Responde punto por punto lo 
 2. Inventarios y pedidos se **parten por sede**: una tabla por sede.
 3. **Reportes** junta todo con vistas que traen los datos de las otras bases.
 
+### No es una simulación académica
+
+La sección 7 del enunciado explica que **una sola instancia de PostgreSQL con un esquema por
+microservicio es una simulación académica**: los esquemas separan los nombres, pero todo comparte
+el mismo servidor, los mismos usuarios, y una consulta puede hacer `JOIN` entre esquemas. Este
+proyecto empezó así, y después se pasó a **microservicios reales**:
+
+| | Simulación (una instancia, 6 esquemas) | Este proyecto (6 instancias) |
+| --- | --- | --- |
+| Servidores de PostgreSQL | 1 | **6**, uno por servicio (local: puertos 5441–5446; nube: 6 proyectos de Neon) |
+| ¿Un servicio puede leer las tablas de otro? | Sí, con un `JOIN` entre esquemas | **No**: la tabla ni existe en su instancia (prueba 11.1) y PostgreSQL no permite nombrar otra base (11.2) |
+| Usuarios | Compartidos por todo el servidor | **Propios de cada instancia**: `gerente_general` no existe en la de ventas (9.2) |
+| Si se cae el servidor | Se cae todo | Se cae **un** servicio; los demás siguen |
+| Programas | Ninguno (solo SQL) | Un programa en Go por servicio, conectado solo a su instancia (`backend/`) |
+| Integración para reportes | `JOIN` entre esquemas | `dblink` + vistas materializadas (sección 4) |
+
+Lo que **no** cambió: las tablas, los datos, las vistas, las 20 consultas y sus resultados.
+
 ---
 
 ## 1. Servicios, instancias y bases
@@ -215,6 +233,24 @@ precios) por `dblink`:
 
 La procedencia también queda guardada en la base, con `COMMENT ON MATERIALIZED VIEW` (se ve con
 `\dm+ reportes.*`).
+
+### Vistas de uso local (en la base de ventas)
+
+El enunciado pide que algunas vistas sean de **uso local** (de una sede) y otras de consulta
+consolidada. Las de reportes son las consolidadas. Las locales están en `andina_ventas`, una por
+sede, para lo que **no** está fragmentado: `pagos` y `devoluciones` son una sola tabla para las 4
+sedes.
+
+| Vista (una por sede) | Muestra | Condición |
+| --- | --- | --- |
+| `ventas.pagos_<sede>` | Los pagos de esa sede | `id_sede = n` y que el pedido exista en `ped_<sede>` |
+| `ventas.devoluciones_<sede>` | Las devoluciones de esa sede | `id_sede = n` y que el pedido exista en `ped_<sede>` |
+| `ventas.detalle_devolucion_<sede>` | El detalle de esas devoluciones | Que la devolución sea de esa sede |
+
+Así el vendedor de Bogotá tiene permiso sobre `pagos_bogota` y **no** sobre la tabla `pagos`: solo
+ve y registra los pagos de su sede, como pide la sección 8 del enunciado. Son vistas actualizables
+con `WITH CHECK OPTION`: por la vista no se puede guardar un pago de otra sede ni de un pedido que no
+esté en el fragmento de la sede (pruebas 9.9a a 9.9d).
 
 ---
 

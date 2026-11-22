@@ -17,17 +17,17 @@ comprueba cada uno:
 | Catálogo, compras, inventarios, transferencias, ventas, pagos y devoluciones | ✓ | `sql/02_tablas/` |
 | Claves y restricciones implementadas | ✓ | Pruebas 1 a 4c de la [`matriz`](matriz-pruebas.md) |
 | Historial de precios de compras y ventas | ✓ | `costo_unitario` en el detalle de cada orden y `precio_unitario` en el de cada pedido: el precio queda fijo aunque cambie el de lista |
-| Seis roles y sus privilegios | ✓ | `sql/06_roles/` y las 12 pruebas de permisos (9.x) |
+| Seis roles y sus privilegios | ✓ | `sql/06_roles/` y las 16 pruebas de permisos (9.x) |
 | Esquemas de los módulos documentados | ✓ | [`distribucion.md`](distribucion.md) y [`diccionario-datos.md`](diccionario-datos.md) |
 | Fragmentación horizontal de dos conjuntos por sede | ✓ | Inventarios (`inv_*`) y pedidos (`ped_*` + `det_ped_*`), con `CHECK (id_sede = n)` |
 | Los fragmentos se pueden consultar solos | ✓ | Pruebas 5 y 5b; el backend lee solo el fragmento de la sede de la sesión |
 | Vistas consolidadas que integran los fragmentos | ✓ | `vista_*_consolidado` con `UNION ALL`; prueba 6 (304 = 304) |
-| Al menos 10 vistas | ✓ | 13 vistas materializadas en reportes |
+| Al menos 10 vistas, locales y consolidadas | ✓ | 13 vistas materializadas (consolidadas) en reportes + 12 vistas locales por sede en ventas (`pagos_<sede>`...) |
 | Las 20 consultas | ✓ | `sql/07_consultas/` e [`analisis-resultados.md`](analisis-resultados.md) |
 | Recursos SQL exigidos | ✓ | Tabla de cobertura en `sql/07_consultas/README.md`: 7 CTE, 5 consultas con funciones de ventana, `EXCEPT`, `INTERSECT`, `UNION ALL`, `NOT EXISTS`, subconsultas correlacionadas |
 | Mínimos de volumen y periodo | ✓ | 80 productos, 100 clientes, 300 pedidos, 60 órdenes, 25 transferencias, 22 devoluciones, de mayo a octubre (6 meses) |
 | Escenarios para resultados variados | ✓ | Ver la tabla de abajo |
-| Pruebas de integridad, fragmentación, consultas y permisos | ✓ | [`matriz-pruebas.md`](matriz-pruebas.md): 37 de 37 |
+| Pruebas de integridad, fragmentación, consultas y permisos | ✓ | [`matriz-pruebas.md`](matriz-pruebas.md): 40 de 40 |
 | El reporte corporativo no duplica | ✓ | Prueba 10: cada total = el de la fuente; con un solo `JOIN` saldría 3,7 veces más |
 | Resultados, evidencias, manual y conclusiones | ✓ | `evidencias*.txt`, [`manual-ejecucion.md`](manual-ejecucion.md) y este documento |
 
@@ -50,8 +50,13 @@ comprueba cada uno:
 
 ## 2. Lo que se hizo además del enunciado
 
-El enunciado aceptaba una sola base con un esquema por módulo y no pedía backend ni despliegue.
-Después se pidieron **microservicios reales**, y el proyecto quedó así:
+El enunciado aceptaba una sola instancia con un esquema por módulo, y aclaraba (sección 7) que eso
+es una **simulación académica** de los microservicios, no microservicios independientes. Este
+proyecto **no es esa simulación**: son 6 instancias de PostgreSQL separadas, y se comprueba con
+pruebas, no solo se afirma (9.2: gerencia ni existe en la instancia de ventas; 11.1 y 11.2: desde
+ventas no se puede leer ni nombrar la base de catálogo). La comparación completa está en
+[`distribucion.md`](distribucion.md#no-es-una-simulación-académica). Además se agregó lo que el
+enunciado no pedía:
 
 - **Una instancia de PostgreSQL por servicio**, no solo una base: en local, 6 servidores en
   puertos distintos; en la nube, 6 proyectos de Neon. Los mismos scripts sirven para los dos.

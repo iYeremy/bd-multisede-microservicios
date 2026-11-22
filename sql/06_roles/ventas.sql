@@ -26,13 +26,18 @@ GRANT ALL    ON ALL TABLES IN SCHEMA ventas TO rol_administrador WITH GRANT OPTI
 GRANT SELECT ON ALL TABLES IN SCHEMA ventas TO rol_auditor;
 GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA ventas TO svc_ventas;
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON ventas.pagos, ventas.devoluciones, ventas.detalle_devolucion TO rol_vendedor;
-
--- REVOKE a proposito: no se borra, se cambia el estado (RN-43, prueba 9.6)
-REVOKE DELETE ON ventas.pagos, ventas.devoluciones, ventas.detalle_devolucion FROM rol_vendedor;
-
 GRANT SELECT, INSERT, UPDATE ON ventas.ped_bogota, ventas.det_ped_bogota TO vendedor_bogota;  -- sede 1
 GRANT SELECT, INSERT, UPDATE ON ventas.ped_cali,   ventas.det_ped_cali   TO vendedor_cali;    -- sede 3
+
+-- pagos y devoluciones: el vendedor NO tiene permiso sobre las tablas (son de
+-- las 4 sedes), solo sobre las vistas locales de su sede (02_tablas/ventas.sql).
+-- leer ventas.pagos le da error (prueba 9.9)
+GRANT SELECT, INSERT, UPDATE, DELETE ON ventas.pagos_bogota, ventas.devoluciones_bogota, ventas.detalle_devolucion_bogota TO vendedor_bogota;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ventas.pagos_cali,   ventas.devoluciones_cali,   ventas.detalle_devolucion_cali   TO vendedor_cali;
+
+-- REVOKE a proposito: no se borra, se cambia el estado (RN-43, prueba 9.6)
+REVOKE DELETE ON ventas.pagos_bogota, ventas.devoluciones_bogota, ventas.detalle_devolucion_bogota FROM vendedor_bogota;
+REVOKE DELETE ON ventas.pagos_cali,   ventas.devoluciones_cali,   ventas.detalle_devolucion_cali   FROM vendedor_cali;
 
 -- sin superusuario (neon): quien corre los scripts necesita ser miembro
 -- de los usuarios para poder probarlos con SET ROLE en 08_pruebas

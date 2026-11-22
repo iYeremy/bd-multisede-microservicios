@@ -262,6 +262,30 @@ COMMENT
 COMMENT
 COMMENT
 COMMENT
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+CREATE VIEW
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
  setseed 
 ---------
  
@@ -316,9 +340,11 @@ GRANT
 GRANT
 GRANT
 GRANT
+GRANT
+GRANT
+GRANT
 REVOKE
-GRANT
-GRANT
+REVOKE
 >> reportes
 Ahora está conectado a la base de datos «postgres» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5446».
 SET
@@ -386,7 +412,7 @@ REFRESH MATERIALIZED VIEW
 COMMIT
    reportes_actualizados_en    
 -------------------------------
- 2026-11-16 00:25:47.173251-05
+ 2026-11-21 22:34:47.906408-05
 (1 fila)
 
 CREATE ROLE
@@ -1740,7 +1766,7 @@ DETALLE:  Failing row contains (1, 1, 1, -1, 13, 2026-10-15 18:00:00).
 
 --- 4b. Una fila de otra sede no entra en el fragmento de Bogota -> esperado: ERROR viola la restriccion check ---
 psql:sql/08_pruebas/pruebas.sql:72: ERROR:  new row for relation "inv_bogota" violates check constraint "inv_bogota_id_sede_check"
-DETALLE:  Failing row contains (2, 2, 1, 10, 5, 2026-11-16 00:25:48.195342).
+DETALLE:  Failing row contains (2, 2, 1, 10, 5, 2026-11-21 22:34:48.969295).
 
 === Prueba 5. Los fragmentos de dos sedes contienen registros distintos ===
  fragmento  | filas | sede_min | sede_max 
@@ -1801,8 +1827,26 @@ INSERT 0 1
 INSERT 0 1
 --- 9.4 vendedor_bogota: consulta pedidos de Cali (DENEGADO) -> esperado: ERROR permiso denegado ---
 psql:sql/08_pruebas/pruebas.sql:146: ERROR:  permission denied for table ped_cali
---- 9.6 vendedor_bogota: borra un pago (DENEGADO por el REVOKE DELETE) -> esperado: ERROR permiso denegado ---
-psql:sql/08_pruebas/pruebas.sql:149: ERROR:  permission denied for table pagos
+--- 9.6 vendedor_bogota: borra un pago de su sede (DENEGADO por el REVOKE DELETE) -> esperado: ERROR permiso denegado ---
+psql:sql/08_pruebas/pruebas.sql:149: ERROR:  permission denied for view pagos_bogota
+--- 9.9a vendedor_bogota: consulta los pagos de su sede por la vista local (PERMITIDO) ---
+ pagos | sede_min | sede_max 
+-------+----------+----------
+   108 |        1 |        1
+(1 fila)
+
+--- 9.9b vendedor_bogota: lee la tabla de pagos de todas las sedes (DENEGADO) -> esperado: ERROR permiso denegado ---
+psql:sql/08_pruebas/pruebas.sql:157: ERROR:  permission denied for table pagos
+--- 9.9c vendedor_bogota: registra un pago de un pedido de su sede (PERMITIDO) ---
+ id_sede | id_pedido |  valor  |  estado   
+---------+-----------+---------+-----------
+       1 |         1 | 1000.00 | PENDIENTE
+(1 fila)
+
+INSERT 0 1
+--- 9.9d vendedor_bogota: registra un pago de un pedido de Cali (DENEGADO) -> esperado: ERROR viola la opcion check de la vista ---
+psql:sql/08_pruebas/pruebas.sql:166: ERROR:  new row violates check option for view "pagos_bogota"
+DETALLE:  Failing row contains (id_sede, id_pedido, fecha_pago, valor, medio_pago) = (3, 1, 2026-10-15, 1000.00, EFECTIVO).
 RESET
 ROLLBACK
 Ahora está conectado a la base de datos «andina_identidad» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5442».
@@ -1816,7 +1860,7 @@ SET
  inventario_bogota | INVENTARIO    | ACTIVO
 (3 filas)
 
-psql:sql/08_pruebas/pruebas.sql:163: ERROR:  permission denied for table usuarios
+psql:sql/08_pruebas/pruebas.sql:180: ERROR:  permission denied for table usuarios
 RESET
 ROLLBACK
 Ahora está conectado a la base de datos «andina_reportes» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5446».
@@ -1867,7 +1911,7 @@ SET
 (4 filas)
 
 --- 9.1b gerente_general: usar dblink para leer ventas (DENEGADO) -> esperado: ERROR permiso denegado para el esquema remoto ---
-psql:sql/08_pruebas/pruebas.sql:218: ERROR:  permission denied for schema remoto
+psql:sql/08_pruebas/pruebas.sql:235: ERROR:  permission denied for schema remoto
 LÍNEA 1: SELECT * FROM dblink(remoto.servidor('ventas'), 'SELECT COUN...
                               ^
 RESET
@@ -1911,11 +1955,11 @@ ROLLBACK
 === Prueba 11. Cada servicio solo ve su propia base ===
 Ahora está conectado a la base de datos «andina_ventas» como el usuario «postgres» en el servidor «localhost» (dirección «::1») port «5445».
 --- 11.1 desde andina_ventas: leer catalogo.productos -> esperado: ERROR la relacion no existe ---
-psql:sql/08_pruebas/pruebas.sql:335: ERROR:  relation "catalogo.productos" does not exist
+psql:sql/08_pruebas/pruebas.sql:352: ERROR:  relation "catalogo.productos" does not exist
 LÍNEA 1: SELECT COUNT(*) FROM catalogo.productos;
                               ^
 --- 11.2 nombrando la otra base (base.esquema.tabla) -> esperado: ERROR no estan implementadas las referencias entre bases ---
-psql:sql/08_pruebas/pruebas.sql:339: ERROR:  cross-database references are not implemented: "andina_catalogo.catalogo.productos"
+psql:sql/08_pruebas/pruebas.sql:356: ERROR:  cross-database references are not implemented: "andina_catalogo.catalogo.productos"
 LÍNEA 1: SELECT COUNT(*) FROM andina_catalogo.catalogo.productos;
                               ^
 --- 11.3 que usuarios existen y pueden entrar en cada instancia ---
@@ -1973,7 +2017,7 @@ REFRESH MATERIALIZED VIEW
 COMMIT
    reportes_actualizados_en    
 -------------------------------
- 2026-11-16 00:25:48.482431-05
+ 2026-11-21 22:34:49.321377-05
 (1 fila)
 
 --- 12.5 ahora el reporte si lo ve (uno mas que en 12.1) ---
@@ -2004,7 +2048,7 @@ REFRESH MATERIALIZED VIEW
 COMMIT
    reportes_actualizados_en    
 -------------------------------
- 2026-11-16 00:25:48.889702-05
+ 2026-11-21 22:34:49.906341-05
 (1 fila)
 
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».

@@ -149,3 +149,106 @@ COMMENT ON TABLE ventas.det_ped_cedi       IS 'Responsable: Ventas y Pagos. Frag
 COMMENT ON TABLE ventas.pagos              IS 'Responsable: Ventas y Pagos';
 COMMENT ON TABLE ventas.devoluciones       IS 'Responsable: Ventas y Pagos';
 COMMENT ON TABLE ventas.detalle_devolucion IS 'Responsable: Ventas y Pagos';
+
+
+-- ---------------------------------------------------------------------
+-- vistas locales por sede: pagos y devoluciones
+-- ---------------------------------------------------------------------
+-- pagos y devoluciones son UNA tabla para las 4 sedes (son pocos y cuelgan
+-- del pedido por id_sede, id_pedido). para que el vendedor solo vea y
+-- registre los de SU sede, no se le da permiso sobre la tabla sino sobre la
+-- vista de su sede (ver 06_roles/ventas.sql).
+--
+-- son vistas actualizables: se puede hacer INSERT y UPDATE sobre ellas, y
+-- PostgreSQL lo pasa a la tabla. WITH CHECK OPTION impide guardar por la
+-- vista una fila que la vista no mostraria: un pago de otra sede, o de un
+-- pedido que no existe en el fragmento de la sede (prueba 9.9).
+
+-- Sede Bogota (id_sede = 1)
+CREATE VIEW ventas.pagos_bogota AS
+    SELECT * FROM ventas.pagos p
+    WHERE p.id_sede = 1
+      AND EXISTS (SELECT 1 FROM ventas.ped_bogota x WHERE x.id_pedido = p.id_pedido)
+    WITH CHECK OPTION;
+
+CREATE VIEW ventas.devoluciones_bogota AS
+    SELECT * FROM ventas.devoluciones d
+    WHERE d.id_sede = 1
+      AND EXISTS (SELECT 1 FROM ventas.ped_bogota x WHERE x.id_pedido = d.id_pedido)
+    WITH CHECK OPTION;
+
+CREATE VIEW ventas.detalle_devolucion_bogota AS
+    SELECT * FROM ventas.detalle_devolucion dd
+    WHERE EXISTS (SELECT 1 FROM ventas.devoluciones d
+                  WHERE d.id_devolucion = dd.id_devolucion AND d.id_sede = 1)
+    WITH CHECK OPTION;
+
+-- Sede Medellin (id_sede = 2)
+CREATE VIEW ventas.pagos_medellin AS
+    SELECT * FROM ventas.pagos p
+    WHERE p.id_sede = 2
+      AND EXISTS (SELECT 1 FROM ventas.ped_medellin x WHERE x.id_pedido = p.id_pedido)
+    WITH CHECK OPTION;
+
+CREATE VIEW ventas.devoluciones_medellin AS
+    SELECT * FROM ventas.devoluciones d
+    WHERE d.id_sede = 2
+      AND EXISTS (SELECT 1 FROM ventas.ped_medellin x WHERE x.id_pedido = d.id_pedido)
+    WITH CHECK OPTION;
+
+CREATE VIEW ventas.detalle_devolucion_medellin AS
+    SELECT * FROM ventas.detalle_devolucion dd
+    WHERE EXISTS (SELECT 1 FROM ventas.devoluciones d
+                  WHERE d.id_devolucion = dd.id_devolucion AND d.id_sede = 2)
+    WITH CHECK OPTION;
+
+-- Sede Cali (id_sede = 3)
+CREATE VIEW ventas.pagos_cali AS
+    SELECT * FROM ventas.pagos p
+    WHERE p.id_sede = 3
+      AND EXISTS (SELECT 1 FROM ventas.ped_cali x WHERE x.id_pedido = p.id_pedido)
+    WITH CHECK OPTION;
+
+CREATE VIEW ventas.devoluciones_cali AS
+    SELECT * FROM ventas.devoluciones d
+    WHERE d.id_sede = 3
+      AND EXISTS (SELECT 1 FROM ventas.ped_cali x WHERE x.id_pedido = d.id_pedido)
+    WITH CHECK OPTION;
+
+CREATE VIEW ventas.detalle_devolucion_cali AS
+    SELECT * FROM ventas.detalle_devolucion dd
+    WHERE EXISTS (SELECT 1 FROM ventas.devoluciones d
+                  WHERE d.id_devolucion = dd.id_devolucion AND d.id_sede = 3)
+    WITH CHECK OPTION;
+
+-- CEDI Funza (id_sede = 4)
+CREATE VIEW ventas.pagos_cedi AS
+    SELECT * FROM ventas.pagos p
+    WHERE p.id_sede = 4
+      AND EXISTS (SELECT 1 FROM ventas.ped_cedi x WHERE x.id_pedido = p.id_pedido)
+    WITH CHECK OPTION;
+
+CREATE VIEW ventas.devoluciones_cedi AS
+    SELECT * FROM ventas.devoluciones d
+    WHERE d.id_sede = 4
+      AND EXISTS (SELECT 1 FROM ventas.ped_cedi x WHERE x.id_pedido = d.id_pedido)
+    WITH CHECK OPTION;
+
+CREATE VIEW ventas.detalle_devolucion_cedi AS
+    SELECT * FROM ventas.detalle_devolucion dd
+    WHERE EXISTS (SELECT 1 FROM ventas.devoluciones d
+                  WHERE d.id_devolucion = dd.id_devolucion AND d.id_sede = 4)
+    WITH CHECK OPTION;
+
+COMMENT ON VIEW ventas.pagos_bogota IS 'Responsable: Ventas y Pagos. Vista local: pagos de Sede Bogota (id_sede = 1)';
+COMMENT ON VIEW ventas.devoluciones_bogota IS 'Responsable: Ventas y Pagos. Vista local: devoluciones de Sede Bogota (id_sede = 1)';
+COMMENT ON VIEW ventas.detalle_devolucion_bogota IS 'Responsable: Ventas y Pagos. Vista local: detalle de devoluciones de Sede Bogota (id_sede = 1)';
+COMMENT ON VIEW ventas.pagos_medellin IS 'Responsable: Ventas y Pagos. Vista local: pagos de Sede Medellin (id_sede = 2)';
+COMMENT ON VIEW ventas.devoluciones_medellin IS 'Responsable: Ventas y Pagos. Vista local: devoluciones de Sede Medellin (id_sede = 2)';
+COMMENT ON VIEW ventas.detalle_devolucion_medellin IS 'Responsable: Ventas y Pagos. Vista local: detalle de devoluciones de Sede Medellin (id_sede = 2)';
+COMMENT ON VIEW ventas.pagos_cali IS 'Responsable: Ventas y Pagos. Vista local: pagos de Sede Cali (id_sede = 3)';
+COMMENT ON VIEW ventas.devoluciones_cali IS 'Responsable: Ventas y Pagos. Vista local: devoluciones de Sede Cali (id_sede = 3)';
+COMMENT ON VIEW ventas.detalle_devolucion_cali IS 'Responsable: Ventas y Pagos. Vista local: detalle de devoluciones de Sede Cali (id_sede = 3)';
+COMMENT ON VIEW ventas.pagos_cedi IS 'Responsable: Ventas y Pagos. Vista local: pagos de CEDI Funza (id_sede = 4)';
+COMMENT ON VIEW ventas.devoluciones_cedi IS 'Responsable: Ventas y Pagos. Vista local: devoluciones de CEDI Funza (id_sede = 4)';
+COMMENT ON VIEW ventas.detalle_devolucion_cedi IS 'Responsable: Ventas y Pagos. Vista local: detalle de devoluciones de CEDI Funza (id_sede = 4)';

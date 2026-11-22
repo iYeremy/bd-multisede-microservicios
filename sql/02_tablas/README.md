@@ -106,3 +106,24 @@ inv_cedi     → CHECK (id_sede = 4)   (el CEDI tiene dos almacenes: 4 y 5)
 - **Pagos y devoluciones** van en una sola tabla cada uno, no por sede. Apuntan al pedido con
   `(id_sede, id_pedido)` pero **sin FK**: una FK solo puede apuntar a una tabla, y el pedido puede
   estar en cualquiera de las 4. `id_sede` dice en cuál buscarlo.
+
+## Vistas locales por sede (al final de ventas.sql)
+
+`pagos` y `devoluciones` no están fragmentados: son una tabla para las 4 sedes. Para que el
+vendedor solo vea y registre los de su sede, `ventas.sql` crea al final una vista por sede:
+`pagos_bogota`, `devoluciones_bogota`, `detalle_devolucion_bogota`, y así con las otras.
+
+```sql
+CREATE VIEW ventas.pagos_bogota AS
+    SELECT * FROM ventas.pagos p
+    WHERE p.id_sede = 1
+      AND EXISTS (SELECT 1 FROM ventas.ped_bogota x WHERE x.id_pedido = p.id_pedido)
+    WITH CHECK OPTION;
+```
+
+- **Es actualizable:** tiene una sola tabla en el `FROM`, así que PostgreSQL deja hacer `INSERT` y
+  `UPDATE` sobre la vista y lo pasa a `ventas.pagos`.
+- **`WITH CHECK OPTION`:** no deja guardar por la vista una fila que la vista no mostraría. Un pago
+  con `id_sede = 3`, o de un pedido que no está en `ped_bogota`, da error (prueba 9.9d).
+- El permiso del vendedor va sobre la vista, no sobre la tabla (`06_roles/ventas.sql`).
+
