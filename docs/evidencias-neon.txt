@@ -159,7 +159,7 @@ GRANT
 GRANT
 GRANT ROLE
 >> inventarios
-Ahora está conectado a la base de datos «neondb» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:136b:ad08:8303:2b8d:416a:fc28») port «5432».
+Ahora está conectado a la base de datos «neondb» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:136b:ad22:7d2a:3be:60c8:d154») port «5432».
 SET
 DROP DATABASE
 DROP ROLE
@@ -232,7 +232,7 @@ GRANT
 GRANT
 GRANT ROLE
 >> ventas
-Ahora está conectado a la base de datos «neondb» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:136b:ad12:265b:5bb2:e5e1:805c») port «5432».
+Ahora está conectado a la base de datos «neondb» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:136b:ad22:7d2a:3be:60c8:d154») port «5432».
 SET
 DROP DATABASE
 DROP ROLE
@@ -397,6 +397,7 @@ COMMENT
 COMMENT
 COMMENT
 COMMENT
+COMMENT
 CREATE MATERIALIZED VIEW
 COMMENT
 BEGIN
@@ -417,7 +418,7 @@ REFRESH MATERIALIZED VIEW
 COMMIT
    reportes_actualizados_en    
 -------------------------------
- 2026-11-22 03:36:24.166058+00
+ 2026-11-22 03:44:30.553487+00
 (1 fila)
 
 CREATE ROLE
@@ -1727,7 +1728,7 @@ Ahora está conectado a la base de datos «andina_reportes» con el usuario «ne
 (4 filas)
 
 >> pruebas
-Ahora está conectado a la base de datos «andina_catalogo» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:555:9610:e12a:d999:54af:121e») port «5432».
+Ahora está conectado a la base de datos «andina_catalogo» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:555:9606:82fc:b4a2:5c2a:a56d») port «5432».
 BEGIN
 
 === Prueba 1. Crear un producto valido y consultarlo ===
@@ -1752,7 +1753,7 @@ SET
 psql:sql/08_pruebas/pruebas.sql:38: ERROR:  permission denied for table productos
 RESET
 ROLLBACK
-Ahora está conectado a la base de datos «andina_compras» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:555:9610:e12a:d999:54af:121e») port «5432».
+Ahora está conectado a la base de datos «andina_compras» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:555:9621:c1fd:73cf:753e:5e0») port «5432».
 BEGIN
 
 === Prueba 3. Cantidad negativa (CHECK) -> esperado: ERROR viola la restriccion check ===
@@ -1763,7 +1764,7 @@ SET
 psql:sql/08_pruebas/pruebas.sql:55: ERROR:  permission denied for table ordenes_compra
 RESET
 ROLLBACK
-Ahora está conectado a la base de datos «andina_inventarios» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:136b:ad08:8303:2b8d:416a:fc28») port «5432».
+Ahora está conectado a la base de datos «andina_inventarios» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:136b:ad22:7d2a:3be:60c8:d154») port «5432».
 BEGIN
 
 --- 3b. Existencia negativa (CHECK) -> esperado: ERROR viola la restriccion check ---
@@ -1772,7 +1773,7 @@ DETALLE:  Failing row contains (1, 1, 1, -1, 13, 2026-10-15 18:00:00).
 
 --- 4b. Una fila de otra sede no entra en el fragmento de Bogota -> esperado: ERROR viola la restriccion check ---
 psql:sql/08_pruebas/pruebas.sql:72: ERROR:  new row for relation "inv_bogota" violates check constraint "inv_bogota_id_sede_check"
-DETALLE:  Failing row contains (2, 2, 1, 10, 5, 2026-11-22 03:36:46.285231).
+DETALLE:  Failing row contains (2, 2, 1, 10, 5, 2026-11-22 03:44:54.108109).
 
 === Prueba 5. Los fragmentos de dos sedes contienen registros distintos ===
  fragmento  | filas | sede_min | sede_max 
@@ -1806,7 +1807,7 @@ UPDATE 1
 psql:sql/08_pruebas/pruebas.sql:107: ERROR:  permission denied for table inv_bogota
 RESET
 ROLLBACK
-Ahora está conectado a la base de datos «andina_ventas» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:136b:ad08:8303:2b8d:416a:fc28») port «5432».
+Ahora está conectado a la base de datos «andina_ventas» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:136b:ad22:7d2a:3be:60c8:d154») port «5432».
 BEGIN
 
 --- 4c. Detalle de un pedido que no existe (FK compuesta) -> esperado: ERROR viola la llave foranea ---
@@ -1855,7 +1856,7 @@ psql:sql/08_pruebas/pruebas.sql:166: ERROR:  new row violates check option for v
 DETALLE:  Failing row contains (id_sede, id_pedido, fecha_pago, valor, medio_pago) = (3, 1, 2026-10-15, 1000.00, EFECTIVO).
 RESET
 ROLLBACK
-Ahora está conectado a la base de datos «andina_identidad» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:555:9606:82fc:b4a2:5c2a:a56d») port «5432».
+Ahora está conectado a la base de datos «andina_identidad» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:555:9621:c1fd:73cf:753e:5e0») port «5432».
 BEGIN
 --- 9.8 auditor_interno: lee todo, pero leer password_hash -> esperado: ERROR permiso denegado ---
 SET
@@ -1869,7 +1870,7 @@ SET
 psql:sql/08_pruebas/pruebas.sql:180: ERROR:  permission denied for table usuarios
 RESET
 ROLLBACK
-Ahora está conectado a la base de datos «andina_reportes» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:555:9610:e12a:d999:54af:121e») port «5432».
+Ahora está conectado a la base de datos «andina_reportes» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:555:9621:c1fd:73cf:753e:5e0») port «5432».
 BEGIN
 === Prueba 6. La vista consolidada reune los fragmentos de las 4 sedes ===
             fragmento            | id_sede | filas 
@@ -1959,7 +1960,7 @@ RESET
 ROLLBACK
 
 === Prueba 11. Cada servicio solo ve su propia base ===
-Ahora está conectado a la base de datos «andina_ventas» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:136b:ad12:265b:5bb2:e5e1:805c») port «5432».
+Ahora está conectado a la base de datos «andina_ventas» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:136b:ad22:7d2a:3be:60c8:d154») port «5432».
 --- 11.1 desde andina_ventas: leer catalogo.productos -> esperado: ERROR la relacion no existe ---
 psql:sql/08_pruebas/pruebas.sql:352: ERROR:  relation "catalogo.productos" does not exist
 LÍNEA 1: SELECT COUNT(*) FROM catalogo.productos;
@@ -1969,7 +1970,7 @@ psql:sql/08_pruebas/pruebas.sql:356: ERROR:  cross-database references are not i
 LÍNEA 1: SELECT COUNT(*) FROM andina_catalogo.catalogo.productos;
                               ^
 --- 11.3 que usuarios existen y pueden entrar en cada instancia ---
-Ahora está conectado a la base de datos «andina_reportes» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:555:9621:c1fd:73cf:753e:5e0») port «5432».
+Ahora está conectado a la base de datos «andina_reportes» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:555:9606:82fc:b4a2:5c2a:a56d») port «5432».
   instancia  |                                                           usuarios                                                            
 -------------+-------------------------------------------------------------------------------------------------------------------------------
  catalogo    | admin_andina, auditor_interno, compras_cedi, inventario_bogota, inventario_cedi, svc_catalogo, vendedor_bogota, vendedor_cali
@@ -1998,7 +1999,7 @@ INSERT 0 1
 (1 fila)
 
 --- 12.3 el reporte todavia NO lo ve: sigue con el ultimo REFRESH ---
-Ahora está conectado a la base de datos «andina_reportes» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:555:9610:e12a:d999:54af:121e») port «5432».
+Ahora está conectado a la base de datos «andina_reportes» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:555:9621:c1fd:73cf:753e:5e0») port «5432».
  pedidos_bogota_en_reporte 
 ---------------------------
                        100
@@ -2023,7 +2024,7 @@ REFRESH MATERIALIZED VIEW
 COMMIT
    reportes_actualizados_en    
 -------------------------------
- 2026-11-22 03:37:08.594338+00
+ 2026-11-22 03:45:19.747016+00
 (1 fila)
 
 --- 12.5 ahora el reporte si lo ve (uno mas que en 12.1) ---
@@ -2033,9 +2034,9 @@ COMMIT
 (1 fila)
 
 --- 12.6 limpieza: se borra el pedido de prueba y se refrescan los reportes otra vez ---
-Ahora está conectado a la base de datos «andina_ventas» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:136b:ad08:8303:2b8d:416a:fc28») port «5432».
+Ahora está conectado a la base de datos «andina_ventas» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:136b:ad22:7d2a:3be:60c8:d154») port «5432».
 DELETE 1
-Ahora está conectado a la base de datos «andina_reportes» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:555:9621:c1fd:73cf:753e:5e0») port «5432».
+Ahora está conectado a la base de datos «andina_reportes» como el usuario «neondb_owner» en el servidor «<host-neon>» (dirección «2600:1f16:555:9606:82fc:b4a2:5c2a:a56d») port «5432».
 BEGIN
 REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
@@ -2052,9 +2053,9 @@ REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
 REFRESH MATERIALIZED VIEW
 COMMIT
-   reportes_actualizados_en   
-------------------------------
- 2026-11-22 03:37:17.30723+00
+   reportes_actualizados_en    
+-------------------------------
+ 2026-11-22 03:45:27.241083+00
 (1 fila)
 
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «neondb_owner».

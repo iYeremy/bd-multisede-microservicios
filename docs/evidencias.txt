@@ -392,6 +392,7 @@ COMMENT
 COMMENT
 COMMENT
 COMMENT
+COMMENT
 CREATE MATERIALIZED VIEW
 COMMENT
 BEGIN
@@ -412,7 +413,7 @@ REFRESH MATERIALIZED VIEW
 COMMIT
    reportes_actualizados_en    
 -------------------------------
- 2026-11-21 22:34:47.906408-05
+ 2026-11-21 22:43:21.256498-05
 (1 fila)
 
 CREATE ROLE
@@ -1766,7 +1767,7 @@ DETALLE:  Failing row contains (1, 1, 1, -1, 13, 2026-10-15 18:00:00).
 
 --- 4b. Una fila de otra sede no entra en el fragmento de Bogota -> esperado: ERROR viola la restriccion check ---
 psql:sql/08_pruebas/pruebas.sql:72: ERROR:  new row for relation "inv_bogota" violates check constraint "inv_bogota_id_sede_check"
-DETALLE:  Failing row contains (2, 2, 1, 10, 5, 2026-11-21 22:34:48.969295).
+DETALLE:  Failing row contains (2, 2, 1, 10, 5, 2026-11-21 22:43:22.389939).
 
 === Prueba 5. Los fragmentos de dos sedes contienen registros distintos ===
  fragmento  | filas | sede_min | sede_max 
@@ -2017,7 +2018,7 @@ REFRESH MATERIALIZED VIEW
 COMMIT
    reportes_actualizados_en    
 -------------------------------
- 2026-11-21 22:34:49.321377-05
+ 2026-11-21 22:43:22.754543-05
 (1 fila)
 
 --- 12.5 ahora el reporte si lo ve (uno mas que en 12.1) ---
@@ -2048,7 +2049,7 @@ REFRESH MATERIALIZED VIEW
 COMMIT
    reportes_actualizados_en    
 -------------------------------
- 2026-11-21 22:34:49.906341-05
+ 2026-11-21 22:43:23.261766-05
 (1 fila)
 
 Ahora está conectado a la base de datos «andina_reportes» con el usuario «postgres».

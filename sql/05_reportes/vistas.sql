@@ -332,6 +332,7 @@ LEFT JOIN tr_ent te  ON te.id_sede  = s.id_sede
 WITH NO DATA;
 
 -- procedencia de cada vista (seccion 6 del enunciado)
+COMMENT ON VIEW reportes.parametros IS 'Responsable: Reportes Corporativos. Fecha de corte fija (2026-10-15) y umbrales que usan las consultas';
 COMMENT ON MATERIALIZED VIEW reportes.vista_inventario_consolidado      IS 'UNION ALL de los fragmentos de andina_inventarios: inv_bogota, inv_medellin, inv_cali, inv_cedi';
 COMMENT ON MATERIALIZED VIEW reportes.vista_pedidos_consolidado         IS 'UNION ALL de los fragmentos de andina_ventas: ped_bogota, ped_medellin, ped_cali, ped_cedi';
 COMMENT ON MATERIALIZED VIEW reportes.vista_detalle_pedido_consolidado  IS 'UNION ALL de los fragmentos de andina_ventas: det_ped_bogota, det_ped_medellin, det_ped_cali, det_ped_cedi';
