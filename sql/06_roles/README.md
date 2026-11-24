@@ -72,7 +72,7 @@ S = SELECT, I = INSERT, U = UPDATE, D = DELETE.
 | rol_gerencia | – | – | – | – | – | S (todas las vistas) |
 | rol_inventario | S | – | – | SIU transferencias; SIU **solo el fragmento de su sede** | – | S (3 vistas + última actualización) |
 | rol_compras | S | – | SIU | – | – | S (1 vista + última actualización) |
-| rol_vendedor | S (productos, clientes) | – | – | – | SIU **solo el fragmento de su sede**; SIU pagos y devoluciones | – |
+| rol_vendedor | S (productos, clientes) | – | – | – | SIU **solo el fragmento de su sede**; SIU pagos y devoluciones **de su sede**, por las vistas locales (`pagos_bogota`...) | – |
 | rol_auditor | S | S (sin `password_hash`) | S | S | S | S |
 | svc_\<servicio\> | SIU solo en las tablas de su servicio (`svc_reportes`: lee y refresca las vistas) ||||||
 
@@ -90,8 +90,14 @@ S = SELECT, I = INSERT, U = UPDATE, D = DELETE.
   `inv_cedi` (prueba 9.7).
 - **Permiso por columna:** `GRANT SELECT (id_usuario, id_empleado, nombre_usuario, ...) ON
   identidad.usuarios TO rol_auditor` deja al auditor ver todo menos `password_hash` (prueba 9.8).
-- **`REVOKE` a propósito:** al vendedor se le da `DELETE` sobre pagos y devoluciones y luego se le
-  quita con `REVOKE`. Se hace en dos pasos para demostrar `REVOKE` (lo pide la sección 8); la prueba
+- **Vistas locales para lo que no está fragmentado:** `pagos` y `devoluciones` son una sola tabla
+  para las 4 sedes. El vendedor **no** tiene permiso sobre la tabla (leerla da error, prueba 9.9b),
+  sino sobre la vista de su sede (`ventas.pagos_bogota`, `devoluciones_bogota`,
+  `detalle_devolucion_bogota`). Son vistas actualizables con `WITH CHECK OPTION`: por la vista se
+  puede registrar un pago, pero solo de un pedido que exista en el fragmento de su sede (9.9c
+  permitido, 9.9d denegado).
+- **`REVOKE` a propósito:** al vendedor se le da `DELETE` sobre sus vistas de pagos y devoluciones y
+  luego se le quita con `REVOKE`. Se hace en dos pasos para demostrar `REVOKE` (lo pide la sección 8); la prueba
   9.6 comprueba que el `DELETE` queda denegado.
 - **`WITH GRANT OPTION`:** el administrador puede conceder sus permisos a otros.
 - **El vendedor no puede crear clientes:** `clientes` es de catálogo y el vendedor solo la lee.

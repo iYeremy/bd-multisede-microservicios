@@ -145,8 +145,25 @@ SELECT 1, MAX(id_pedido), 1, 2, 4800 FROM ventas.ped_bogota;
 \echo '--- 9.4 vendedor_bogota: consulta pedidos de Cali (DENEGADO) -> esperado: ERROR permiso denegado ---'
 SELECT COUNT(*) FROM ventas.ped_cali;
 
-\echo '--- 9.6 vendedor_bogota: borra un pago (DENEGADO por el REVOKE DELETE) -> esperado: ERROR permiso denegado ---'
-DELETE FROM ventas.pagos WHERE id_pago = 1;
+\echo '--- 9.6 vendedor_bogota: borra un pago de su sede (DENEGADO por el REVOKE DELETE) -> esperado: ERROR permiso denegado ---'
+DELETE FROM ventas.pagos_bogota WHERE id_pago = (SELECT MIN(id_pago) FROM ventas.pagos_bogota);
+
+-- pagos es una sola tabla para las 4 sedes: el vendedor solo tiene permiso
+-- sobre la vista local de su sede (ventas.pagos_bogota), no sobre la tabla
+\echo '--- 9.9a vendedor_bogota: consulta los pagos de su sede por la vista local (PERMITIDO) ---'
+SELECT COUNT(*) AS pagos, MIN(id_sede) AS sede_min, MAX(id_sede) AS sede_max FROM ventas.pagos_bogota;
+
+\echo '--- 9.9b vendedor_bogota: lee la tabla de pagos de todas las sedes (DENEGADO) -> esperado: ERROR permiso denegado ---'
+SELECT COUNT(*) FROM ventas.pagos;
+
+\echo '--- 9.9c vendedor_bogota: registra un pago de un pedido de su sede (PERMITIDO) ---'
+INSERT INTO ventas.pagos_bogota (id_sede, id_pedido, fecha_pago, valor, medio_pago)
+VALUES (1, 1, DATE '2026-10-15', 1000, 'EFECTIVO')
+RETURNING id_sede, id_pedido, valor, estado;
+
+\echo '--- 9.9d vendedor_bogota: registra un pago de un pedido de Cali (DENEGADO) -> esperado: ERROR viola la opcion check de la vista ---'
+INSERT INTO ventas.pagos_bogota (id_sede, id_pedido, fecha_pago, valor, medio_pago)
+VALUES (3, 1, DATE '2026-10-15', 1000, 'EFECTIVO');
 RESET ROLE;
 
 ROLLBACK;

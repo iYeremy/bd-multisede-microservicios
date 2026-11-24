@@ -56,7 +56,7 @@ Y `docker-compose.neon.yml` levanta solo el backend, conectado a las bases de Ne
 | Ruta | Qué es (cada carpeta tiene su README explicando el código) |
 | --- | --- |
 | `sql/README.md` | **empezar aquí**: el orden, las carpetas y los comandos de psql |
-| `scripts/` | `instancias_locales.sh` (levanta las 6 instancias), `correr.sh` (corre los scripts con la configuración de un ambiente), `backend.sh` y `probar_backend.sh` (arrancar y probar el backend), `servidor.sh` (el backend en la VM de la nube), `claves_svc.sh` (contraseñas de los `svc_*`) |
+| `scripts/` | `instancias_locales.sh` (levanta las 6 instancias), `correr.sh` (corre los scripts con la configuración de un ambiente), `backend.sh` y `probar_backend.sh` (arrancar y probar el backend), `servidor.sh` (el backend en la VM de la nube), `claves_svc.sh` (contraseñas de los `svc_*`), `armar_entregables.sh` (la carpeta de entregables) |
 | `config/` | plantillas con la conexión de cada instancia (`local.env.example`, `neon.env.example`, `docker.env.example`) |
 | `backend/` | **el backend en Go**: gateway y 6 microservicios, con su `Dockerfile` (ver su README) |
 | `docker-compose.yml` | todo en contenedores: 6 PostgreSQL, un `init` que carga las bases y los 7 programas |
@@ -70,6 +70,7 @@ Y `docker-compose.neon.yml` levanta solo el backend, conectado a las bases de Ne
 | `sql/06_roles/` | roles, usuarios y permisos, un archivo por instancia, con la matriz de permisos |
 | `sql/07_consultas/` | las 20 consultas que pide el enunciado |
 | `sql/08_pruebas/` | pruebas de restricciones, fragmentos, permisos y aislamiento entre bases (todo con ROLLBACK, no ensucia nada) |
+| `docs/entregables/` | **la entrega en orden**: una carpeta por cada entregable de la sección 12 del enunciado, con su índice y la verificación de cada requisito (se arma con `scripts/armar_entregables.sh`) |
 | `docs/enunciado.pdf` | Todo el contexto y requisitos que se nos dio para el proyecto |
 | `docs/despliegue.md` | **una instancia por servicio**: cómo correrlo en local, en Docker y en Neon |
 | `docs/distribucion.md` | **bases, servicios, fragmentos por sede y vistas de integración** (entregable 5) |

@@ -1,0 +1,17 @@
+// fragmentacion derivada: cada detalle va en el mismo fragmento que su pedido
+// para regenerar la imagen: dot -Tpng -Gdpi=150 fragmentacion_derivada.dot -o fragmentacion_derivada.png
+digraph derivada {
+    rankdir=LR; bgcolor="white"; pad=0.3; nodesep=0.25; ranksep=1.3;
+    node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=12, color="#e07a5f", fillcolor="#fdf1ec", margin="0.2,0.1"];
+    edge [fontname="DejaVu Sans", fontsize=10, color="#333333", penwidth=1.6];
+
+    DE [label="det_ped_cedi"];     PE [label="ped_cedi\nid_sede = 4"];
+    DC [label="det_ped_cali"];     PC [label="ped_cali\nid_sede = 3"];
+    DM [label="det_ped_medellin"]; PM [label="ped_medellin\nid_sede = 2"];
+    DB [label="det_ped_bogota"];   PB [label="ped_bogota\nid_sede = 1"];
+
+    DE -> PE [label="FK (id_sede, id_pedido)"];
+    DC -> PC [label="FK (id_sede, id_pedido)"];
+    DM -> PM [label="FK (id_sede, id_pedido)"];
+    DB -> PB [label="FK (id_sede, id_pedido)"];
+}
